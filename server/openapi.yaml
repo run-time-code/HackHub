@@ -19,6 +19,7 @@ paths:
       tags:
         - Authentication
       summary: Register a new user
+      description: Creates a new user account and sends an email verification link. Registration is completed only after the email is verified.
       requestBody:
         required: true
         content:
@@ -26,8 +27,8 @@ paths:
             schema:
               $ref: "#/components/schemas/RegisterRequest"
       responses:
-        "201":
-          description: User registered successfully
+        "200":
+          description: Verification email sent. Please verify your email to complete registration.
         "400":
           description: Invalid input
         "409":
@@ -53,6 +54,8 @@ paths:
           description: Invalid input
         "401":
           description: Invalid email or password
+        "403":
+          description: Please verify your email before logging in
         "500":
           description: Server error
 
@@ -159,7 +162,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Email verified successfully
+          description: Email verified successfully. Registration completed. User can now log in.
         "400":
           description: Invalid or expired verification token
         "500":
