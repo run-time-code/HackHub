@@ -1,8 +1,8 @@
 const bcrypt = require("bcryptjs");
-
 const validator = require("validator");
-const User = require("../models/User");
 const crypto = require("crypto");
+
+const User = require("../models/User");
 
 const {
     sendVerificationEmail,
@@ -21,12 +21,18 @@ const {
     refreshCookieOptions
 } = require("../utils/cookieUtils");
 
+
+// ==============================
+// REGISTER
+// ==============================
+
 const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
         if (!name || !email || !password) {
             console.log("All fields are required");
+
             return res.status(400).json({
                 message: "All fields are required"
             });
@@ -34,13 +40,15 @@ const register = async (req, res) => {
 
         if (!validator.isEmail(email)) {
             console.log("Invalid email format");
+
             return res.status(400).json({
                 message: "Invalid email format"
             });
         }
 
         if (password.length < 6) {
-             console.log("Password must be at least 6 characters");
+            console.log("Password must be at least 6 characters");
+
             return res.status(400).json({
                 message: "Password must be at least 6 characters"
             });
@@ -49,7 +57,8 @@ const register = async (req, res) => {
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
-             console.log("User already exists");
+            console.log("User already exists");
+
             return res.status(409).json({
                 message: "User already exists"
             });
@@ -57,54 +66,72 @@ const register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const verificationToken = generateEmailVerificationToken();
+        // Generate email verification token
+        const verificationToken =
+            generateEmailVerificationToken();
 
-        const verificationTokenHash = hashToken(verificationToken);
+        const verificationTokenHash =
+            hashToken(verificationToken);
 
-        const verificationTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const verificationTokenExpiresAt =
+            new Date(Date.now() + 15 * 60 * 1000);
 
+        // Create user as UNVERIFIED
         const user = await User.create({
-    name,
-    email,
-    password: hashedPassword,
-    emailVerificationTokenHash: verificationTokenHash,
-    emailVerificationTokenExpiresAt: verificationTokenExpiresAt
-});
+            name,
+            email,
+            password: hashedPassword,
+            emailVerified: false,
+            emailVerificationTokenHash:
+                verificationTokenHash,
+            emailVerificationTokenExpiresAt:
+                verificationTokenExpiresAt
+        });
 
-try {
-    await sendVerificationEmail(
-        user.email,
-        verificationToken
-    );
-} catch (emailError) {
-    console.error("Verification email failed:", emailError);
+        // Send verification email
+        try {
+            await sendVerificationEmail(
+                user.email,
+                verificationToken
+            );
+        } catch (emailError) {
+            console.error(
+                "Verification email failed:",
+                emailError
+            );
 
-    await User.findByIdAndDelete(user._id);
+            // Remove account if verification email could not be sent
+            await User.findByIdAndDelete(user._id);
 
-    return res.status(500).json({
-        message: "Unable to send verification email. Please try again."
-    });
-}
+            return res.status(500).json({
+                message:
+                    "Unable to send verification email. Please try again."
+            });
+        }
 
-console.log(`User registered successfully: ${user.email}`);
-        res.status(201).json({
-            message: "User registered successfully",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
+        console.log(
+            `Verification email sent for registration: ${user.email}`
+        );
+
+        // Registration is NOT completed yet
+        return res.status(200).json({
+            message:
+                "Verification email sent. Please verify your email to complete registration."
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Registration error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Server error"
         });
     }
 };
+
+
+// ==============================
+// VERIFY EMAIL
+// ==============================
 
 const verifyEmail = async (req, res) => {
     try {
@@ -127,32 +154,45 @@ const verifyEmail = async (req, res) => {
 
         if (!user) {
             return res.status(400).json({
-                message: "Invalid or expired verification token"
+                message:
+                    "Invalid or expired verification token"
             });
         }
 
+        // Complete registration
         user.emailVerified = true;
 
-        // Make the token single-use
+        // Make verification token single-use
         user.emailVerificationTokenHash = null;
         user.emailVerificationTokenExpiresAt = null;
 
         await user.save();
 
-        console.log(`Email verified successfully: ${user.email}`);
+        console.log(
+            `Email verified successfully: ${user.email}`
+        );
 
         return res.status(200).json({
-            message: "Email verified successfully"
+            message:
+                "Email verified successfully. Registration completed. You can now log in."
         });
 
     } catch (error) {
-        console.error("Email verification error:", error);
+        console.error(
+            "Email verification error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
         });
     }
 };
+
+
+// ==============================
+// RESEND VERIFICATION
+// ==============================
 
 const resendVerification = async (req, res) => {
     try {
@@ -175,7 +215,8 @@ const resendVerification = async (req, res) => {
         // Don't reveal whether an account exists
         if (!user) {
             return res.status(200).json({
-                message: "If the account exists, a verification email has been sent"
+                message:
+                    "If the account exists, a verification email has been sent"
             });
         }
 
@@ -185,11 +226,11 @@ const resendVerification = async (req, res) => {
             });
         }
 
-        const verificationToken = generateEmailVerificationToken();
+        const verificationToken =
+            generateEmailVerificationToken();
 
-        const verificationTokenHash = hashToken(
-            verificationToken
-        );
+        const verificationTokenHash =
+            hashToken(verificationToken);
 
         const verificationTokenExpiresAt =
             new Date(Date.now() + 15 * 60 * 1000);
@@ -214,7 +255,8 @@ const resendVerification = async (req, res) => {
             );
 
             return res.status(500).json({
-                message: "Unable to send verification email. Please try again."
+                message:
+                    "Unable to send verification email. Please try again."
             });
         }
 
@@ -223,7 +265,8 @@ const resendVerification = async (req, res) => {
         );
 
         return res.status(200).json({
-            message: "If the account exists, a verification email has been sent"
+            message:
+                "If the account exists, a verification email has been sent"
         });
 
     } catch (error) {
@@ -238,15 +281,23 @@ const resendVerification = async (req, res) => {
     }
 };
 
+
+// ==============================
+// LOGIN
+// ==============================
+
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            console.log("Email and password are required");
+            console.log(
+                "Email and password are required"
+            );
 
             return res.status(400).json({
-                message: "Email and password are required"
+                message:
+                    "Email and password are required"
             });
         }
 
@@ -281,11 +332,25 @@ const login = async (req, res) => {
             });
         }
 
+        // User must verify email before login
+        if (!user.emailVerified) {
+            console.log(
+                `Login blocked: email not verified - ${user.email}`
+            );
+
+            return res.status(403).json({
+                message:
+                    "Please verify your email before logging in"
+            });
+        }
+
         // Generate access token
-        const accessToken = generateAccessToken(user);
+        const accessToken =
+            generateAccessToken(user);
 
         // Generate refresh token
-        const refreshToken = generateRefreshToken();
+        const refreshToken =
+            generateRefreshToken();
 
         // Hash refresh token before storing it
         const refreshTokenHash = crypto
@@ -293,7 +358,8 @@ const login = async (req, res) => {
             .update(refreshToken)
             .digest("hex");
 
-        user.refreshTokenHash = refreshTokenHash;
+        user.refreshTokenHash =
+            refreshTokenHash;
 
         await user.save();
 
@@ -310,7 +376,9 @@ const login = async (req, res) => {
             refreshCookieOptions
         );
 
-        console.log(`Login successful: ${user.email}`);
+        console.log(
+            `Login successful: ${user.email}`
+        );
 
         return res.status(200).json({
             message: "Login successful",
@@ -323,7 +391,7 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Login error:", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -331,49 +399,64 @@ const login = async (req, res) => {
     }
 };
 
+
+// ==============================
+// REFRESH TOKEN
+// ==============================
+
 const refreshToken = async (req, res) => {
     try {
         const token = req.cookies.refreshToken;
 
         if (!token) {
-            console.log("Refresh token not provided");
+            console.log(
+                "Refresh token not provided"
+            );
 
             return res.status(401).json({
-                message: "Refresh token not provided"
+                message:
+                    "Refresh token not provided"
             });
         }
 
-        // Hash the incoming refresh token
+        // Hash incoming refresh token
         const refreshTokenHash = crypto
             .createHash("sha256")
             .update(token)
             .digest("hex");
 
-        // Find the user with this refresh-token hash
+        // Find user with this refresh-token hash
         const user = await User.findOne({
             refreshTokenHash
         });
 
         if (!user) {
-            console.log("Invalid refresh token");
+            console.log(
+                "Invalid refresh token"
+            );
 
             return res.status(401).json({
-                message: "Invalid refresh token"
+                message:
+                    "Invalid refresh token"
             });
         }
 
         // Generate new tokens
-        const newAccessToken = generateAccessToken(user);
-        const newRefreshToken = generateRefreshToken();
+        const newAccessToken =
+            generateAccessToken(user);
 
-        // Hash the new refresh token
+        const newRefreshToken =
+            generateRefreshToken();
+
+        // Hash new refresh token
         const newRefreshTokenHash = crypto
             .createHash("sha256")
             .update(newRefreshToken)
             .digest("hex");
 
-        // Replace old refresh-token hash
-        user.refreshTokenHash = newRefreshTokenHash;
+        // Rotate refresh token
+        user.refreshTokenHash =
+            newRefreshTokenHash;
 
         await user.save();
 
@@ -390,14 +473,20 @@ const refreshToken = async (req, res) => {
             refreshCookieOptions
         );
 
-        console.log(`Refresh token rotated: ${user.email}`);
+        console.log(
+            `Refresh token rotated: ${user.email}`
+        );
 
         return res.status(200).json({
-            message: "Token refreshed successfully"
+            message:
+                "Token refreshed successfully"
         });
 
     } catch (error) {
-        console.error(error);
+        console.error(
+            "Refresh token error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
@@ -405,9 +494,15 @@ const refreshToken = async (req, res) => {
     }
 };
 
+
+// ==============================
+// LOGOUT
+// ==============================
+
 const logout = async (req, res) => {
     try {
-        const refreshToken = req.cookies.refreshToken;
+        const refreshToken =
+            req.cookies.refreshToken;
 
         if (refreshToken) {
             const refreshTokenHash = crypto
@@ -415,16 +510,27 @@ const logout = async (req, res) => {
                 .update(refreshToken)
                 .digest("hex");
 
-            // Remove the refresh token from the user's record
+            // Remove refresh token
             await User.findOneAndUpdate(
                 { refreshTokenHash },
-                { $set: { refreshTokenHash: null } }
+                {
+                    $set: {
+                        refreshTokenHash: null
+                    }
+                }
             );
         }
 
         // Clear authentication cookies
-        res.clearCookie("accessToken", accessCookieOptions);
-        res.clearCookie("refreshToken", refreshCookieOptions);
+        res.clearCookie(
+            "accessToken",
+            accessCookieOptions
+        );
+
+        res.clearCookie(
+            "refreshToken",
+            refreshCookieOptions
+        );
 
         console.log("Logout successful");
 
@@ -433,13 +539,21 @@ const logout = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error(
+            "Logout error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
         });
     }
 };
+
+
+// ==============================
+// FORGOT PASSWORD
+// ==============================
 
 const forgotPassword = async (req, res) => {
     try {
@@ -459,22 +573,28 @@ const forgotPassword = async (req, res) => {
 
         const user = await User.findOne({ email });
 
-        // Don't reveal whether an account exists
+        // Don't reveal whether account exists
         if (!user) {
             return res.status(200).json({
-                message: "If the account exists, a password reset email has been sent"
+                message:
+                    "If the account exists, a password reset email has been sent"
             });
         }
 
-        const resetToken = generateEmailVerificationToken();
+        const resetToken =
+            generateEmailVerificationToken();
 
-        const resetTokenHash = hashToken(resetToken);
+        const resetTokenHash =
+            hashToken(resetToken);
 
         const resetTokenExpiresAt =
             new Date(Date.now() + 15 * 60 * 1000);
 
-        user.passwordResetTokenHash = resetTokenHash;
-        user.passwordResetTokenExpiresAt = resetTokenExpiresAt;
+        user.passwordResetTokenHash =
+            resetTokenHash;
+
+        user.passwordResetTokenExpiresAt =
+            resetTokenExpiresAt;
 
         await user.save();
 
@@ -483,20 +603,31 @@ const forgotPassword = async (req, res) => {
             resetToken
         );
 
-        console.log(`Password reset email sent: ${user.email}`);
+        console.log(
+            `Password reset email sent: ${user.email}`
+        );
 
         return res.status(200).json({
-            message: "If the account exists, a password reset email has been sent"
+            message:
+                "If the account exists, a password reset email has been sent"
         });
 
     } catch (error) {
-        console.error("Forgot password error:", error);
+        console.error(
+            "Forgot password error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
         });
     }
 };
+
+
+// ==============================
+// RESET PASSWORD
+// ==============================
 
 const resetPassword = async (req, res) => {
     try {
@@ -504,20 +635,24 @@ const resetPassword = async (req, res) => {
 
         if (!token || !password) {
             return res.status(400).json({
-                message: "Token and password are required"
+                message:
+                    "Token and password are required"
             });
         }
 
         if (password.length < 6) {
             return res.status(400).json({
-                message: "Password must be at least 6 characters long"
+                message:
+                    "Password must be at least 6 characters long"
             });
         }
 
-        const tokenHash = hashToken(token);
+        const tokenHash =
+            hashToken(token);
 
         const user = await User.findOne({
-            passwordResetTokenHash: tokenHash,
+            passwordResetTokenHash:
+                tokenHash,
             passwordResetTokenExpiresAt: {
                 $gt: new Date()
             }
@@ -525,31 +660,44 @@ const resetPassword = async (req, res) => {
 
         if (!user) {
             return res.status(400).json({
-                message: "Invalid or expired password reset token"
+                message:
+                    "Invalid or expired password reset token"
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
 
-        user.password = hashedPassword;
+        user.password =
+            hashedPassword;
 
-        // Make the reset token single-use
-        user.passwordResetTokenHash = null;
-        user.passwordResetTokenExpiresAt = null;
+        // Make reset token single-use
+        user.passwordResetTokenHash =
+            null;
+
+        user.passwordResetTokenExpiresAt =
+            null;
 
         // Invalidate existing refresh token
-        user.refreshTokenHash = null;
+        user.refreshTokenHash =
+            null;
 
         await user.save();
 
-        console.log(`Password reset successful: ${user.email}`);
+        console.log(
+            `Password reset successful: ${user.email}`
+        );
 
         return res.status(200).json({
-            message: "Password reset successful"
+            message:
+                "Password reset successful"
         });
 
     } catch (error) {
-        console.error("Reset password error:", error);
+        console.error(
+            "Reset password error:",
+            error
+        );
 
         return res.status(500).json({
             message: "Server error"
@@ -557,4 +705,18 @@ const resetPassword = async (req, res) => {
     }
 };
 
-module.exports = {register, login, refreshToken, logout, verifyEmail, resendVerification, forgotPassword, resetPassword};
+
+// ==============================
+// EXPORTS
+// ==============================
+
+module.exports = {
+    register,
+    login,
+    refreshToken,
+    logout,
+    verifyEmail,
+    resendVerification,
+    forgotPassword,
+    resetPassword
+};
