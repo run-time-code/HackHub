@@ -6,14 +6,16 @@ const {
     removeSavedHackathon
 } = require("../controllers/savedHackathonController");
 
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+    requireAuth
+} = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.post("/", authMiddleware, saveHackathon);
+router.post("/", requireAuth, saveHackathon);
 
-router.get("/", authMiddleware, getSavedHackathons);
+router.get("/", requireAuth, getSavedHackathons);
 
-router.delete("/:hackathonId", authMiddleware, removeSavedHackathon);
+router.delete("/:hackathonId", requireAuth, removeSavedHackathon);
 
 module.exports = router;
