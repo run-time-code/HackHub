@@ -33,6 +33,15 @@ const register = async (req, res) => {
         if (!name || !email || !password) {
             console.log("All fields are required");
 
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
+        if (!passwordRegex.test(password)) {
+                  return res.status(400).json({
+                  message:
+                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
+            });
+        }
+
             return res.status(400).json({
                 message: "All fields are required"
             });
@@ -633,6 +642,15 @@ const resetPassword = async (req, res) => {
     try {
         const { token, password } = req.body;
 
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                message:
+                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
+            });
+        }
+
         if (!token || !password) {
             return res.status(400).json({
                 message:
@@ -640,10 +658,12 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
+
+
+        if (password.length < 8) {
             return res.status(400).json({
                 message:
-                    "Password must be at least 6 characters long"
+                    "Password must be at least 8 characters long"
             });
         }
 
