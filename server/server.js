@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const cookieParser = require("cookie-parser");
+
 const express = require("express");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -11,7 +13,7 @@ const app = express();
 const PORT = 5000;
 connectDB();
 app.use(express.json());
-
+app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/saved-hackathons", savedHackathonRoutes);

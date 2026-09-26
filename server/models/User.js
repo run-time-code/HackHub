@@ -25,6 +25,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["student", "admin"],
             default: "student"
+        },
+
+        refreshTokenHash: {
+            type: String,
+            default: null
         }
     },
     {

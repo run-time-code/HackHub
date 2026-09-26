@@ -1,0 +1,119 @@
+openapi: 3.0.3
+
+info:
+  title: HackHub Authentication API
+  description: Authentication API for the HackHub backend
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000/api
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+
+paths:
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+        "400":
+          description: Invalid input
+        "409":
+          description: User already exists
+        "500":
+          description: Server error
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful. Access and refresh tokens are sent as HTTP-only cookies.
+        "400":
+          description: Invalid input
+        "401":
+          description: Invalid email or password
+        "500":
+          description: Server error
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh authentication tokens
+      responses:
+        "200":
+          description: Tokens refreshed successfully. New access and refresh tokens are sent as HTTP-only cookies.
+        "401":
+          description: Refresh token missing or invalid
+        "500":
+          description: Server error
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      responses:
+        "200":
+          description: Logout successful
+        "500":
+          description: Server error
+
+components:
+
+  schemas:
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: Berwin
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+        password:
+          type: string
+          format: password
+          example: Test@123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+        password:
+          type: string
+          format: password
+          example: Test@123
