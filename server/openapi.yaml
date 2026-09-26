@@ -80,6 +80,72 @@ paths:
         "500":
           description: Server error
 
+  /auth/protected:
+    get:
+      tags:
+        - Authentication
+      summary: Access a protected route
+      description: Requires a valid access token.
+      responses:
+        "200":
+          description: Protected route accessed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: You accessed a protected route
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: 68c123456789abcdef123456
+                      email:
+                        type: string
+                        example: berwincr4028@gmail.com
+                      role:
+                        type: string
+                        example: student
+        "401":
+          description: Authentication required or access token is invalid/expired
+
+  /auth/admin-test:
+    get:
+      tags:
+        - Authentication
+      summary: Test admin role access
+      description: Requires a valid access token and admin role.
+      responses:
+        "200":
+          description: Admin access granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Admin access granted
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: 68c123456789abcdef123456
+                      email:
+                        type: string
+                        example: admin@hackhub.com
+                      role:
+                        type: string
+                        example: admin
+        "401":
+          description: Authentication required or access token is invalid/expired
+        "403":
+          description: Access forbidden because the user does not have the admin role
+
   /auth/verify-email:
     get:
       tags:
