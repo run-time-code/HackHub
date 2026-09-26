@@ -5,7 +5,6 @@ const cookieParser = require("cookie-parser");
 const express = require("express");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
-const reminderRoutes = require("./routes/reminderRoutes");
 const savedHackathonRoutes = require("./routes/savedHackathonRoutes");
 
 const app = express();
@@ -15,7 +14,6 @@ connectDB();
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", authRoutes);
-app.use("/api/reminders", reminderRoutes);
 app.use("/api/saved-hackathons", savedHackathonRoutes);
 
 app.get("/", (req, res) => {

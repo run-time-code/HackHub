@@ -80,6 +80,84 @@ paths:
         "500":
           description: Server error
 
+  /auth/verify-email:
+    get:
+      tags:
+        - Authentication
+      summary: Verify user email
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified successfully
+        "400":
+          description: Invalid or expired verification token
+        "500":
+          description: Server error
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Verification email request processed
+        "400":
+          description: Invalid email or email already verified
+        "429":
+          description: Too many verification email requests
+        "500":
+          description: Server error
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Password reset request processed
+        "400":
+          description: Invalid email
+        "500":
+          description: Server error
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Invalid or expired password reset token
+        "500":
+          description: Server error
+
 components:
 
   schemas:
@@ -117,3 +195,27 @@ components:
           type: string
           format: password
           example: Test@123
+
+    EmailRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          example: verification-token-here
+        password:
+          type: string
+          format: password
+          example: NewPassword123

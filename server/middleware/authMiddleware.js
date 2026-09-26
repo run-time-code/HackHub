@@ -1,10 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-const authMiddleware = (req, res, next) => {
+const requireAuth = (req, res, next) => {
     const token = req.cookies.accessToken;
 
     if (!token) {
-        console.log("Authentication required");
         return res.status(401).json({
             message: "Authentication required"
         });
@@ -29,4 +28,27 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+const requireRole = (...allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            console.log("Authentication required");
+            return res.status(401).json({
+                message: "Authentication required"
+            });
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
+            console.log("Access forbidden");
+            return res.status(403).json({
+                message: "Access forbidden"
+            });
+        }
+
+        next();
+    };
+};
+
+module.exports = {
+    requireAuth,
+    requireRole
+};

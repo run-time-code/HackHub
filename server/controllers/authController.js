@@ -3,9 +3,17 @@ const bcrypt = require("bcryptjs");
 const validator = require("validator");
 const User = require("../models/User");
 const crypto = require("crypto");
+
+const {
+    sendVerificationEmail,
+    sendPasswordResetEmail
+} = require("../utils/emailUtils");
+
 const {
     generateAccessToken,
-    generateRefreshToken
+    generateRefreshToken,
+    generateEmailVerificationToken,
+    hashToken
 } = require("../utils/tokenUtils");
 
 const {
@@ -49,12 +57,36 @@ const register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        const verificationToken = generateEmailVerificationToken();
+
+        const verificationTokenHash = hashToken(verificationToken);
+
+        const verificationTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
         const user = await User.create({
-            name,
-            email,
-            password: hashedPassword
-        });
-         console.log("User registered successfully");
+    name,
+    email,
+    password: hashedPassword,
+    emailVerificationTokenHash: verificationTokenHash,
+    emailVerificationTokenExpiresAt: verificationTokenExpiresAt
+});
+
+try {
+    await sendVerificationEmail(
+        user.email,
+        verificationToken
+    );
+} catch (emailError) {
+    console.error("Verification email failed:", emailError);
+
+    await User.findByIdAndDelete(user._id);
+
+    return res.status(500).json({
+        message: "Unable to send verification email. Please try again."
+    });
+}
+
+console.log(`User registered successfully: ${user.email}`);
         res.status(201).json({
             message: "User registered successfully",
             user: {
@@ -69,6 +101,138 @@ const register = async (req, res) => {
         console.error(error);
 
         res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+
+        if (!token) {
+            return res.status(400).json({
+                message: "Verification token is required"
+            });
+        }
+
+        const tokenHash = hashToken(token);
+
+        const user = await User.findOne({
+            emailVerificationTokenHash: tokenHash,
+            emailVerificationTokenExpiresAt: {
+                $gt: new Date()
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Invalid or expired verification token"
+            });
+        }
+
+        user.emailVerified = true;
+
+        // Make the token single-use
+        user.emailVerificationTokenHash = null;
+        user.emailVerificationTokenExpiresAt = null;
+
+        await user.save();
+
+        console.log(`Email verified successfully: ${user.email}`);
+
+        return res.status(200).json({
+            message: "Email verified successfully"
+        });
+
+    } catch (error) {
+        console.error("Email verification error:", error);
+
+        return res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+const resendVerification = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required"
+            });
+        }
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({
+                message: "Invalid email format"
+            });
+        }
+
+        const user = await User.findOne({ email });
+
+        // Don't reveal whether an account exists
+        if (!user) {
+            return res.status(200).json({
+                message: "If the account exists, a verification email has been sent"
+            });
+        }
+
+        if (user.emailVerified) {
+            return res.status(400).json({
+                message: "Email is already verified"
+            });
+        }
+
+        const verificationToken = generateEmailVerificationToken();
+
+        const verificationTokenHash = hashToken(
+            verificationToken
+        );
+
+        const verificationTokenExpiresAt =
+            new Date(Date.now() + 15 * 60 * 1000);
+
+        user.emailVerificationTokenHash =
+            verificationTokenHash;
+
+        user.emailVerificationTokenExpiresAt =
+            verificationTokenExpiresAt;
+
+        await user.save();
+
+        try {
+            await sendVerificationEmail(
+                user.email,
+                verificationToken
+            );
+        } catch (emailError) {
+            console.error(
+                "Verification email resend failed:",
+                emailError
+            );
+
+            return res.status(500).json({
+                message: "Unable to send verification email. Please try again."
+            });
+        }
+
+        console.log(
+            `Verification email resent: ${user.email}`
+        );
+
+        return res.status(200).json({
+            message: "If the account exists, a verification email has been sent"
+        });
+
+    } catch (error) {
+        console.error(
+            "Resend verification error:",
+            error
+        );
+
+        return res.status(500).json({
             message: "Server error"
         });
     }
@@ -277,4 +441,120 @@ const logout = async (req, res) => {
     }
 };
 
-module.exports = {register, login, refreshToken, logout};
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required"
+            });
+        }
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({
+                message: "Invalid email format"
+            });
+        }
+
+        const user = await User.findOne({ email });
+
+        // Don't reveal whether an account exists
+        if (!user) {
+            return res.status(200).json({
+                message: "If the account exists, a password reset email has been sent"
+            });
+        }
+
+        const resetToken = generateEmailVerificationToken();
+
+        const resetTokenHash = hashToken(resetToken);
+
+        const resetTokenExpiresAt =
+            new Date(Date.now() + 15 * 60 * 1000);
+
+        user.passwordResetTokenHash = resetTokenHash;
+        user.passwordResetTokenExpiresAt = resetTokenExpiresAt;
+
+        await user.save();
+
+        await sendPasswordResetEmail(
+            user.email,
+            resetToken
+        );
+
+        console.log(`Password reset email sent: ${user.email}`);
+
+        return res.status(200).json({
+            message: "If the account exists, a password reset email has been sent"
+        });
+
+    } catch (error) {
+        console.error("Forgot password error:", error);
+
+        return res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({
+                message: "Token and password are required"
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters long"
+            });
+        }
+
+        const tokenHash = hashToken(token);
+
+        const user = await User.findOne({
+            passwordResetTokenHash: tokenHash,
+            passwordResetTokenExpiresAt: {
+                $gt: new Date()
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Invalid or expired password reset token"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        user.password = hashedPassword;
+
+        // Make the reset token single-use
+        user.passwordResetTokenHash = null;
+        user.passwordResetTokenExpiresAt = null;
+
+        // Invalidate existing refresh token
+        user.refreshTokenHash = null;
+
+        await user.save();
+
+        console.log(`Password reset successful: ${user.email}`);
+
+        return res.status(200).json({
+            message: "Password reset successful"
+        });
+
+    } catch (error) {
+        console.error("Reset password error:", error);
+
+        return res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+module.exports = {register, login, refreshToken, logout, verifyEmail, resendVerification, forgotPassword, resetPassword};

@@ -30,11 +30,38 @@ const userSchema = new mongoose.Schema(
         refreshTokenHash: {
             type: String,
             default: null
-        }
+        },
+
+        emailVerified: {
+           type: Boolean,
+           default: false
+        },
+
+emailVerificationTokenHash: {
+    type: String,
+    default: null
+},
+
+emailVerificationTokenExpiresAt: {
+    type: Date,
+    default: null
+},
+
+passwordResetTokenHash: {
+    type: String,
+    default: null
+},
+
+passwordResetTokenExpiresAt: {
+    type: Date,
+    default: null
+},
     },
     {
         timestamps: true
     }
+
+
 );
 
 module.exports = mongoose.model("User", userSchema);
