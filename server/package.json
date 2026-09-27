@@ -1,0 +1,28 @@
+{
+  "name": "hackhub-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HackHub Express API backend",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.0",
+    "pino": "^9.0.0",
+    "pino-http": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
