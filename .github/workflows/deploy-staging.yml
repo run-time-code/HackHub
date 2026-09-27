@@ -1,0 +1,22 @@
+name: Deploy to staging
+
+# Starting version (Task 6.1.3). Full staging deploy lands in Task 6.2.1:
+# frontend -> Vercel, API -> Render/Railway/AWS, DB -> Atlas staging.
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    name: deploy to staging
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # TODO(6.2.1): build frontend, deploy it, deploy API, run smoke checks.
+      - run: echo "staging deploy placeholder - wired up in Task 6.2.1"
