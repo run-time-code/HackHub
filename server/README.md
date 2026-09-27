@@ -35,14 +35,39 @@ Every response carries `x-request-id` (reuses the incoming header when present).
 
 ## Config
 
-| Var | Dev | Staging | Live |
+Same variable names in every environment — only the values change.
+
+| Var | Dev (local / compose) | Staging | Live |
 |---|---|---|---|
 | `NODE_ENV` | `development` | `staging` | `production` |
-| `PORT` | `5000` | set by host | set by host |
-| `MONGODB_URI` | local mongo | Atlas staging | Atlas live |
-| `JWT_SECRET` | dev only | secret store | secret store (required, must differ from `change_me`) |
+| `PORT` | `5000` | set by host (Render/Railway) | set by host |
+| `MONGODB_URI` | `mongodb://localhost:27017/hackhub` (compose: `mongodb://mongo:27017/hackhub`) | Atlas staging cluster | Atlas live cluster |
+| `REDIS_URL` | `redis://localhost:6379` (compose: `redis://redis:6379`) | hosted Redis staging | hosted Redis live |
+| `JWT_SECRET` | dev value only | secret store | secret store (required, must differ from `change_me`) |
 | `LOG_LEVEL` | `debug` | `info` | `info` |
-| `CORS_ORIGIN` | `http://localhost:5173` | staging URL | live URL (comma-separated for more) |
+| `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
+
+## Docker
+
+Production image:
+
+```sh
+docker build -t hackhub-api .
+docker run --env-file .env -p 5000:5000 hackhub-api
+```
+
+Local stack (API with live reload + MongoDB + Redis):
+
+```sh
+cp .env.example .env   # first time only
+docker compose up --build
+```
+
+This starts `api` (http://localhost:5000), `mongo` (localhost:27017),
+and `redis` (localhost:6379). The API waits for healthy Mongo/Redis
+before starting. Source is mounted, so edits under `src/` reload via nodemon.
+`Ctrl+C` stops; data survives in the `mongo-data` / `redis-data` volumes
+(`docker compose down -v` wipes them).
 
 ## Scripts
 
