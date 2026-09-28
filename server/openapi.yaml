@@ -1,0 +1,290 @@
+openapi: 3.0.3
+
+info:
+  title: HackHub Authentication API
+  description: Authentication API for the HackHub backend
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000/api
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+
+paths:
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user account and sends an email verification link. Registration is completed only after the email is verified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Verification email sent. Please verify your email to complete registration.
+        "400":
+          description: Invalid input
+        "409":
+          description: User already exists
+        "500":
+          description: Server error
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful. Access and refresh tokens are sent as HTTP-only cookies.
+        "400":
+          description: Invalid input
+        "401":
+          description: Invalid email or password
+        "403":
+          description: Please verify your email before logging in
+        "500":
+          description: Server error
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh authentication tokens
+      responses:
+        "200":
+          description: Tokens refreshed successfully. New access and refresh tokens are sent as HTTP-only cookies.
+        "401":
+          description: Refresh token missing or invalid
+        "500":
+          description: Server error
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      responses:
+        "200":
+          description: Logout successful
+        "500":
+          description: Server error
+
+  /auth/protected:
+    get:
+      tags:
+        - Authentication
+      summary: Access a protected route
+      description: Requires a valid access token.
+      responses:
+        "200":
+          description: Protected route accessed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: You accessed a protected route
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: 68c123456789abcdef123456
+                      email:
+                        type: string
+                        example: berwincr4028@gmail.com
+                      role:
+                        type: string
+                        example: student
+        "401":
+          description: Authentication required or access token is invalid/expired
+
+  /auth/admin-test:
+    get:
+      tags:
+        - Authentication
+      summary: Test admin role access
+      description: Requires a valid access token and admin role.
+      responses:
+        "200":
+          description: Admin access granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Admin access granted
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: 68c123456789abcdef123456
+                      email:
+                        type: string
+                        example: admin@hackhub.com
+                      role:
+                        type: string
+                        example: admin
+        "401":
+          description: Authentication required or access token is invalid/expired
+        "403":
+          description: Access forbidden because the user does not have the admin role
+
+  /auth/verify-email:
+    get:
+      tags:
+        - Authentication
+      summary: Verify user email
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified successfully. Registration completed. User can now log in.
+        "400":
+          description: Invalid or expired verification token
+        "500":
+          description: Server error
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Verification email request processed
+        "400":
+          description: Invalid email or email already verified
+        "429":
+          description: Too many verification email requests
+        "500":
+          description: Server error
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "200":
+          description: Password reset request processed
+        "400":
+          description: Invalid email
+        "500":
+          description: Server error
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Invalid or expired password reset token
+        "500":
+          description: Server error
+
+components:
+
+  schemas:
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: Berwin
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+        password:
+          type: string
+          format: password
+          example: Test@123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+        password:
+          type: string
+          format: password
+          example: Test@123
+
+    EmailRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: berwin@test.com
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          example: verification-token-here
+        password:
+          type: string
+          format: password
+          example: NewPassword123
