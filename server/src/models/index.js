@@ -8,4 +8,6 @@
 // const Hackathon = require('./Hackathon');
 // module.exports = { User, Hackathon };
 
-module.exports = {};
+const { Team } = require('./team');
+
+module.exports = { Team };

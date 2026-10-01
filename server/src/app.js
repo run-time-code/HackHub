@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const pinoHttp = require('pino-http');
 
@@ -22,6 +23,7 @@ function createApp() {
     })
   );
   app.use(cors({ origin: config.corsOrigin }));
+  app.use(cookieParser());
   app.use(express.json({ limit: '100kb' }));
 
   // Served at both /health and /api/health (frontend calls /api/*).
