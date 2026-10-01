@@ -117,6 +117,20 @@ before starting. Source is mounted, so edits under `src/` reload via nodemon.
 
 Health: `GET /health` and `GET /api/health`.
 
+### Teams (`/teams`, also served under `/api/teams`)
+
+- `POST /teams` (auth) — create a team for a hackathon; caller becomes leader.
+- `GET /teams?hackathonId=<id>` (public) — list teams linked to one hackathon,
+  with optional `status`, `page`, `limit`.
+- `GET /teams/:id` (public) — one team.
+- `PATCH /teams/:id` (auth, leader only) — edit `name`, `description`,
+  `rolesNeeded`, `maxTeamSize`, `status`. `members`, `leader` and `hackathon`
+  are immutable here; seats change through the join-request flow.
+- `DELETE /teams/:id` (auth, leader only).
+
+Auth accepts the login `accessToken` cookie or `Authorization: Bearer <token>`.
+Responses follow the shared `{ success, data, requestId }` envelope.
+
 ### Staging
 
 - Blueprint: `render.yaml` (API on Render, `develop` branch, health check `/health`).
