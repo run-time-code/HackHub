@@ -355,6 +355,53 @@ paths:
         "404":
           description: Team not found
 
+  /users/discover:
+    get:
+      tags:
+        - Teams
+      summary: Discover teammates by skills and availability
+      description: Login required. Only users who opted in (looking for a team and discoverable) are listed, best skill match first. Contact details are never exposed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: skills
+          in: query
+          required: false
+          schema:
+            type: string
+          example: react,node
+        - name: availability
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, limited, unavailable]
+        - name: lookingForTeam
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Ranked teammate list
+        "400":
+          description: Invalid filter value
+        "401":
+          description: Authentication required
+
 components:
 
   securitySchemes:
