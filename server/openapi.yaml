@@ -553,3 +553,22 @@ components:
         status:
           type: string
           enum: [open, closed]
+
+    TeammateCard:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        availability:
+          type: string
+          enum: [available, limited, unavailable]
+        lookingForTeam:
+          type: boolean
+        matchCount:
+          type: integer

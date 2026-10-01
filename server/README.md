@@ -131,6 +131,15 @@ Health: `GET /health` and `GET /api/health`.
 Auth accepts the login `accessToken` cookie or `Authorization: Bearer <token>`.
 Responses follow the shared `{ success, data, requestId }` envelope.
 
+### Teammate discovery (`GET /users/discover`, also under `/api/...`)
+
+Login required. Finds users by `skills` (comma-separated, best match first),
+`availability` and the `lookingForTeam` switch (defaults to `true`).
+
+Privacy: only users who opted in (`discoverable`) are ever listed, and the
+card exposes `id`, `name`, `skills`, `availability`, `lookingForTeam` and
+`matchCount` only — no email, password or tokens.
+
 ### Staging
 
 - Blueprint: `render.yaml` (API on Render, `develop` branch, health check `/health`).
