@@ -27,6 +27,30 @@ const userSchema = new mongoose.Schema(
             default: "student"
         },
 
+        skills: {
+            type: [String],
+            default: [],
+            index: true
+        },
+
+        availability: {
+            type: String,
+            enum: ["available", "limited", "unavailable"],
+            default: "available"
+        },
+
+        lookingForTeam: {
+            type: Boolean,
+            default: false,
+            index: true
+        },
+
+        discoverable: {
+            type: Boolean,
+            default: false,
+            index: true
+        },
+
         refreshTokenHash: {
             type: String,
             default: null
