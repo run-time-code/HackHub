@@ -357,6 +357,12 @@ paths:
 
 components:
 
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
 
     RegisterRequest:
@@ -416,3 +422,87 @@ components:
           type: string
           format: password
           example: NewPassword123
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        hackathon:
+          type: string
+        leader:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                type: string
+              role:
+                type: string
+              joinedAt:
+                type: string
+                format: date-time
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+        maxTeamSize:
+          type: integer
+        size:
+          type: integer
+        openSlots:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTeamRequest:
+      type: object
+      required:
+        - name
+        - hackathonId
+      properties:
+        name:
+          type: string
+          example: Pixel Builders
+        hackathonId:
+          type: string
+        description:
+          type: string
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+          example: [designer, backend]
+        maxTeamSize:
+          type: integer
+          default: 4
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+        maxTeamSize:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
