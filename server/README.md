@@ -116,3 +116,11 @@ before starting. Source is mounted, so edits under `src/` reload via nodemon.
 - `npm start` — production run
 
 Health: `GET /health` and `GET /api/health`.
+
+### Staging
+
+- Blueprint: `render.yaml` (API on Render, `develop` branch, health check `/health`).
+- Pipeline: `.github/workflows/deploy-staging.yml` (push to `develop` triggers
+  Render deploy, Vercel frontend deploy, then smoke checks).
+- Runbook: `docs/staging.md`. Staging env template: `.env.staging.example`.
+- Smoke: `STAGING_API_URL=https://<staging-api> npm run smoke:staging`.

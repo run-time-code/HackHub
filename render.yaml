@@ -1,0 +1,29 @@
+# HackHub staging blueprint (owner: Senthil Raja).
+# In Render: New > Blueprint > connect repo > select this file.
+# Secrets (MONGODB_URI, REDIS_URL, JWT_SECRET, CORS_ORIGIN) are set in the
+# Render dashboard, NOT here. Render provides HTTPS + domain automatically.
+
+services:
+  - type: web
+    name: hackhub-api-staging
+    runtime: node
+    plan: starter
+    branch: develop
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: LOG_LEVEL
+        value: info
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false

@@ -1,6 +1,6 @@
 'use strict';
 
-// Smoke tests for the API skeleton (Task 6.1.1 structure, wired into CI 6.1.3).
+// Smoke tests for the API skeleton.
 // No database needed. Run with: npm test
 
 process.env.LOG_LEVEL = 'fatal';
