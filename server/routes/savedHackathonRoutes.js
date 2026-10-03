@@ -2,9 +2,11 @@ const express = require("express");
 
 const {
     saveHackathon,
-    getSavedHackathons,
-    removeSavedHackathon
-} = require("../controllers/savedHackathonController");
+    unsaveHackathon,
+    markRegistered,
+    addNotes,
+    getHackathonStatus
+} = require("../controllers/hackathonTrackingController");
 
 const {
     requireAuth
@@ -12,10 +14,14 @@ const {
 
 const router = express.Router();
 
-router.post("/", requireAuth, saveHackathon);
+router.post("/save", requireAuth, saveHackathon);
 
-router.get("/", requireAuth, getSavedHackathons);
+router.post("/unsave", requireAuth, unsaveHackathon);
 
-router.delete("/:hackathonId", requireAuth, removeSavedHackathon);
+router.post("/register", requireAuth, markRegistered);
+
+router.post("/notes", requireAuth, addNotes);
+
+router.get("/status/:hackathon", requireAuth, getHackathonStatus);
 
 module.exports = router;

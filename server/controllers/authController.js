@@ -55,11 +55,11 @@ const register = async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
-            console.log("Password must be at least 6 characters");
+        if (password.length < 8) {
+            console.log("Password must be at least 8 characters");
 
             return res.status(400).json({
-                message: "Password must be at least 6 characters"
+                message: "Password must be at least 8 characters"
             });
         }
 
