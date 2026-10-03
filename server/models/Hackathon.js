@@ -2,79 +2,26 @@ const mongoose = require("mongoose");
 
 const hackathonSchema = new mongoose.Schema(
     {
-        title: {
+        hackathon_id: {
             type: String,
             required: true,
-            trim: true
+            unique: true
         },
 
-        organizer: {
-            type: String,
-            default: ""
+        title: {
+            type: String
         },
 
-        description: {
-            type: String,
-            default: ""
+        registration_deadline: {
+            type: String
         },
 
-        registrationDeadline: {
-            type: Date
-        },
-
-        eventDate: {
-            type: Date
-        },
-
-        mode: {
-            type: String,
-            enum: ["Online", "Offline", "Hybrid"],
-            default: "Online"
-        },
-
-        location: {
-            type: String,
-            default: ""
-        },
-
-        domains: {
-            type: [String],
-            default: []
-        },
-
-        eligibility: {
-            type: String,
-            default: ""
-        },
-
-        prizePool: {
-            type: Number,
-            default: 0
-        },
-
-        registrationUrl: {
-            type: String,
-            default: ""
-        },
-
-        sourceWebsite: {
-            type: String,
-            default: ""
-        },
-
-        skillsRequired: {
-            type: [String],
-            default: []
-        },
-
-        status: {
-            type: String,
-            enum: ["Open", "Closed", "Upcoming", "Ongoing", "Completed"],
-            default: "Open"
+        is_active: {
+            type: Boolean
         }
     },
     {
-        timestamps: true
+        collection: "Hackathons"
     }
 );
 
