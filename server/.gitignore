@@ -3,12 +3,6 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build outputs
-dist/
-dist-ssr/
-build/
-coverage/
-
 # Environment variables (keep examples tracked)
 .env
 .env.local
@@ -16,7 +10,6 @@ coverage/
 .env.test.local
 .env.production.local
 !.env.example
-.env.*
 
 # Logs
 logs/
@@ -27,19 +20,25 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Test coverage
+coverage/
+.nyc_output/
+
 # Runtime / temp
 *.pid
 *.seed
 *.pid.lock
 .tmp/
 temp/
+uploads/
+tmp/
 
 # OS
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# Editor / IDE
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -50,14 +49,3 @@ Desktop.ini
 *.sw?
 *.swp
 *.swo
-
-# Vite
-vite.config.*.timestamp-*.mjs
-
-# Vercel / Netlify
-.vercel
-.netlify
-
-# Postman
-postman/
-.postman/
