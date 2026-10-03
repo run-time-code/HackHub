@@ -9,13 +9,13 @@ const savedHackathonSchema = new mongoose.Schema(
         },
 
         hackathon: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Hackathon",
+            type: String,
             required: true
         }
     },
     {
-        timestamps: true
+        timestamps: true,
+        collection: "Saved_Hackathons"
     }
 );
 
