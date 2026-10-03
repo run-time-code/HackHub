@@ -1,3 +1,5 @@
+const { z } = require("zod");
+
 const updateProfileSchema = z.object({
     name: z.string().trim().min(1).max(100).optional(),
     bio: z.string().trim().max(500).optional(),
@@ -10,6 +12,7 @@ const updateProfileSchema = z.object({
         message: "At least one profile field is required"
     }
 );
+
 const updateSkillsSchema = z.object({
     skills: z.array(
         z.string().trim().min(1).max(50)
