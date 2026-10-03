@@ -27,6 +27,39 @@ const userSchema = new mongoose.Schema(
             default: "student"
         },
 
+        bio: {
+    type: String,
+    default: "",
+    trim: true
+},
+
+college: {
+    type: String,
+    default: "",
+    trim: true
+},
+
+location: {
+    type: String,
+    default: "",
+    trim: true
+},
+
+skills: {
+    type: [String],
+    default: []
+},
+
+preferences: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+},
+
+avatarUrl: {
+    type: String,
+    default: ""
+},
+
         refreshTokenHash: {
             type: String,
             default: null
