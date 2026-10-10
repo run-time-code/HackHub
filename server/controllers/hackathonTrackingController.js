@@ -212,6 +212,10 @@ const getHackathonStatus = async (req, res) => {
     }
 };
 
+// ==============================
+// ADD NOTES
+// ==============================
+
 const addNotes = async (req, res) => {
     try {
         const { hackathon, notes } = req.body;
@@ -274,5 +278,4 @@ module.exports = {
     markRegistered,
     addNotes,
     getHackathonStatus,
-    addNotes
 };
