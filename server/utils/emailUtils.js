@@ -1,12 +1,22 @@
 const { Resend } = require("resend");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY is required to send email");
+    }
+    return new Resend(process.env.RESEND_API_KEY);
+}
+
+function getFrontendUrl() {
+    const configuredUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+    return configuredUrl.split(",")[0].replace(/\/$/, "");
+}
 
 const sendVerificationEmail = async (email, verificationToken) => {
     const verificationLink =
-        `http://localhost:5000/api/auth/verify-email?token=${verificationToken}`;
+        `${getFrontendUrl()}/verify-email?token=${encodeURIComponent(verificationToken)}`;
 
-    await resend.emails.send({
+    await getResend().emails.send({
         from: process.env.EMAIL_FROM,
         to: email,
         subject: "Verify your HackHub email",
@@ -31,9 +41,9 @@ const sendVerificationEmail = async (email, verificationToken) => {
 
 const sendPasswordResetEmail = async (email, resetToken) => {
     const resetLink =
-        `http://localhost:5000/api/auth/reset-password?token=${resetToken}`;
+        `${getFrontendUrl()}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
-    await resend.emails.send({
+    await getResend().emails.send({
         from: process.env.EMAIL_FROM,
         to: email,
         subject: "Reset your HackHub password",

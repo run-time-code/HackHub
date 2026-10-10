@@ -13,6 +13,7 @@ const base = {
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hackhub',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   jwtSecret: process.env.JWT_SECRET || 'change_me',
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || '',
   logLevel: process.env.LOG_LEVEL || (env === 'production' ? 'info' : 'debug'),
   sentryDsn: process.env.SENTRY_DSN || '',
   metricsToken: process.env.METRICS_TOKEN || '',
@@ -24,6 +25,12 @@ const base = {
 
 if ((base.isProd || base.isStaging) && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'change_me')) {
   throw new Error('JWT_SECRET must be set to a strong value in staging/production');
+}
+if ((base.isProd || base.isStaging) && !base.accessTokenSecret) {
+  throw new Error('ACCESS_TOKEN_SECRET must be set in staging/production');
+}
+if ((base.isProd || base.isStaging) && !process.env.CSRF_SECRET) {
+  throw new Error('CSRF_SECRET must be set in staging/production');
 }
 
 module.exports = base;

@@ -2,6 +2,7 @@ const express = require("express");
 const upload = require("../middleware/uploadMiddleware");
 const {
     getMyProfile,
+    saveOnboarding,
     updateMyProfile,
     getPublicProfile,
     updateMySkills,
@@ -27,6 +28,7 @@ const {
 } = require("../middleware/csrfMiddleware");
 
 router.get("/me", requireAuth, getMyProfile);
+router.put("/me/onboarding", requireAuth, doubleCsrfProtection, saveOnboarding);
 router.put(
     "/me",
     requireAuth,

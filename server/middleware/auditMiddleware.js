@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const logAuditEvent = require("../utils/auditLogger");
 
 const AUTH_EVENTS = [
@@ -44,6 +45,10 @@ const AUTH_EVENTS = [
 ];
 
 const auditMiddleware = (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+        return next();
+    }
+
     const requestPath = req.path.replace(/\/+$/, "") || "/";
 
     let eventDefinition = AUTH_EVENTS.find(

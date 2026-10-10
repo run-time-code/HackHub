@@ -52,6 +52,43 @@ const getMyProfile = async (req, res) => {
     }
 };
 
+const saveOnboarding = async (req, res) => {
+    const { skills, interests, preferredMode, location } = req.body || {};
+    const validModes = ["online", "offline", "hybrid"];
+
+    if (
+        !Array.isArray(skills) || skills.length === 0 || skills.length > 10 ||
+        skills.some(skill => typeof skill !== "string" || !skill.trim()) ||
+        !Array.isArray(interests) || interests.length === 0 || interests.length > 10 ||
+        interests.some(interest => typeof interest !== "string" || !interest.trim()) ||
+        !validModes.includes(preferredMode) ||
+        typeof location !== "string" || location.trim().length < 2 || location.trim().length > 100
+    ) {
+        return res.status(400).json({ message: "Invalid onboarding data" });
+    }
+
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user || user.deletedAt) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        user.skills = [...new Set(skills.map(skill => skill.trim()))];
+        user.location = location.trim();
+        user.preferences = {
+            ...(user.preferences || {}),
+            interests: [...new Set(interests.map(interest => interest.trim()))],
+            preferredMode
+        };
+        await user.save();
+
+        return res.status(200).json({ message: "Onboarding saved successfully" });
+    } catch (error) {
+        console.error("Save onboarding error:", error);
+        return res.status(500).json({ message: "Unable to save onboarding" });
+    }
+};
+
 
 const updateMyProfile = async (req, res) => {
     try {
@@ -521,6 +558,7 @@ const exportMyData = async (req, res) => {
 
 module.exports = {
     getMyProfile,
+    saveOnboarding,
     updateMyProfile,
     getPublicProfile,
     updateMySkills,

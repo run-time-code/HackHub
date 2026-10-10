@@ -36,6 +36,20 @@ const {
 
 const router = express.Router();
 
+function startOAuth(provider, options) {
+    return (req, res, next) => {
+        const prefix = provider === "google" ? "GOOGLE" : "GITHUB";
+        if (
+            !process.env[`${prefix}_CLIENT_ID`] ||
+            !process.env[`${prefix}_CLIENT_SECRET`] ||
+            !process.env[`${prefix}_CALLBACK_URL`]
+        ) {
+            return res.status(503).json({ message: `${provider} login is not configured` });
+        }
+        return passport.authenticate(provider, options)(req, res, next);
+    };
+}
+
 // Generate CSRF token
 router.get("/csrf-token", (req, res) => {
     const csrfToken = generateCsrfToken(req, res);
@@ -48,7 +62,7 @@ router.get("/csrf-token", (req, res) => {
 // Google OAuth
 router.get(
     "/google",
-    passport.authenticate("google", {
+    startOAuth("google", {
         scope: ["profile", "email"],
         session: false
     })
@@ -56,7 +70,7 @@ router.get(
 
 router.get(
     "/google/callback",
-    passport.authenticate("google", {
+    startOAuth("google", {
         session: false,
         failureRedirect: "/api/auth/oauth-failed"
     }),
@@ -66,7 +80,7 @@ router.get(
 // GitHub OAuth
 router.get(
     "/github",
-    passport.authenticate("github", {
+    startOAuth("github", {
         scope: ["user:email"],
         session: false
     })
@@ -74,7 +88,7 @@ router.get(
 
 router.get(
     "/github/callback",
-    passport.authenticate("github", {
+    startOAuth("github", {
         session: false,
         failureRedirect: "/api/auth/oauth-failed"
     }),

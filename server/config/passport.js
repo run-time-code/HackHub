@@ -2,8 +2,9 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const GitHubStrategy = require("passport-github2").Strategy;
 
-passport.use(
-    new GoogleStrategy(
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CALLBACK_URL) {
+    passport.use(
+        new GoogleStrategy(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -21,11 +22,13 @@ passport.use(
 
             done(null, profile);
         }
-    )
-);
+        )
+    );
+}
 
-passport.use(
-    new GitHubStrategy(
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET && process.env.GITHUB_CALLBACK_URL) {
+    passport.use(
+        new GitHubStrategy(
         {
             clientID: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
@@ -73,7 +76,8 @@ passport.use(
                 done(error);
             }
         }
-    )
-);
+        )
+    );
+}
 
 module.exports = passport;

@@ -1,35 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+import { apiRequest } from "./request";
 
-function emit401() {
-  window.dispatchEvent(new CustomEvent("auth:unauthorized"));
-}
-
-async function request(path, { method = "POST", body } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    // no JSON body
-  }
-
-  if (res.status === 401) emit401();
-
-  if (!res.ok) {
-    const error = new Error(data?.message || "Something went wrong");
-    error.status = res.status;
-    error.code = data?.code;
-    throw error;
-  }
-
-  return data;
-}
+const request = (path, options = {}) => apiRequest(path, { method: "POST", ...options });
 
 export function loginUser(payload) {
   return request("/auth/login", { body: payload });
@@ -52,7 +23,7 @@ export function verifyEmail(token) {
 }
 
 export function getCurrentUser() {
-  return request("/auth/me", { method: "GET" });
+  return request("/users/me", { method: "GET" });
 }
 
 export function logoutUser() {

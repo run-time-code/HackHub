@@ -88,6 +88,11 @@ Same variable names everywhere, only values change:
 | `MONGODB_URI`  | `mongodb://localhost:27017/hackhub`  | Atlas staging cluster                | Atlas live cluster   |
 | `REDIS_URL`    | `redis://localhost:6379`             | hosted Redis / placeholder           | hosted Redis         |
 | `JWT_SECRET`   | dev value only                       | secret store (required, differs)     | secret store (required, differs) |
+| `ACCESS_TOKEN_SECRET` | separate secret store value       | separate secret store value          | separate secret store value |
+| `CSRF_SECRET`  | separate secret store value          | separate secret store value          | separate secret store value |
+| `RESEND_API_KEY` | email provider key                 | email provider key                   | email provider key |
+| `EMAIL_FROM`   | verified sender                      | verified sender                      | verified sender |
+| `FRONTEND_URL` | `http://localhost:5173`              | staging frontend URL                 | live frontend URL |
 | `LOG_LEVEL`    | `debug`                              | `info`                               | `info`               |
 | `CORS_ORIGIN`  | `http://localhost:5173`              | staging frontend URL                 | live frontend URL    |
 

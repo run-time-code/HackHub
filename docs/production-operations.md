@@ -4,7 +4,7 @@
 
 The production workflow runs on pushes to `main` and manual dispatch. Before the first release, create a GitHub Environment named `production`, restrict it to `main`, and require an independent reviewer. The deployment job waits at that environment after backend tests and frontend lint/build pass.
 
-Provision a dedicated Render API service from `server/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative.
+Provision a dedicated Render API service from `server/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. OAuth credentials are optional; configure each provider's client ID, secret, and callback URL to enable it. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative.
 
 Add these secrets to the GitHub `production` environment:
 
@@ -56,4 +56,4 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point serves the newer `server/src` API, which currently has health, teams, and teammate-discovery routes. The frontend login client targets routes in the legacy `server/server.js` app, and hackathon listing/search routes are not mounted in the active API. Configure the k6 paths to match the deployed product routes, and resolve this API/runtime mismatch before approving a full live release. A successful health check alone does not verify sign-in or hackathon discovery.
+The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, and teammate-discovery routes together. The separate `backend/` package contains hackathon browse/search handlers but is not installed or mounted by the active `server/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.
