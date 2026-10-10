@@ -16,6 +16,8 @@ coverage/
 .env.test.local
 .env.production.local
 !.env.example
+!.env.staging.example
+.env.*
 
 # Logs
 logs/
@@ -56,3 +58,7 @@ vite.config.*.timestamp-*.mjs
 # Vercel / Netlify
 .vercel
 .netlify
+
+# Postman
+postman/
+.postman/
