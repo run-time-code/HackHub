@@ -1,6 +1,11 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
+// Fall back to JWT_SECRET so local dev and CI keep working; the
+// authMiddleware verifies against both secrets (mirrors it here).
+const accessTokenSecret = () =>
+    process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
+
 const generateAccessToken = (user) => {
     return jwt.sign(
         {
@@ -9,7 +14,7 @@ const generateAccessToken = (user) => {
             role: user.role,
             tokenVersion: user.tokenVersion ?? 0
         },
-        process.env.ACCESS_TOKEN_SECRET,
+        accessTokenSecret(),
         {
             expiresIn: "15m"
         }
