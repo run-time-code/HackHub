@@ -75,6 +75,7 @@ Repo Settings > Environments > New environment `staging`, add these secrets:
 | `VERCEL_TOKEN`                | Vercel account token                           |
 | `VERCEL_ORG_ID`               | Vercel team/user id                            |
 | `VERCEL_PROJECT_ID`           | Vercel project id                              |
+| `SENTRY_DSN_FRONTEND`          | Sentry browser project DSN                     |
 
 ## 6. Settings per environment
 
@@ -116,3 +117,5 @@ Templates: `server/.env.example` (dev), `server/.env.staging.example`
 - API: Render dashboard > Deploys > pick the last good deploy > Rollback.
 - Frontend: Vercel dashboard > Deployments > Promote an older deployment.
 - Practice both before the live deployment.
+
+Production release approval, monitoring, backup/restore, and load-test procedures are documented in [production-operations.md](production-operations.md).

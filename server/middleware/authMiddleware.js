@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const requireAuth = (req, res, next) => {
-    const token = req.cookies.accessToken;
+const requireAuth = async (req, res, next) => {
+    const token = req.cookies?.accessToken;
 
     if (!token) {
         return res.status(401).json({
@@ -15,15 +16,44 @@ const requireAuth = (req, res, next) => {
             process.env.ACCESS_TOKEN_SECRET
         );
 
-        req.user = decoded;
+        const user = await User.findById(decoded.id)
+            .select("_id email role deletedAt tokenVersion");
+
+        if (!user || user.deletedAt) {
+            return res.status(401).json({
+                message: "Account not found or deactivated"
+            });
+        }
+
+        const tokenVersion = decoded.tokenVersion ?? 0;
+        const currentTokenVersion = user.tokenVersion ?? 0;
+
+        if (tokenVersion !== currentTokenVersion) {
+            return res.status(401).json({
+                message: "Session revoked. Please log in again."
+            });
+        }
+
+        req.user = {
+            id: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            tokenVersion: currentTokenVersion
+        };
 
         next();
-
     } catch (error) {
-        console.log("Access token error:", error.message);
+        if (error.name === "JsonWebTokenError" ||
+            error.name === "TokenExpiredError") {
+            return res.status(401).json({
+                message: "Invalid or expired access token"
+            });
+        }
 
-        return res.status(401).json({
-            message: "Invalid or expired access token"
+        console.error("Authentication error:", error);
+
+        return res.status(500).json({
+            message: "Authentication error"
         });
     }
 };
@@ -31,14 +61,12 @@ const requireAuth = (req, res, next) => {
 const requireRole = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user) {
-            console.log("Authentication required");
             return res.status(401).json({
                 message: "Authentication required"
             });
         }
 
         if (!allowedRoles.includes(req.user.role)) {
-            console.log("Access forbidden");
             return res.status(403).json({
                 message: "Access forbidden"
             });

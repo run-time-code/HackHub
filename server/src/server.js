@@ -1,8 +1,17 @@
 'use strict';
 
+const Sentry = require('@sentry/node');
 const config = require('./config');
 const logger = require('./utils/logger');
 const createApp = require('./app');
+
+if (config.sentryDsn) {
+  Sentry.init({
+    dsn: config.sentryDsn,
+    environment: config.env,
+    sendDefaultPii: false,
+  });
+}
 
 const app = createApp();
 const server = app.listen(config.port, () => {
