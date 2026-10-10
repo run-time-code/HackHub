@@ -1,4 +1,4 @@
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = ["production", "staging"].includes(process.env.NODE_ENV);
 
 const accessCookieOptions = {
     httpOnly: true,

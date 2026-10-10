@@ -42,6 +42,54 @@ describe('health', () => {
     assert.equal(body.success, true);
   });
 
+  it('auth routes expose CSRF bootstrap and reject mutations without a token', async () => {
+    const bootstrap = await fetch(`${base}/api/auth/csrf-token`);
+    assert.equal(bootstrap.status, 200);
+    const { csrfToken } = await bootstrap.json();
+    const csrfCookie = bootstrap.headers.get('set-cookie').split(';', 1)[0];
+    assert.ok(csrfToken);
+    assert.match(bootstrap.headers.get('set-cookie'), /psifi\.x-csrf-token/);
+
+    const login = await fetch(`${base}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@example.com', password: 'password' }),
+    });
+    assert.equal(login.status, 403);
+
+    const logout = await fetch(`${base}/api/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+        Cookie: csrfCookie,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(logout.status, 200);
+  });
+
+  it('mounted profile and optional OAuth routes respond without a database or provider credentials', async () => {
+    const profile = await fetch(`${base}/api/users/me`);
+    assert.equal(profile.status, 401);
+
+    const oauth = await fetch(`${base}/api/auth/google`);
+    assert.equal(oauth.status, 503);
+  });
+
+  it('credentialed CORS allows the configured frontend origin', async () => {
+    const response = await fetch(`${base}/api/auth/login`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:5173',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type,x-csrf-token',
+      },
+    });
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get('access-control-allow-credentials'), 'true');
+  });
+
   it('unknown routes return the NOT_FOUND envelope', async () => {
     const res = await fetch(`${base}/no-such-route`);
     assert.equal(res.status, 404);
