@@ -25,6 +25,16 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: CSRF_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
       - key: CORS_ORIGIN
         sync: false
       - key: SENTRY_DSN

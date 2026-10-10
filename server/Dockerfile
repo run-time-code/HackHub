@@ -13,7 +13,14 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
+COPY config ./config
+COPY controllers ./controllers
+COPY middleware ./middleware
+COPY models ./models
+COPY routes ./routes
 COPY src ./src
+COPY utils ./utils
+COPY validators ./validators
 
 USER app
 EXPOSE 5000

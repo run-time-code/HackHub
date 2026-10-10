@@ -1,6 +1,7 @@
 const { doubleCsrf } = require("csrf-csrf");
 
-const csrfSecret = process.env.CSRF_SECRET;
+const isProduction = ["production", "staging"].includes(process.env.NODE_ENV);
+const csrfSecret = process.env.CSRF_SECRET || (isProduction ? null : "hackhub-local-csrf-secret-change-before-deploy");
 
 if (!csrfSecret) {
     throw new Error("CSRF_SECRET is missing from environment variables");
@@ -23,7 +24,7 @@ const {
 
     cookieOptions: {
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: isProduction ? "none" : "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production"
     },
