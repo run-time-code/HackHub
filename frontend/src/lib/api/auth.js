@@ -1,3 +1,5 @@
+import { getCsrfToken } from "./csrf";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 function emit401() {
@@ -5,12 +7,33 @@ function emit401() {
 }
 
 async function request(path, { method = "POST", body } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const send = (csrfToken) => {
+    const headers = body ? { "Content-Type": "application/json" } : {};
+
+    if (csrfToken && method !== "GET") {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+
+    return fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      credentials: "include",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  };
+
+  let csrfToken = method === "GET" ? null : await getCsrfToken();
+  let res = await send(csrfToken);
+
+  // The CSRF cookie may have rotated since we last fetched a token;
+  // refresh once and retry.
+  if (res.status === 403 && method !== "GET") {
+    csrfToken = await getCsrfToken({ forceRefresh: true });
+
+    if (csrfToken) {
+      res = await send(csrfToken);
+    }
+  }
 
   let data = null;
   try {
