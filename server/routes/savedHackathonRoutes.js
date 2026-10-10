@@ -12,16 +12,44 @@ const {
     requireAuth
 } = require("../middleware/authMiddleware");
 
+const {
+    doubleCsrfProtection
+} = require("../middleware/csrfMiddleware");
+
 const router = express.Router();
 
-router.post("/save", requireAuth, saveHackathon);
+router.post(
+    "/save",
+    requireAuth,
+    doubleCsrfProtection,
+    saveHackathon
+);
 
-router.post("/unsave", requireAuth, unsaveHackathon);
+router.post(
+    "/unsave",
+    requireAuth,
+    doubleCsrfProtection,
+    unsaveHackathon
+);
 
-router.post("/register", requireAuth, markRegistered);
+router.post(
+    "/register",
+    requireAuth,
+    doubleCsrfProtection,
+    markRegistered
+);
 
-router.post("/notes", requireAuth, addNotes);
+router.post(
+    "/notes",
+    requireAuth,
+    doubleCsrfProtection,
+    addNotes
+);
 
-router.get("/status/:hackathon", requireAuth, getHackathonStatus);
+router.get(
+    "/status/:hackathon",
+    requireAuth,
+    getHackathonStatus
+);
 
 module.exports = router;

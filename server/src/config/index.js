@@ -14,6 +14,8 @@ const base = {
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   jwtSecret: process.env.JWT_SECRET || 'change_me',
   logLevel: process.env.LOG_LEVEL || (env === 'production' ? 'info' : 'debug'),
+  sentryDsn: process.env.SENTRY_DSN || '',
+  metricsToken: process.env.METRICS_TOKEN || '',
   corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim())
