@@ -17,16 +17,19 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
 
+        // NOTE: intentionally no `default` on the provider ids. A null
+        // default is written for every password-only user, and MongoDB's
+        // unique sparse index treats an explicit null as an indexed value —
+        // which made the second user registration fail with E11000.
+        // Leaving the field absent lets the sparse index skip those docs.
         googleId: {
             type: String,
-            default: null,
             sparse: true,
             unique: true
         },
 
         githubId: {
             type: String,
-            default: null,
             sparse: true,
             unique: true
         },
