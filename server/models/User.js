@@ -16,10 +16,25 @@ const userSchema = new mongoose.Schema(
             trim: true
         },
 
+        googleId: {
+    type: String,
+    default: null,
+    sparse: true,
+    unique: true
+},
+
+githubId: {
+    type: String,
+    default: null,
+    sparse: true,
+    unique: true
+},
+
         password: {
-            type: String,
-            required: true
-        },
+    type: String,
+    required: false,
+    select: false
+},
 
         role: {
             type: String,

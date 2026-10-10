@@ -318,7 +318,7 @@ const login = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
             console.log("Invalid email or password");
