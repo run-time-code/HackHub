@@ -11,7 +11,6 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (!token) return;
-    setStatus("verifying");
     verifyEmail(token)
       .then(() => setStatus("success"))
       .catch(() => setStatus("error"));
