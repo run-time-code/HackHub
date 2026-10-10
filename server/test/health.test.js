@@ -8,6 +8,7 @@ process.env.LOG_LEVEL = 'fatal';
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
+const config = require('../src/config');
 const createApp = require('../src/app');
 
 describe('health', () => {
@@ -48,5 +49,24 @@ describe('health', () => {
     assert.equal(body.success, false);
     assert.equal(body.error.code, 'NOT_FOUND');
     assert.ok(body.requestId, 'missing requestId in body');
+  });
+
+  it('metrics are hidden unless the scrape token is supplied', async () => {
+    const previousToken = config.metricsToken;
+    config.metricsToken = 'test-metrics-token';
+
+    try {
+      const hidden = await fetch(`${base}/metrics`);
+      assert.equal(hidden.status, 404);
+
+      const response = await fetch(`${base}/metrics`, {
+        headers: { authorization: 'Bearer test-metrics-token' },
+      });
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /text\/plain/);
+      assert.match(await response.text(), /hackhub_http_requests_total/);
+    } finally {
+      config.metricsToken = previousToken;
+    }
   });
 });

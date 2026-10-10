@@ -27,3 +27,7 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: METRICS_TOKEN
+        sync: false
