@@ -40,6 +40,8 @@ export function AuthProvider({ children }) {
   );
 }
 
+// The provider and its shared hook intentionally live in the same context module.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside an AuthProvider");
