@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -17,24 +18,36 @@ const userSchema = new mongoose.Schema(
         },
 
         googleId: {
-    type: String,
-    default: null,
-    sparse: true,
-    unique: true
-},
+            type: String,
+            default: null,
+            sparse: true,
+            unique: true
+        },
 
-githubId: {
-    type: String,
-    default: null,
-    sparse: true,
-    unique: true
-},
+        githubId: {
+            type: String,
+            default: null,
+            sparse: true,
+            unique: true
+        },
 
         password: {
-    type: String,
-    required: false,
-    select: false
-},
+            type: String,
+            required: false,
+            select: false
+        },
+
+        // Login lockout protection
+        failedLoginAttempts: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+
+        lockUntil: {
+            type: Date,
+            default: null
+        },
 
         role: {
             type: String,
@@ -100,35 +113,45 @@ githubId: {
         },
 
         emailVerified: {
-           type: Boolean,
-           default: false
+            type: Boolean,
+            default: false
         },
 
-emailVerificationTokenHash: {
-    type: String,
-    default: null
-},
+        emailVerificationTokenHash: {
+            type: String,
+            default: null
+        },
 
-emailVerificationTokenExpiresAt: {
+        emailVerificationTokenExpiresAt: {
+            type: Date,
+            default: null
+        },
+
+        passwordResetTokenHash: {
+            type: String,
+            default: null
+        },
+
+        passwordResetTokenExpiresAt: {
+            type: Date,
+            default: null
+        },
+
+        deletedAt: {
     type: Date,
-    default: null
+    default: null,
+    index: true
 },
 
-passwordResetTokenHash: {
-    type: String,
-    default: null
-},
+tokenVersion: {
+    type: Number,
+    default: 0
+}
 
-passwordResetTokenExpiresAt: {
-    type: Date,
-    default: null
-},
     },
     {
         timestamps: true
     }
-
-
 );
 
 module.exports = mongoose.model("User", userSchema);

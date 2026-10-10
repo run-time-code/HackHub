@@ -2,6 +2,11 @@ const express = require("express");
 const passport = require("passport");
 
 const {
+    generateCsrfToken,
+    doubleCsrfProtection
+} = require("../middleware/csrfMiddleware");
+
+const {
     register,
     login,
     refreshToken,
@@ -22,10 +27,23 @@ const {
 } = require("../middleware/authMiddleware");
 
 const {
-    resendVerificationLimiter
+    loginLimiter,
+    registerLimiter,
+    resendVerificationLimiter,
+    passwordResetLimiter,
+    refreshTokenLimiter
 } = require("../middleware/rateLimitMiddleware");
 
 const router = express.Router();
+
+// Generate CSRF token
+router.get("/csrf-token", (req, res) => {
+    const csrfToken = generateCsrfToken(req, res);
+
+    res.status(200).json({
+        csrfToken
+    });
+});
 
 // Google OAuth
 router.get(
@@ -71,30 +89,72 @@ router.get("/oauth-failed", (req, res) => {
     });
 });
 
-// Existing authentication routes
-router.post("/register", register);
-router.post("/login", login);
-router.post("/refresh", refreshToken);
-router.post("/logout", logout);
+// Registration and login
+router.post(
+    "/register",
+    registerLimiter,
+    doubleCsrfProtection,
+    register
+);
 
+router.post(
+    "/login",
+    loginLimiter,
+    doubleCsrfProtection,
+    login
+);
+
+// Token management
+router.post(
+    "/refresh",
+    refreshTokenLimiter,
+    doubleCsrfProtection,
+    refreshToken
+);
+
+router.post(
+    "/logout",
+    doubleCsrfProtection,
+    logout
+);
+
+// Email verification
 router.get("/verify-email", verifyEmail);
 
+// Resend verification email
 router.post(
     "/resend-verification",
     resendVerificationLimiter,
+    doubleCsrfProtection,
     resendVerification
 );
 
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+// Password reset
+router.post(
+    "/forgot-password",
+    passwordResetLimiter,
+    doubleCsrfProtection,
+    forgotPassword
+);
+
+router.post(
+    "/reset-password",
+    passwordResetLimiter,
+    doubleCsrfProtection,
+    resetPassword
+);
 
 // Protected route
-router.get("/protected", requireAuth, (req, res) => {
-    res.json({
-        message: "You accessed a protected route",
-        user: req.user
-    });
-});
+router.get(
+    "/protected",
+    requireAuth,
+    (req, res) => {
+        res.json({
+            message: "You accessed a protected route",
+            user: req.user
+        });
+    }
+);
 
 // Admin-only route
 router.get(

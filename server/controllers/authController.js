@@ -295,37 +295,62 @@ const resendVerification = async (req, res) => {
 // LOGIN
 // ==============================
 
+
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email =
+            typeof req.body.email === "string"
+                ? req.body.email.trim().toLowerCase()
+                : "";
+
+        const { password } = req.body;
 
         if (!email || !password) {
-            console.log(
-                "Email and password are required"
-            );
-
             return res.status(400).json({
-                message:
-                    "Email and password are required"
+                message: "Email and password are required"
             });
         }
 
         if (!validator.isEmail(email)) {
-            console.log("Invalid email format");
-
             return res.status(400).json({
                 message: "Invalid email format"
             });
         }
 
-        const user = await User.findOne({ email }).select("+password");
+        const user = await User.findOne({ email })
+            .select("+password");
 
-        if (!user) {
-            console.log("Invalid email or password");
-
+        // Use a generic response for unknown accounts.
+        if (!user || !user.password) {
             return res.status(401).json({
                 message: "Invalid email or password"
             });
+        }
+
+        const now = new Date();
+
+        // Enforce an active account lockout.
+        if (user.lockUntil && user.lockUntil > now) {
+            const retryAfterSeconds = Math.ceil(
+                (user.lockUntil.getTime() - now.getTime()) / 1000
+            );
+
+            res.set(
+                "Retry-After",
+                String(retryAfterSeconds)
+            );
+
+            return res.status(423).json({
+                message:
+                    "Account temporarily locked due to failed login attempts. Please try again later.",
+                retryAfterSeconds
+            });
+        }
+
+        // Reset expired lockout state before checking the password.
+        if (user.lockUntil && user.lockUntil <= now) {
+            user.failedLoginAttempts = 0;
+            user.lockUntil = null;
         }
 
         const passwordMatch = await bcrypt.compare(
@@ -334,45 +359,69 @@ const login = async (req, res) => {
         );
 
         if (!passwordMatch) {
-            console.log("Invalid email or password");
+            user.failedLoginAttempts =
+                (user.failedLoginAttempts || 0) + 1;
+
+            const MAX_FAILED_ATTEMPTS = 5;
+            const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+            if (
+                user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS
+            ) {
+                user.lockUntil = new Date(
+                    Date.now() + LOCKOUT_DURATION_MS
+                );
+            }
+
+            await user.save();
+
+            // Do not disclose the remaining attempts.
+            if (user.lockUntil && user.lockUntil > new Date()) {
+                const retryAfterSeconds = Math.ceil(
+                    (user.lockUntil.getTime() - Date.now()) / 1000
+                );
+
+                res.set(
+                    "Retry-After",
+                    String(retryAfterSeconds)
+                );
+
+                return res.status(423).json({
+                    message:
+                        "Account temporarily locked due to failed login attempts. Please try again later.",
+                    retryAfterSeconds
+                });
+            }
 
             return res.status(401).json({
                 message: "Invalid email or password"
             });
         }
 
-        // User must verify email before login
+        // Require verified email before completing login.
         if (!user.emailVerified) {
-            console.log(
-                `Login blocked: email not verified - ${user.email}`
-            );
-
             return res.status(403).json({
                 message:
                     "Please verify your email before logging in"
             });
         }
 
-        // Generate access token
-        const accessToken =
-            generateAccessToken(user);
+        // Clear lockout state after a successful password check.
+        user.failedLoginAttempts = 0;
+        user.lockUntil = null;
 
-        // Generate refresh token
-        const refreshToken =
-            generateRefreshToken();
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken();
 
-        // Hash refresh token before storing it
         const refreshTokenHash = crypto
             .createHash("sha256")
             .update(refreshToken)
             .digest("hex");
 
-        user.refreshTokenHash =
-            refreshTokenHash;
+        user.refreshTokenHash = refreshTokenHash;
 
         await user.save();
 
-        // Send tokens as HTTP-only cookies
         res.cookie(
             "accessToken",
             accessToken,
@@ -385,10 +434,6 @@ const login = async (req, res) => {
             refreshCookieOptions
         );
 
-        console.log(
-            `Login successful: ${user.email}`
-        );
-
         return res.status(200).json({
             message: "Login successful",
             user: {
@@ -398,7 +443,6 @@ const login = async (req, res) => {
                 role: user.role
             }
         });
-
     } catch (error) {
         console.error("Login error:", error);
 
