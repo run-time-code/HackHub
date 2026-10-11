@@ -25,7 +25,8 @@ const organizerSchema = new mongoose.Schema(
         }
     },
     {
-        timestamps: true
+        timestamps: true,
+        collection: "Organizers"
     }
 );
 

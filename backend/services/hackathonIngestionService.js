@@ -2,6 +2,8 @@ const Hackathon = require("../models/Hackathon");
 const Organizer = require("../models/Organizer");
 const Source = require("../models/Source");
 const Tag = require("../models/Tag");
+const IngestionQuarantine = require("../models/IngestionQuarantine");
+const { makeCanonicalKey } = require("../utils/canonicalHackathon");
 
 const {
     invalidateHackathonCache
@@ -69,9 +71,18 @@ const validateHackathon = (data) => {
         errors.push("source is required");
     }
 
+    if (data.prize !== undefined && (!Number.isFinite(Number(data.prize)) || Number(data.prize) < 0)) {
+        errors.push("prize must be a non-negative number");
+    }
+
+    for (const field of ["registrationDeadline", "eventStartDate", "eventEndDate"]) {
+        if (data[field] && Number.isNaN(new Date(data[field]).getTime())) {
+            errors.push(`${field} must be a valid date`);
+        }
+    }
+
     return errors;
 };
-
 
 // ======================================================
 // UPSERT ONE HACKATHON
@@ -86,7 +97,6 @@ const upsertHackathon = async (data) => {
     const errors = validateHackathon(data);
 
     if (errors.length > 0) {
-
         return {
             success: false,
             quarantined: true,
@@ -205,6 +215,21 @@ const upsertHackathon = async (data) => {
             externalId: externalId
         });
 
+    const canonicalKey =
+        makeCanonicalKey(
+            data.title,
+            organizerName,
+            data.eventStartDate
+        );
+
+    const canonicalMatch = canonicalKey
+        ? await Hackathon.findOne({
+            canonicalKey,
+            isCanonical: true,
+            source: { $ne: source._id }
+        })
+        : null;
+
 
     // --------------------------------------------------
     // PREPARE HACKATHON DATA
@@ -219,7 +244,7 @@ const upsertHackathon = async (data) => {
             data.slug ||
             createSlug(
                 data.title,
-                externalId
+                `${source._id}-${externalId}`
             ),
 
         description:
@@ -236,6 +261,9 @@ const upsertHackathon = async (data) => {
 
         tags:
             tagIds,
+
+        tagNames:
+            tagNames.map((name) => name.toLowerCase()),
 
         skills:
             normalizeArray(data.skills),
@@ -292,6 +320,54 @@ const upsertHackathon = async (data) => {
             data.isActive !== false
     };
 
+    if (canonicalMatch) {
+        const listing = await Hackathon.findOneAndUpdate(
+            {
+                source: source._id,
+                externalId
+            },
+            {
+                $set: {
+                    ...hackathonData,
+                    canonicalKey,
+                    isCanonical: false
+                },
+                $addToSet: {
+                    sourceListings: {
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+                runValidators: true
+            }
+        );
+
+        await Hackathon.updateOne(
+            { _id: canonicalMatch._id },
+            {
+                $addToSet: {
+                    sourceListings: {
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }
+                }
+            }
+        );
+
+        return {
+            success: true,
+            created: !existing,
+            updated: !!existing,
+            canonicalId: canonicalMatch._id,
+            hackathon: listing
+        };
+    }
 
     // --------------------------------------------------
     // UPSERT HACKATHON
@@ -304,7 +380,18 @@ const upsertHackathon = async (data) => {
                 externalId: externalId
             },
             {
-                $set: hackathonData
+                $set: {
+                    ...hackathonData,
+                    canonicalKey,
+                    isCanonical: true
+                },
+                $setOnInsert: {
+                    sourceListings: [{
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }]
+                }
             },
             {
                 upsert: true,
@@ -313,6 +400,18 @@ const upsertHackathon = async (data) => {
             }
         );
 
+    await Hackathon.updateOne(
+        { _id: hackathon._id },
+        {
+            $addToSet: {
+                sourceListings: {
+                    source: source._id,
+                    externalId,
+                    sourceUrl: data.sourceUrl || ""
+                }
+            }
+        }
+    );
 
     // --------------------------------------------------
     // RESULT
@@ -379,6 +478,11 @@ const ingestHackathons = async (records) => {
 
             if (response.quarantined) {
 
+                await IngestionQuarantine.create({
+                    record,
+                    issues: response.errors
+                });
+
                 result.quarantined++;
 
                 result.errors.push({
@@ -419,6 +523,19 @@ const ingestHackathons = async (records) => {
         catch (error) {
 
             result.failed++;
+
+            try {
+                await IngestionQuarantine.create({
+                    record,
+                    issues: [error.message],
+                    status: "failed"
+                });
+            } catch (quarantineError) {
+                console.error(
+                    "Failed to persist ingestion quarantine record:",
+                    quarantineError.message
+                );
+            }
 
             result.errors.push({
 

@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: HackHub Hackathons API
+  version: 1.0.0
+  description: Read-only API for searching and retrieving hackathons.
+servers:
+  - url: http://localhost:5000/api
+paths:
+  /hackathons:
+    get:
+      summary: Search and filter hackathons
+      description: Returns canonical hackathons with facet counts. Cursor values are opaque and must be reused with the same sort.
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: skills
+          description: Comma-separated skill values.
+          schema: { type: string }
+        - in: query
+          name: domain
+          description: Comma-separated domain values.
+          schema: { type: string }
+        - in: query
+          name: mode
+          schema: { type: string, enum: [ONLINE, OFFLINE, HYBRID] }
+        - in: query
+          name: location
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [upcoming, ongoing, completed, inactive] }
+        - in: query
+          name: source
+          description: MongoDB ObjectId for a source.
+          schema: { type: string }
+        - in: query
+          name: minPrize
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: maxPrize
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: fromDate
+          description: Inclusive registration deadline start (ISO 8601).
+          schema: { type: string, format: date-time }
+        - in: query
+          name: toDate
+          description: Inclusive registration deadline end (ISO 8601).
+          schema: { type: string, format: date-time }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [deadline, prize_high, prize_low, newest] }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - in: query
+          name: cursor
+          description: Opaque cursor returned by the previous response.
+          schema: { type: string }
+        - in: header
+          name: If-None-Match
+          schema: { type: string }
+      responses:
+        "200":
+          description: Hackathon page.
+          headers:
+            ETag:
+              schema: { type: string }
+            Cache-Control:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HackathonListResponse"
+        "304":
+          description: Response has not changed.
+        "400":
+          description: Invalid query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to fetch hackathons.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /hackathons/{idOrSlug}:
+    get:
+      summary: Get a hackathon by MongoDB ID or slug
+      parameters:
+        - in: path
+          name: idOrSlug
+          required: true
+          schema: { type: string }
+        - in: header
+          name: If-None-Match
+          schema: { type: string }
+      responses:
+        "200":
+          description: Hackathon detail.
+          headers:
+            ETag:
+              schema: { type: string }
+            Cache-Control:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { type: object, additionalProperties: true }
+        "304":
+          description: Response has not changed.
+        "404":
+          description: Hackathon not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to fetch hackathon.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HackathonListResponse:
+      type: object
+      required: [success, data, pagination, facets]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { type: object, additionalProperties: true }
+        pagination:
+          type: object
+          required: [limit, hasMore, nextCursor]
+          properties:
+            limit: { type: integer }
+            hasMore: { type: boolean }
+            nextCursor: { type: string, nullable: true }
+        facets:
+          type: object
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          required: [message]
+          properties:
+            message: { type: string }

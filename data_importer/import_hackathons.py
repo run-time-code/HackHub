@@ -1,6 +1,7 @@
 import os
 import re
 import requests
+import unicodedata
 
 from datetime import datetime, timezone
 
@@ -41,6 +42,7 @@ hackathons_collection = db["Hackathons"]
 organizers_collection = db["Organizers"]
 sources_collection = db["Sources"]
 tags_collection = db["Tags"]
+quarantine_collection = db["IngestionQuarantine"]
 
 print("Connected to MongoDB")
 
@@ -94,6 +96,30 @@ def normalize_array(value):
     ]
 
 
+def canonical_key(title, organizer_name, event_start_date):
+
+    if not event_start_date:
+        return None
+
+    def normalize(value):
+        return re.sub(
+            r"[^a-z0-9]+",
+            " ",
+            unicodedata.normalize("NFKC", str(value or "")).lower()
+        ).strip()
+
+    if event_start_date.tzinfo is None:
+        event_start_date = event_start_date.replace(tzinfo=timezone.utc)
+    else:
+        event_start_date = event_start_date.astimezone(timezone.utc)
+
+    return "|".join([
+        normalize(title),
+        normalize(organizer_name),
+        event_start_date.date().isoformat()
+    ])
+
+
 def parse_date(value):
 
     if not value:
@@ -104,8 +130,8 @@ def parse_date(value):
             str(value).replace("Z", "+00:00")
         )
 
-    except Exception:
-        return None
+    except ValueError as error:
+        raise ValueError("date must be a valid ISO-8601 value") from error
 
 
 # =========================================================
@@ -343,9 +369,8 @@ def convert_record(item):
             item.get("prize") or 0
         )
 
-    except Exception:
-
-        prize = 0
+    except (TypeError, ValueError) as error:
+        raise ValueError("prize must be a number") from error
 
     source_id = get_source_id(
         source_name
@@ -355,9 +380,10 @@ def convert_record(item):
         organizer_name
     )
 
-    tag_ids = get_tag_ids(
-        item.get("tags")
-    )
+    tag_names = normalize_array(item.get("tags"))
+    tag_ids = get_tag_ids(tag_names)
+    event_start_date = parse_date(item.get("eventStart"))
+    source_url = item.get("url", "")
 
     return {
 
@@ -367,7 +393,7 @@ def convert_record(item):
         "slug":
             create_slug(
                 title,
-                external_id
+                f"{source_id}-{external_id}"
             ),
 
         "description":
@@ -387,6 +413,19 @@ def convert_record(item):
 
         "tags":
             tag_ids,
+
+        "tagNames":
+            [tag.lower() for tag in tag_names],
+
+        "canonicalKey":
+            canonical_key(
+                title,
+                organizer_name,
+                event_start_date
+            ),
+
+        "isCanonical":
+            True,
 
         "skills":
             normalize_array(
@@ -411,9 +450,7 @@ def convert_record(item):
             registration_deadline,
 
         "eventStartDate":
-            parse_date(
-                item.get("eventStart")
-            ),
+            event_start_date,
 
         "eventEndDate":
             parse_date(
@@ -427,10 +464,13 @@ def convert_record(item):
             status,
 
         "sourceUrl":
-            item.get(
-                "url",
-                ""
-            ),
+            source_url,
+
+        "sourceListings": [{
+            "source": source_id,
+            "externalId": external_id,
+            "sourceUrl": source_url
+        }],
 
         "isActive":
             True,
@@ -463,6 +503,8 @@ def import_hackathons():
     quarantined = []
 
     current_keys = set()
+    source_ids = set()
+    canonical_groups = {}
 
 
     # -----------------------------------------------------
@@ -493,9 +535,8 @@ def import_hackathons():
             if not external_id:
 
                 quarantined.append({
-                    "title": title,
-                    "reason":
-                        "Missing external ID"
+                    "record": item,
+                    "errors": ["Missing external ID"]
                 })
 
                 continue
@@ -506,10 +547,8 @@ def import_hackathons():
             if not title:
 
                 quarantined.append({
-                    "externalId":
-                        external_id,
-                    "reason":
-                        "Missing title"
+                    "record": item,
+                    "errors": ["Missing title"]
                 })
 
                 continue
@@ -524,7 +563,54 @@ def import_hackathons():
                     record["externalId"]
                 )
             )
+            source_ids.add(record["source"])
 
+            source_listing = {
+                "source": record["source"],
+                "externalId": record["externalId"],
+                "sourceUrl": record.get("sourceUrl", "")
+            }
+            record.pop("sourceListings", None)
+
+            canonical_identity = None
+            key = record.get("canonicalKey")
+            if key:
+                canonical_identity = canonical_groups.get(key)
+                if canonical_identity is None:
+                    existing_canonical = hackathons_collection.find_one(
+                        {"canonicalKey": key, "isCanonical": True},
+                        {"source": 1, "externalId": 1}
+                    )
+                    if existing_canonical:
+                        canonical_identity = (
+                            existing_canonical["source"],
+                            existing_canonical["externalId"]
+                        )
+                    else:
+                        canonical_identity = (
+                            record["source"],
+                            record["externalId"]
+                        )
+                    canonical_groups[key] = canonical_identity
+
+            if canonical_identity and canonical_identity != (
+                record["source"],
+                record["externalId"]
+            ):
+                record["isCanonical"] = False
+                operations.append(
+                    UpdateOne(
+                        {
+                            "source": canonical_identity[0],
+                            "externalId": canonical_identity[1]
+                        },
+                        {
+                            "$addToSet": {
+                                "sourceListings": source_listing
+                            }
+                        }
+                    )
+                )
 
             operations.append(
                 UpdateOne(
@@ -537,12 +623,15 @@ def import_hackathons():
                     },
 
                     {
-                        "$set":
-                            record,
+                        "$set": record,
 
                         "$setOnInsert": {
                             "createdAt":
                                 now()
+                        },
+
+                        "$addToSet": {
+                            "sourceListings": source_listing
                         }
                     },
 
@@ -554,14 +643,8 @@ def import_hackathons():
         except Exception as error:
 
             quarantined.append({
-                "title":
-                    item.get(
-                        "title",
-                        "Unknown"
-                    ),
-
-                "reason":
-                    str(error)
+                "record": item,
+                "errors": [str(error)]
             })
 
 
@@ -576,7 +659,7 @@ def import_hackathons():
 
         result = hackathons_collection.bulk_write(
             operations,
-            ordered=False
+            ordered=True
         )
 
         inserted = result.upserted_count
@@ -589,7 +672,8 @@ def import_hackathons():
 
     existing_records = hackathons_collection.find(
         {
-            "isActive": True
+            "isActive": True,
+            "source": {"$in": list(source_ids)}
         },
 
         {
@@ -637,6 +721,17 @@ def import_hackathons():
             }
         )
 
+    if quarantined:
+        quarantine_collection.insert_many([
+            {
+                "record": item["record"],
+                "issues": item["errors"],
+                "status": "pending",
+                "createdAt": now(),
+                "updatedAt": now()
+            }
+            for item in quarantined
+        ])
 
     # -----------------------------------------------------
     # OUTPUT

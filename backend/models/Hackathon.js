@@ -40,6 +40,34 @@ const hackathonSchema = new mongoose.Schema(
             trim: true
         },
 
+        canonicalKey: {
+            type: String,
+            default: null
+        },
+
+        isCanonical: {
+            type: Boolean,
+            default: true
+        },
+
+        sourceListings: [
+            new mongoose.Schema({
+                source: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Source",
+                    required: true
+                },
+                externalId: {
+                    type: String,
+                    required: true
+                },
+                sourceUrl: {
+                    type: String,
+                    default: ""
+                }
+            }, { _id: false })
+        ],
+
         tags: [
             {
                 type: mongoose.Schema.Types.ObjectId,
@@ -53,6 +81,11 @@ const hackathonSchema = new mongoose.Schema(
         },
 
         domain: {
+            type: [String],
+            default: []
+        },
+
+        tagNames: {
             type: [String],
             default: []
         },
@@ -118,12 +151,16 @@ hackathonSchema.index(
     { unique: true }
 );
 
+hackathonSchema.index({ canonicalKey: 1, isCanonical: 1 });
+hackathonSchema.index({ "sourceListings.source": 1 });
+
 // Text search
 hackathonSchema.index({
     title: "text",
     description: "text",
     skills: "text",
-    domain: "text"
+    domain: "text",
+    tagNames: "text"
 });
 
 // Filters
@@ -133,12 +170,9 @@ hackathonSchema.index({
     status: 1
 });
 
-hackathonSchema.index({
-    registrationDeadline: 1
-});
-
-hackathonSchema.index({
-    prize: 1
-});
+hackathonSchema.index({ registrationDeadline: 1, _id: 1 });
+hackathonSchema.index({ prize: 1, _id: 1 });
+hackathonSchema.index({ prize: -1, _id: 1 });
+hackathonSchema.index({ createdAt: -1, _id: -1 });
 
 module.exports = mongoose.model("Hackathon", hackathonSchema);

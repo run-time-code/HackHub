@@ -2,7 +2,14 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        const configuredPoolSize = Number(process.env.MONGODB_MAX_POOL_SIZE);
+        const maxPoolSize = Number.isInteger(configuredPoolSize) && configuredPoolSize > 0
+            ? configuredPoolSize
+            : 10;
+        await mongoose.connect(process.env.MONGODB_URI, {
+            maxPoolSize,
+            serverSelectionTimeoutMS: 10000
+        });
 
         console.log("MongoDB connected successfully");
     } catch (error) {
