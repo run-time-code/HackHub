@@ -116,3 +116,34 @@ before starting. Source is mounted, so edits under `src/` reload via nodemon.
 - `npm start` — production run
 
 Health: `GET /health` and `GET /api/health`.
+
+### Teams (`/teams`, also served under `/api/teams`)
+
+- `POST /teams` (auth) — create a team for a hackathon; caller becomes leader.
+- `GET /teams?hackathonId=<id>` (public) — list teams linked to one hackathon,
+  with optional `status`, `page`, `limit`.
+- `GET /teams/:id` (public) — one team.
+- `PATCH /teams/:id` (auth, leader only) — edit `name`, `description`,
+  `rolesNeeded`, `maxTeamSize`, `status`. `members`, `leader` and `hackathon`
+  are immutable here; seats change through the join-request flow.
+- `DELETE /teams/:id` (auth, leader only).
+
+Auth accepts the login `accessToken` cookie or `Authorization: Bearer <token>`.
+Responses follow the shared `{ success, data, requestId }` envelope.
+
+### Teammate discovery (`GET /users/discover`, also under `/api/...`)
+
+Login required. Finds users by `skills` (comma-separated, best match first),
+`availability` and the `lookingForTeam` switch (defaults to `true`).
+
+Privacy: only users who opted in (`discoverable`) are ever listed, and the
+card exposes `id`, `name`, `skills`, `availability`, `lookingForTeam` and
+`matchCount` only — no email, password or tokens.
+
+### Staging
+
+- Blueprint: `render.yaml` (API on Render, `develop` branch, health check `/health`).
+- Pipeline: `.github/workflows/deploy-staging.yml` (push to `develop` triggers
+  Render deploy, Vercel frontend deploy, then smoke checks).
+- Runbook: `docs/staging.md`. Staging env template: `.env.staging.example`.
+- Smoke: `STAGING_API_URL=https://<staging-api> npm run smoke:staging`.

@@ -11,6 +11,8 @@ servers:
 tags:
   - name: Authentication
     description: User authentication and session management
+  - name: Teams
+    description: Team collaboration for hackathons
 
 paths:
 
@@ -227,7 +229,186 @@ paths:
         "500":
           description: Server error
 
+  /teams:
+    get:
+      tags:
+        - Teams
+      summary: List teams linked to a hackathon
+      parameters:
+        - name: hackathonId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, closed]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated team list
+        "400":
+          description: hackathonId missing or invalid
+    post:
+      tags:
+        - Teams
+      summary: Create a team for a hackathon
+      description: Requires authentication. The caller becomes the team leader.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeamRequest"
+      responses:
+        "201":
+          description: Team created
+        "400":
+          description: Invalid input
+        "401":
+          description: Authentication required
+
+  /teams/{id}:
+    get:
+      tags:
+        - Teams
+      summary: Get one team by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team details
+        "400":
+          description: Invalid team id
+        "404":
+          description: Team not found
+    patch:
+      tags:
+        - Teams
+      summary: Update a team
+      description: Only the team leader can update. Members, leader and hackathon cannot be changed here.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamRequest"
+      responses:
+        "200":
+          description: Team updated
+        "400":
+          description: Invalid input
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the team leader can do this
+        "404":
+          description: Team not found
+    delete:
+      tags:
+        - Teams
+      summary: Delete a team
+      description: Only the team leader can delete.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team deleted
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the team leader can do this
+        "404":
+          description: Team not found
+
+  /users/discover:
+    get:
+      tags:
+        - Teams
+      summary: Discover teammates by skills and availability
+      description: Login required. Only users who opted in (looking for a team and discoverable) are listed, best skill match first. Contact details are never exposed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: skills
+          in: query
+          required: false
+          schema:
+            type: string
+          example: react,node
+        - name: availability
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, limited, unavailable]
+        - name: lookingForTeam
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Ranked teammate list
+        "400":
+          description: Invalid filter value
+        "401":
+          description: Authentication required
+
 components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   schemas:
 
@@ -288,3 +469,106 @@ components:
           type: string
           format: password
           example: NewPassword123
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        hackathon:
+          type: string
+        leader:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                type: string
+              role:
+                type: string
+              joinedAt:
+                type: string
+                format: date-time
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+        maxTeamSize:
+          type: integer
+        size:
+          type: integer
+        openSlots:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTeamRequest:
+      type: object
+      required:
+        - name
+        - hackathonId
+      properties:
+        name:
+          type: string
+          example: Pixel Builders
+        hackathonId:
+          type: string
+        description:
+          type: string
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+          example: [designer, backend]
+        maxTeamSize:
+          type: integer
+          default: 4
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rolesNeeded:
+          type: array
+          items:
+            type: string
+        maxTeamSize:
+          type: integer
+        status:
+          type: string
+          enum: [open, closed]
+
+    TeammateCard:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        availability:
+          type: string
+          enum: [available, limited, unavailable]
+        lookingForTeam:
+          type: boolean
+        matchCount:
+          type: integer
