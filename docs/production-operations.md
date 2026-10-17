@@ -4,7 +4,7 @@
 
 The production workflow runs on pushes to `main` and manual dispatch. Before the first release, create a GitHub Environment named `production`, restrict it to `main`, and require an independent reviewer. The deployment job waits at that environment after backend tests and frontend lint/build pass.
 
-Provision a dedicated Render API service from `server/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. OAuth credentials are optional; configure each provider's client ID, secret, and callback URL to enable it. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative.
+Provision a dedicated Render API service from `apps/api/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. OAuth credentials are optional; configure each provider's client ID, secret, and callback URL to enable it. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative.
 
 Add these secrets to the GitHub `production` environment:
 
@@ -33,7 +33,7 @@ MONGODB_URI='...' \
 RESTORE_MONGODB_URI='...' \
 RESTORE_TARGET_CONFIRMATION=isolated-non-production \
 BACKUP_DIR='/secure/backup/path' \
-bash server/scripts/backup-restore-drill.sh
+bash apps/api/scripts/backup-restore-drill.sh
 ```
 
 The drill writes and hashes a compressed archive, restores into the target database, then compares collection names and document counts. Never point `RESTORE_MONGODB_URI` at production: the restore uses `--drop` on the target collections. Copy verified archives to encrypted off-host storage and record the drill date, checksum, operator, and restore duration. Repeat after schema migrations and on a regular schedule.
@@ -56,4 +56,4 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, and teammate-discovery routes together. The separate `backend/` package contains hackathon browse/search handlers but is not installed or mounted by the active `server/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.
+The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, and teammate-discovery routes together. The separate `apps/backend-prototype/` package contains hackathon browse/search handlers but is not installed or mounted by the active `apps/api/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.

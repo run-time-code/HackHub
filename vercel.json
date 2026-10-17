@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build --workspace @hackhub/web",
+  "outputDirectory": "apps/web/dist",
   "framework": "vite"
 }
