@@ -35,12 +35,12 @@ Existing records need the data/search migration once before deploying the new sc
 
 ## Freeze
 
-This is the backend's documented initial schema/index plan (Week 1). Treat changes to required fields, relationship cardinality, or unique indexes as schema changes and review/migrate existing records before deployment.
+**Baseline freeze: 2026-10-16.** This records the Week 1 schema and index baseline implemented in this repository. Treat changes to required fields, relationship cardinality, collection names, or unique indexes as schema changes; review migration and importer compatibility before deployment. This repository record does not represent approval by the project team; record that approval separately.
 
 ## Database deployment checklist
 
 - Use a separate Atlas cluster/database user and `MONGODB_URI` for each environment; grant the application user only the database role needed to read/write the application database, not project/cluster administration.
 - Keep connection strings and importer API keys in environment secrets, never in source control. Configure `MONGODB_MAX_POOL_SIZE` per deployment; the backend defaults to 10 connections and a 10-second server-selection timeout.
-- Run the API and importer against the same database name and collection names. The importer currently targets `HackHub`.
+- Run the API and importer against the same database name and collection names. Both target `HackHub` by default; set `MONGODB_DATABASE` only when intentionally configuring another matching database for both processes.
 - Seed local development data with `$env:NODE_ENV="development"; npm run seed` in PowerShell. The script refuses to run otherwise unless `ALLOW_SEED_DATA=true` is explicitly set.
 - After deploying the tag text-index change, run `npm run backfill:tag-search` once before relying on tag search.

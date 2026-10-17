@@ -6,6 +6,7 @@ const Hackathon = require("../models/Hackathon");
 const Organizer = require("../models/Organizer");
 const Source = require("../models/Source");
 const Tag = require("../models/Tag");
+const { syncHackathonReminders } = require("../services/syncHackathonReminders");
 
 const seed = async () => {
     if (process.env.NODE_ENV !== "development" && process.env.ALLOW_SEED_DATA !== "true") {
@@ -30,7 +31,7 @@ const seed = async () => {
         { upsert: true, new: true }
     );
 
-    await Hackathon.findOneAndUpdate(
+    const hackathon = await Hackathon.findOneAndUpdate(
         { source: source._id, externalId: "hackhub-sample-001" },
         {
             $set: {
@@ -47,6 +48,7 @@ const seed = async () => {
                 mode: "ONLINE",
                 location: "Online",
                 registrationDeadline: new Date("2099-12-01T00:00:00.000Z"),
+                submissionDeadline: new Date("2099-12-14T00:00:00.000Z"),
                 eventStartDate: new Date("2099-12-15T00:00:00.000Z"),
                 eventEndDate: new Date("2099-12-16T00:00:00.000Z"),
                 prize: 1000,
@@ -64,6 +66,8 @@ const seed = async () => {
         },
         { upsert: true, new: true, runValidators: true }
     );
+
+    await syncHackathonReminders(hackathon);
 
     console.log("Development sample data seeded.");
 };

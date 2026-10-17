@@ -8,6 +8,7 @@ const { makeCanonicalKey } = require("../utils/canonicalHackathon");
 const {
     invalidateHackathonCache
 } = require("./cacheService");
+const { syncHackathonReminders } = require("./syncHackathonReminders");
 
 
 // ======================================================
@@ -75,7 +76,12 @@ const validateHackathon = (data) => {
         errors.push("prize must be a non-negative number");
     }
 
-    for (const field of ["registrationDeadline", "eventStartDate", "eventEndDate"]) {
+    for (const field of [
+        "registrationDeadline",
+        "submissionDeadline",
+        "eventStartDate",
+        "eventEndDate"
+    ]) {
         if (data[field] && Number.isNaN(new Date(data[field]).getTime())) {
             errors.push(`${field} must be a valid date`);
         }
@@ -293,6 +299,13 @@ const upsertHackathon = async (data) => {
                 )
                 : null,
 
+        submissionDeadline:
+            data.submissionDeadline
+                ? new Date(
+                    data.submissionDeadline
+                )
+                : null,
+
         eventStartDate:
             data.eventStartDate
                 ? new Date(
@@ -455,6 +468,9 @@ const ingestHackathons = async (records) => {
         failed:
             0,
 
+        reminderSyncFailures:
+            0,
+
         errors:
             []
     };
@@ -496,6 +512,28 @@ const ingestHackathons = async (records) => {
                 });
 
                 continue;
+            }
+
+            try {
+                const hackathonForReminders = response.canonicalId
+                    ? await Hackathon.findById(response.canonicalId)
+                    : response.hackathon;
+
+                if (!hackathonForReminders) {
+                    throw new Error("Saved hackathon was not found for reminder sync");
+                }
+
+                await syncHackathonReminders(hackathonForReminders);
+            } catch (error) {
+                result.reminderSyncFailures++;
+                console.error(
+                    "Failed to create hackathon reminder jobs:",
+                    error.message
+                );
+                result.errors.push({
+                    title: record.title || "Unknown",
+                    reminderError: error.message
+                });
             }
 
 

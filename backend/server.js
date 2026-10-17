@@ -1,10 +1,16 @@
 require("dotenv").config();
 
 const express = require("express");
+const path = require("path");
 const connectDB = require("./config/db");
 const { connectRedis } = require("./config/redis");
 
 const hackathonRoutes = require("./routes/hackathonRoutes");
+const authRoutes = require("./routes/authRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const userRoutes = require("./routes/userRoutes");
+
+const { scheduleReminderJobs } = require("./services/reminderScheduler");
 
 const app = express();
 
@@ -15,6 +21,8 @@ const startServer = async () => {
         await connectDB();
         await connectRedis();
 
+        scheduleReminderJobs();
+
         app.get("/", (req, res) => {
             res.json({
                 success: true,
@@ -22,7 +30,21 @@ const startServer = async () => {
             });
         });
 
+        app.get("/api-docs/openapi.yaml", (req, res, next) => {
+            res.type("application/yaml").sendFile(
+                path.join(__dirname, "docs", "openapi.yaml"),
+                (error) => {
+                    if (error) {
+                        next(error);
+                    }
+                }
+            );
+        });
+
         app.use("/api/hackathons", hackathonRoutes);
+        app.use("/api/auth", authRoutes);
+        app.use("/api/notifications", notificationRoutes);
+        app.use("/api/users", userRoutes);
 
         const PORT = process.env.PORT || 5000;
 

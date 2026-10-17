@@ -6,7 +6,9 @@ const connectDB = async () => {
         const maxPoolSize = Number.isInteger(configuredPoolSize) && configuredPoolSize > 0
             ? configuredPoolSize
             : 10;
+        const databaseName = process.env.MONGODB_DATABASE || "HackHub";
         await mongoose.connect(process.env.MONGODB_URI, {
+            dbName: databaseName,
             maxPoolSize,
             serverSelectionTimeoutMS: 10000
         });

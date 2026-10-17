@@ -18,7 +18,8 @@ const userSchema = new mongoose.Schema(
 
         password: {
             type: String,
-            required: true
+            required: true,
+            select: false
         },
 
         role: {
@@ -67,7 +68,14 @@ const userSchema = new mongoose.Schema(
 
         refreshTokenHash: {
             type: String,
-            default: null
+            default: null,
+            select: false
+        },
+
+        refreshTokenExpiresAt: {
+            type: Date,
+            default: null,
+            select: false
         },
 
         emailVerified: {
@@ -77,22 +85,109 @@ const userSchema = new mongoose.Schema(
 
         emailVerificationTokenHash: {
             type: String,
-            default: null
+            default: null,
+            select: false
         },
 
         emailVerificationTokenExpiresAt: {
             type: Date,
-            default: null
+            default: null,
+            select: false
         },
 
         passwordResetTokenHash: {
             type: String,
-            default: null
+            default: null,
+            select: false
         },
 
         passwordResetTokenExpiresAt: {
             type: Date,
-            default: null
+            default: null,
+            select: false
+        },
+
+        timeZone: {
+            type: String,
+            default: "UTC",
+            trim: true,
+            validate: {
+                validator(value) {
+                    try {
+                        new Intl.DateTimeFormat("en-US", {
+                            timeZone: value
+                        });
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                },
+                message: "timeZone must be a valid IANA time zone"
+            }
+        },
+
+        reminderPreferences: {
+            enabled: {
+                type: Boolean,
+                default: true
+            },
+
+            emailReminders: {
+                type: Boolean,
+                default: true
+            },
+
+            registrationDeadlineHours: {
+                type: [Number],
+                default: [24],
+                validate: {
+                    validator(values) {
+                        return values.every(
+                            (value) => Number.isFinite(value) && value >= 0
+                        );
+                    },
+                    message: "Reminder offsets must be non-negative numbers"
+                }
+            },
+
+            submissionDeadlineHours: {
+                type: [Number],
+                default: [24],
+                validate: {
+                    validator(values) {
+                        return values.every(
+                            (value) => Number.isFinite(value) && value >= 0
+                        );
+                    },
+                    message: "Reminder offsets must be non-negative numbers"
+                }
+            },
+
+            eventStartHours: {
+                type: [Number],
+                default: [24],
+                validate: {
+                    validator(values) {
+                        return values.every(
+                            (value) => Number.isFinite(value) && value >= 0
+                        );
+                    },
+                    message: "Reminder offsets must be non-negative numbers"
+                }
+            },
+
+            eventEndHours: {
+                type: [Number],
+                default: [],
+                validate: {
+                    validator(values) {
+                        return values.every(
+                            (value) => Number.isFinite(value) && value >= 0
+                        );
+                    },
+                    message: "Reminder offsets must be non-negative numbers"
+                }
+            }
         }
     },
     {

@@ -123,7 +123,7 @@ const getHackathons = async (req, res) => {
         if (!Object.prototype.hasOwnProperty.call(SORTS, sortName)) {
             return res.status(400).json({
                 success: false,
-                error: { message: "sort must be deadline, prize_high, prize_low, or newest" }
+                error: { message: "sort must be default, deadline, prize_high, prize_low, or newest" }
             });
         }
 
@@ -274,6 +274,11 @@ const getHackathons = async (req, res) => {
             }
         }
 
+        const facetFilter = { ...filter };
+        if (filter.$and) {
+            facetFilter.$and = [...filter.$and];
+        }
+
         /*
          * -----------------------------
          * 4. CURSOR PAGINATION
@@ -347,7 +352,7 @@ const getHackathons = async (req, res) => {
         const facets =
             await Hackathon.aggregate([
                 {
-                    $match: filter
+                    $match: facetFilter
                 },
                 {
                     $facet: {
@@ -633,6 +638,7 @@ const getHackathonByIdOrSlug = async (
         });
     }
 };
+
 
 
 module.exports = {

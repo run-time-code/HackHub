@@ -107,6 +107,11 @@ const hackathonSchema = new mongoose.Schema(
             default: null
         },
 
+        submissionDeadline: {
+            type: Date,
+            default: null
+        },
+
         eventStartDate: {
             type: Date,
             default: null
