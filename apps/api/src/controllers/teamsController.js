@@ -42,6 +42,19 @@ async function update(req, res, next) {
   }
 }
 
+async function transferLeader(req, res, next) {
+  try {
+    const team = await teamsService.transferLeader(
+      req.params.id,
+      req.user.id,
+      req.body && req.body.userId
+    );
+    send(res, 200, team, req);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     await teamsService.deleteTeam(req.params.id, req.user.id);
@@ -51,4 +64,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, list, getOne, update, remove };
+module.exports = { create, list, getOne, update, transferLeader, remove };

@@ -17,6 +17,7 @@ const base = {
   logLevel: process.env.LOG_LEVEL || (env === 'production' ? 'info' : 'debug'),
   sentryDsn: process.env.SENTRY_DSN || '',
   metricsToken: process.env.METRICS_TOKEN || '',
+  maxJoinRequestsPerDay: Number(process.env.MAX_JOIN_REQUESTS_PER_DAY || 10),
   corsOrigin: (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim())

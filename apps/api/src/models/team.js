@@ -45,7 +45,9 @@ const teamSchema = new Schema(
 teamSchema.index({ hackathon: 1, status: 1 });
 
 teamSchema.virtual('size').get(function size() {
-  return 1 + this.members.length;
+  // `members` can be absent when a query projects a subset of the fields
+  // (e.g. a populated team reference selecting only name/status).
+  return 1 + (this.members ? this.members.length : 0);
 });
 
 teamSchema.set('toJSON', { virtuals: true });
