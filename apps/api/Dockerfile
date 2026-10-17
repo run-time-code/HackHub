@@ -4,8 +4,12 @@
 FROM node:20-alpine AS deps
 
 WORKDIR /app
+# npm validates every workspace declared in the root package.json, so all
+# workspace manifests must be present before `npm ci`.
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY apps/backend-prototype/package.json apps/backend-prototype/
 RUN npm ci --workspace @hackhub/api --include-workspace-root=false
 
 FROM node:20-alpine AS runner

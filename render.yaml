@@ -12,11 +12,13 @@ services:
     runtime: node
     plan: starter
     branch: develop
-    rootDir: apps/api
+    # Build from the repo root so the npm workspace (and its lockfile) is used.
     buildCommand: npm ci
-    startCommand: npm start
+    startCommand: npm start --workspace @hackhub/api
     healthCheckPath: /health
-    autoDeploy: true
+    # Deploys are triggered by .github/workflows/deploy-staging.yml only
+    # after lint + tests pass, via the RENDER_DEPLOY_HOOK_STAGING secret.
+    autoDeploy: false
     envVars:
       - key: NODE_ENV
         value: staging
@@ -44,12 +46,8 @@ services:
         sync: false
       - key: METRICS_TOKEN
         sync: false
-      - key: ACCESS_TOKEN_SECRET
-        sync: false
-      - key: CSRF_SECRET
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
+      - key: MAX_JOIN_REQUESTS_PER_DAY
+        value: "10"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -63,8 +61,4 @@ services:
       - key: GITHUB_CALLBACK_URL
         sync: false
       - key: API_BASE_URL
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
         sync: false
