@@ -44,6 +44,26 @@ const {
 
 const router = express.Router();
 
+// Social login start routes: respond with a clear 503 when the provider
+// is not configured (deployed envs without OAuth credentials) instead of
+// letting passport fail with a confusing 401.
+function requireOAuthConfig(provider) {
+    return (req, res, next) => {
+        const prefix = provider === "google" ? "GOOGLE" : "GITHUB";
+
+        if (
+            !process.env[`${prefix}_CLIENT_ID`] ||
+            !process.env[`${prefix}_CLIENT_SECRET`]
+        ) {
+            return res.status(503).json({
+                message: `${provider} login is not configured`
+            });
+        }
+
+        return next();
+    };
+}
+
 // Generate CSRF token
 router.get("/csrf-token", csrfTokenLimiter, (req, res) => {
     const csrfToken = generateCsrfToken(req, res);
@@ -58,6 +78,7 @@ router.get(
     "/google",
     oauthStartLimiter,
     issueOAuthState,
+    requireOAuthConfig("google"),
     (req, res, next) =>
         passport.authenticate("google", {
             scope: ["profile", "email"],
@@ -82,6 +103,7 @@ router.get(
     "/github",
     oauthStartLimiter,
     issueOAuthState,
+    requireOAuthConfig("github"),
     (req, res, next) =>
         passport.authenticate("github", {
             scope: ["user:email"],
