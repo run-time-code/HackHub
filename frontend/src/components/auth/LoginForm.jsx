@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { loginSchema } from "../../lib/validation/authSchemas";
 import { loginUser, getCurrentUser } from "../../lib/api/auth";
 import { useAuthMutation } from "../../lib/hooks/useAuthMutation";
@@ -14,8 +14,6 @@ export default function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [oauthError, setOauthError] = useState(null);
-  const [oauthPending, setOauthPending] = useState(false);
   const {
     register,
     handleSubmit,
@@ -23,6 +21,13 @@ export default function LoginForm() {
   } = useForm({ resolver: zodResolver(loginSchema) });
 
   const { mutate, isLoading, error } = useAuthMutation(loginUser);
+
+  // The OAuth outcome is handed to the render phase via navigation state
+  // (see the effect below), so no setState calls are needed here.
+  const oauthError = location.state?.oauthError
+    ? { message: location.state.oauthError }
+    : null;
+  const oauthPending = Boolean(location.state?.oauthPending);
 
   // The OAuth callback redirects back here: pick the session up from the
   // httpOnly cookies and route to the dashboard (or surface the failure).
@@ -33,26 +38,36 @@ export default function LoginForm() {
     if (!outcome) return;
 
     // Strip the query param so refreshes/bookmarks don't replay it.
-    navigate(location.pathname, { replace: true });
-
     if (outcome === "failed") {
-      setOauthError({ message: "Social login failed. Please try again." });
+      navigate(location.pathname, {
+        replace: true,
+        state: { oauthError: "Social login failed. Please try again." },
+      });
       return;
     }
 
     if (outcome.endsWith("_success")) {
-      setOauthPending(true);
-      setOauthError(null);
+      navigate(location.pathname, {
+        replace: true,
+        state: { oauthPending: true },
+      });
+
       getCurrentUser()
         .then((data) => {
           login(data.user);
           navigate("/dashboard", { replace: true });
         })
         .catch(() => {
-          setOauthError({ message: "Social login failed. Please try again." });
-        })
-        .finally(() => setOauthPending(false));
+          navigate(location.pathname, {
+            replace: true,
+            state: { oauthError: "Social login failed. Please try again." },
+          });
+        });
+
+      return;
     }
+
+    navigate(location.pathname, { replace: true });
   }, [location.search, location.pathname, navigate, login]);
 
   async function onSubmit(values) {
