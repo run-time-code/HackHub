@@ -38,13 +38,16 @@ In GitHub: Settings > Branches > add a protection rule for `develop`
 ## 3. Render API service (one time)
 
 1. Render > New > Blueprint > connect the HackHub repo > select `render.yaml`.
+   The blueprint builds from the repository root and starts
+   `npm start --workspace @hackhub/api` (the root lockfile is required).
 2. Set the secret env vars on the service (values from section 6 table):
    `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGIN`.
 3. Deploy once manually, then open `https://<service>.onrender.com/health`
    and expect `{"success":true,"data":{"status":"ok",...}}`.
 4. Settings > Deploy Hook: copy the hook URL. It goes into GitHub as
    `RENDER_DEPLOY_HOOK_STAGING` (next section). Every push to `develop`
-   triggers this hook from the workflow.
+   triggers this hook from the workflow after lint/tests pass, so the
+   blueprint sets `autoDeploy: false` to avoid a second, ungated deploy.
 
 Free-tier note: the service sleeps when idle, so the first staging request
 after inactivity can take ~1 minute. The workflow's health-wait loop
@@ -95,6 +98,9 @@ Same variable names everywhere, only values change:
 | `FRONTEND_URL` | `http://localhost:5173`              | staging frontend URL                 | live frontend URL |
 | `LOG_LEVEL`    | `debug`                              | `info`                               | `info`               |
 | `CORS_ORIGIN`  | `http://localhost:5173`              | staging frontend URL                 | live frontend URL    |
+| `SENTRY_DSN`   | empty (disabled)                     | backend Sentry project DSN           | backend Sentry project DSN |
+| `METRICS_TOKEN` | empty (endpoint hidden)             | random scrape token                  | random scrape token |
+| `MAX_JOIN_REQUESTS_PER_DAY` | `10`                   | `10`                                 | `10` |
 
 Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 (staging shape, no real values).
@@ -103,7 +109,7 @@ Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 
 1. Push to `develop` > Actions > "Deploy to staging" runs:
    backend checks > Render deploy > health wait > Vercel deploy > smoke.
-2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix server`.
+2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix apps/api`.
 3. Week 2 demo flow on staging: browse hackathons, search/filter, save,
    dashboard, profile skills, recommendations + Worth Score.
 
@@ -115,7 +121,7 @@ Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 | Health wait times out | free-tier cold start or bad `MONGODB_URI` | wait 2 min and retry; check Render logs |
 | API boots then crashes (`JWT_SECRET ... staging`) | staging secret is `change_me`/missing | set a real `JWT_SECRET` in Render |
 | CORS errors on staging frontend | `CORS_ORIGIN` missing staging URL | set exact staging frontend URL in Render |
-| Frontend job skipped | `apps/web/package.json` missing | expected until frontend Week 1 lands |
+| Frontend job skipped | missing `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | set the Vercel secrets (section 4) |
 
 ## Rollback
 

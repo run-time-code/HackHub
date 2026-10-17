@@ -15,10 +15,6 @@ const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 const metrics = require('./utils/metrics');
 const routes = require('./routes');
-const authRoutes = require('../routes/authRoutes');
-const savedHackathonRoutes = require('../routes/savedHackathonRoutes');
-const userRoutes = require('../routes/userRoutes');
-const dashboardRoutes = require('../routes/dashboardRoutes');
 const sanitizeMiddleware = require('../middleware/sanitizeMiddleware');
 const auditMiddleware = require('../middleware/auditMiddleware');
 
@@ -66,11 +62,6 @@ function createApp() {
   app.use(passport.initialize());
   app.use(auditMiddleware);
   app.get('/metrics', metrics.serveMetrics);
-
-  app.use('/api/auth', authRoutes);
-  app.use('/api/saved-hackathons', savedHackathonRoutes);
-  app.use('/api/users', userRoutes);
-  app.use('/api/dashboard', dashboardRoutes);
 
   // Served at both /health and /api/health (frontend calls /api/*).
   app.use('/', routes);

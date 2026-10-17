@@ -3,6 +3,8 @@
 const mongoose = require('mongoose');
 
 const { Team } = require('../models/team');
+const { JoinRequest } = require('../models/joinRequest');
+const notifications = require('./notificationsService');
 
 const ALLOWED_UPDATE_FIELDS = ['name', 'description', 'rolesNeeded', 'maxTeamSize', 'status'];
 const IMMUTABLE_FIELDS = ['members', 'leader', 'hackathon'];
@@ -29,6 +31,13 @@ function assertObjectId(value, name) {
 
 function isLeader(team, userId) {
   return String(team.leader) === String(userId);
+}
+
+async function cancelPendingRequests(teamId) {
+  await JoinRequest.updateMany(
+    { team: teamId, status: 'pending' },
+    { $set: { status: 'cancelled', respondedAt: new Date() } }
+  );
 }
 
 function serialize(team) {
@@ -122,6 +131,7 @@ async function updateTeam(id, updates, requesterId) {
   if (!isLeader(team, requesterId)) {
     throw forbidden();
   }
+  const wasClosed = team.status === 'closed';
   const rejected = IMMUTABLE_FIELDS.filter(
     (field) => updates && updates[field] !== undefined
   );
@@ -145,12 +155,20 @@ async function updateTeam(id, updates, requesterId) {
   if (team.maxTeamSize < size) {
     throw badRequest(`maxTeamSize cannot be below the current team size (${size})`);
   }
+  // A team is never left open with no seats; closing it also clears the
+  // queue of people waiting, so nobody is stuck on a team that is full.
+  if (size >= team.maxTeamSize) {
+    team.status = 'closed';
+  }
   try {
     await team.validate();
   } catch (err) {
     throw badRequest(err.message);
   }
   await team.save();
+  if (!wasClosed && team.status === 'closed') {
+    await cancelPendingRequests(team._id);
+  }
   return serialize(team);
 }
 
@@ -163,7 +181,55 @@ async function deleteTeam(id, requesterId) {
   if (!isLeader(team, requesterId)) {
     throw forbidden();
   }
+  await cancelPendingRequests(team._id);
   await team.deleteOne();
+}
+
+// Leader hand-off. The outgoing leader stays on the team as a regular
+// member; the new leader must already be a member (they joined through the
+// request/invitation flow).
+async function transferLeader(id, requesterId, newLeaderId) {
+  assertObjectId(id, 'team id');
+  if (!newLeaderId) {
+    throw badRequest('userId is required');
+  }
+  assertObjectId(newLeaderId, 'userId');
+  const team = await Team.findById(id);
+  if (!team) {
+    throw notFound();
+  }
+  if (!isLeader(team, requesterId)) {
+    throw forbidden();
+  }
+  if (String(newLeaderId) === String(team.leader)) {
+    throw badRequest('That user is already the leader');
+  }
+  const index = team.members.findIndex((m) => String(m.user) === String(newLeaderId));
+  if (index === -1) {
+    throw badRequest('The new leader must be a current team member');
+  }
+
+  team.members.splice(index, 1);
+  team.members.push({ user: requesterId, role: 'member', joinedAt: new Date() });
+  team.leader = newLeaderId;
+  await team.save();
+
+  await notifications.createNotification({
+    userId: newLeaderId,
+    type: 'leader_changed',
+    title: 'You are now the team leader',
+    message: `You are now the leader of ${team.name}.`,
+    data: { teamId: String(team._id) },
+  });
+  await notifications.createNotification({
+    userId: requesterId,
+    type: 'leader_changed',
+    title: 'Team leadership transferred',
+    message: `You handed leadership of ${team.name} to another member.`,
+    data: { teamId: String(team._id) },
+  });
+
+  return serialize(team);
 }
 
 module.exports = {
@@ -172,6 +238,7 @@ module.exports = {
   getTeamById,
   updateTeam,
   deleteTeam,
+  transferLeader,
   isLeader,
   serialize,
 };

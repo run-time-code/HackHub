@@ -50,6 +50,35 @@ const sendVerificationEmail = async (email, verificationToken) => {
 };
 
 
+const escapeHtml = (value) =>
+    String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+// Generic team-notification email (join request, invitation, accepted,
+// team full, leader change). Kept deliberately small: the in-app
+// notification is the source of truth, email is the nudge.
+const sendTeamEmail = async (email, subject, message) => {
+    await getClient().emails.send({
+        from: process.env.EMAIL_FROM,
+        to: email,
+        subject,
+        html: `
+            <h2>${escapeHtml(subject)}</h2>
+            <p>${escapeHtml(message)}</p>
+            <p>
+                <a href="${escapeHtml(
+                    process.env.FRONTEND_URL || "http://localhost:5173"
+                )}">Open HackHub</a>
+            </p>
+        `
+    });
+};
+
+
 const sendPasswordResetEmail = async (email, resetToken) => {
     const resetLink =
         `${apiBaseUrl()}/api/auth/reset-password?token=${resetToken}`;
@@ -78,5 +107,6 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 
 module.exports = {
     sendVerificationEmail,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    sendTeamEmail
 };

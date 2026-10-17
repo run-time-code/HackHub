@@ -20,6 +20,10 @@ The workflow deploys the API, waits for `/health`, deploys the Vercel production
 
 ## Monitoring and alerts
 
+End-to-end setup (Sentry projects, scheduled uptime checks, Slack alerts,
+log drain, metrics scrape and dashboard import) is in
+[monitoring.md](monitoring.md).
+
 Create separate Sentry projects for the browser and Node API. Set the frontend DSN as `SENTRY_DSN_FRONTEND` in the GitHub `staging` and `production` environments. Set the backend `SENTRY_DSN` in each Render service. Add Sentry alert rules for new issues and a sustained error-rate increase, and route notifications to the on-call email and team Slack channel.
 
 Use an external uptime monitor for both the frontend root URL and API `/health`; alert by email and Slack on consecutive failures. The API emits structured Pino JSON to stdout, which Render retains. Configure a Render log drain to the team's central log provider and set retention there. `/metrics` exposes per-process uptime, resident memory, and request counts in Prometheus text format only when `METRICS_TOKEN` is configured; counters reset when an instance restarts. Configure the collector with `Authorization: Bearer <token>` and build a dashboard for those metrics. Keep the token in the collector's secret store.
@@ -47,7 +51,7 @@ Before go-live, rehearse both rollback paths in staging and record the operator,
 Install k6 and run the scenarios against staging with a dedicated test account and representative, non-production data. Set `BASE_URL`, `BROWSE_PATH`, `SEARCH_PATH`, `LOGIN_PATH`, `LOGIN_EMAIL`, and `LOGIN_PASSWORD` in the environment, then run:
 
 ```sh
-k6 run loadtest/scenarios.js
+k6 run tools/loadtest/scenarios.js
 ```
 
 The script runs browsing and search at five and three virtual users, and login at one virtual user for four minutes. Override the VU counts and duration with `BROWSE_VUS`, `SEARCH_VUS`, `LOGIN_VUS`, and `TEST_DURATION`. Supply `SEARCH_TOKEN` or `SEARCH_COOKIE` if the search route requires authentication. It fails when HTTP errors exceed 1% or p95 latency reaches one second.
@@ -56,4 +60,4 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, and teammate-discovery routes together. The separate `apps/backend-prototype/` package contains hackathon browse/search handlers but is not installed or mounted by the active `apps/api/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.
+The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, teammate-discovery, join-request/invitation, and notification routes together. The separate `apps/backend-prototype/` package contains hackathon browse/search handlers but is not installed or mounted by the active `apps/api/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.

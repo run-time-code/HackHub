@@ -87,21 +87,22 @@ Same variable names in every environment — only the values change.
 | `JWT_SECRET` | dev value only | secret store | secret store (required, must differ from `change_me`) |
 | `LOG_LEVEL` | `debug` | `info` | `info` |
 | `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
+| `MAX_JOIN_REQUESTS_PER_DAY` | `10` | `10` | `10` |
 
 ### Docker
 
-Production image:
+Production image (build context is the repository root):
 
 ```sh
-docker build -t hackhub-api .
-docker run --env-file .env -p 5000:5000 hackhub-api
+docker build -f apps/api/Dockerfile -t hackhub-api .
+docker run --env-file apps/api/.env -p 5000:5000 hackhub-api
 ```
 
 Local stack (API with live reload + MongoDB + Redis):
 
 ```sh
-cp .env.example .env   # first time only
-docker compose up --build
+cp apps/api/.env.example apps/api/.env   # first time only
+docker compose -f apps/api/docker-compose.yml up --build
 ```
 
 This starts `api` (http://localhost:5000), `mongo` (localhost:27017),
@@ -117,6 +118,15 @@ before starting. Source is mounted, so edits under `src/` reload via nodemon.
 
 Health: `GET /health` and `GET /api/health`.
 
+### Monitoring
+
+- `SENTRY_DSN` enables backend error reporting; `VITE_SENTRY_DSN` does the
+  same for the web app.
+- `GET /metrics` (Prometheus text format) requires
+  `Authorization: Bearer $METRICS_TOKEN` and is hidden when unset.
+- Sentry projects, uptime checks, log drain and the Grafana dashboard are
+  documented in [docs/monitoring.md](../../docs/monitoring.md).
+
 ### Teams (`/teams`, also served under `/api/teams`)
 
 - `POST /teams` (auth) — create a team for a hackathon; caller becomes leader.
@@ -130,6 +140,37 @@ Health: `GET /health` and `GET /api/health`.
 
 Auth accepts the login `accessToken` cookie or `Authorization: Bearer <token>`.
 Responses follow the shared `{ success, data, requestId }` envelope.
+
+### Join requests and invitations
+
+- `POST /teams/:id/requests` (auth) — ask to join. One pending row per
+  team/user, no self-requests, no requests to closed or full teams, and a
+  rolling 24h cap of `MAX_JOIN_REQUESTS_PER_DAY` (default 10).
+- `POST /teams/:id/invitations` (leader) — invite a user by id.
+- `GET /teams/:id/requests?type=request|invite` (leader) — pending queue.
+- `GET /team-requests/mine?status=pending` (auth) — my requests and
+  invitations.
+- `PATCH /team-requests/:id` `{ action: "accept" | "decline" }` — leader
+  answers requests, invitee answers invitations.
+- `DELETE /team-requests/:id` — cancel a pending row.
+
+States: `pending → accepted | declined | cancelled | expired` (7-day TTL).
+Accepting into the last seat closes the team and cancels the rest of the
+queue. `PATCH /teams/:id/leader { userId }` transfers leadership to an
+existing member (the outgoing leader becomes a member).
+
+### Notifications
+
+- `GET /notifications?unreadOnly=true` — newest first, with `unread` count.
+  This is also the polling fallback.
+- `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`.
+- `GET /notifications/stream` — Server-Sent Events; emits
+  `event: notification` with the same payload. EventSource must send the
+  session cookie (`withCredentials: true` cross-origin). Delivery is
+  in-process, so a multi-instance deployment needs a shared bus.
+- Email nudges for important team events (request, invitation, accepted,
+  declined, team full, leader change) are best-effort: no `RESEND_API_KEY`
+  means no email, never a failed request.
 
 ### Teammate discovery (`GET /users/discover`, also under `/api/...`)
 

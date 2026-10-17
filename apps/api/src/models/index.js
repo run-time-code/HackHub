@@ -9,5 +9,7 @@
 // module.exports = { User, Hackathon };
 
 const { Team } = require('./team');
+const { JoinRequest } = require('./joinRequest');
+const { Notification } = require('./notification');
 
-module.exports = { Team };
+module.exports = { Team, JoinRequest, Notification };

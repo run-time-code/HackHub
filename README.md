@@ -58,7 +58,7 @@
 
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, and DB schema overview.
-Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md).
+Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
 
 ```
 [Scrapers/Cron] -> [Express API] -> [MongoDB]

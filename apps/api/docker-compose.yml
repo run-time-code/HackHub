@@ -1,22 +1,30 @@
 # Local stack: API + MongoDB + Redis.
-# Usage: `docker compose up --build` (run from server/).
-# Needs server/.env (copy from .env.example first).
+# Usage (from the repository root):
+#   cp apps/api/.env.example apps/api/.env
+#   docker compose -f apps/api/docker-compose.yml up --build
+#
+# Build context is the repo root because the Dockerfile installs the npm
+# workspace; the compose file itself can stay next to the API.
 name: hackhub
 
 services:
   api:
-    build: .
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
     ports:
       - "${PORT:-5000}:5000"
     env_file:
       - .env
     environment:
       NODE_ENV: development
+      PORT: 5000
       MONGODB_URI: mongodb://mongo:27017/hackhub
       REDIS_URL: redis://redis:6379
     volumes:
-      - ./src:/app/src
-    command: npm run dev
+      # Live reload: host source overwrites the copy baked into the image.
+      - ./src:/app/apps/api/src
+    command: npm run dev --workspace @hackhub/api
     depends_on:
       mongo:
         condition: service_healthy
