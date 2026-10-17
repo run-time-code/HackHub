@@ -50,13 +50,19 @@ const requireAuth = async (req, res, next) => {
         }
 
         const user = await User.findById(decoded.id)
-            .select("_id email role deletedAt tokenVersion");
+    .select("_id email role deletedAt tokenVersion banned");
 
-        if (!user || user.deletedAt) {
-            return res.status(401).json({
-                message: "Account not found or deactivated"
-            });
-        }
+if (!user || user.deletedAt) {
+    return res.status(401).json({
+        message: "Account not found or deactivated"
+    });
+}
+
+if (user.banned === true) {
+    return res.status(403).json({
+        message: "Your account has been banned"
+    });
+}
 
         const tokenVersion = decoded.tokenVersion ?? 0;
         const currentTokenVersion = user.tokenVersion ?? 0;

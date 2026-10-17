@@ -58,6 +58,17 @@ const userSchema = new mongoose.Schema(
             default: "student"
         },
 
+        banned: {
+           type: Boolean,
+           default: false,
+           index: true
+        },
+
+        bannedAt: {
+           type: Date,
+           default: null
+     },
+
         bio: {
             type: String,
             default: "",

@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
 const express = require("express");
 const helmet = require("helmet");
@@ -24,6 +24,10 @@ const authRoutes = require("./routes/authRoutes");
 const savedHackathonRoutes = require("./routes/savedHackathonRoutes");
 const userRoutes = require("./routes/userRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+
+const adminHackathonRoutes = require("./routes/adminHackathonRoutes");
+const adminUserRoutes = require("./routes/adminUserRoutes");
+const adminReportRoutes = require("./routes/adminReportRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -80,6 +84,9 @@ app.use("/api/saved-hackathons", savedHackathonRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+app.use("/api/admin/hackathons", adminHackathonRoutes);
+app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/admin/reports", adminReportRoutes);
 // Health check.
 app.get("/", (req, res) => {
     res.json({

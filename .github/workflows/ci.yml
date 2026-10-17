@@ -66,3 +66,18 @@ jobs:
         if: steps.check.outputs.exists == 'true'
       - run: npm test
         if: steps.check.outputs.exists == 'true'
+  gitleaks:
+    name: Secret scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

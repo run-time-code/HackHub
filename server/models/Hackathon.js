@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const hackathonSchema = new mongoose.Schema(
@@ -9,7 +10,8 @@ const hackathonSchema = new mongoose.Schema(
         },
 
         title: {
-            type: String
+            type: String,
+            trim: true
         },
 
         registration_deadline: {
@@ -17,7 +19,18 @@ const hackathonSchema = new mongoose.Schema(
         },
 
         is_active: {
-            type: Boolean
+            type: Boolean,
+            default: true
+        },
+
+        is_hidden: {
+            type: Boolean,
+            default: false
+        },
+
+        is_featured: {
+            type: Boolean,
+            default: false
         }
     },
     {
