@@ -27,31 +27,25 @@ const {
 } = require("../middleware/authMiddleware");
 
 const {
+    getMyProfile
+} = require("../controllers/userController");
+
+const {
     loginLimiter,
     registerLimiter,
     resendVerificationLimiter,
     passwordResetLimiter,
-    refreshTokenLimiter
+    refreshTokenLimiter,
+    oauthStartLimiter,
+    csrfTokenLimiter,
+    issueOAuthState,
+    verifyOAuthState
 } = require("../middleware/rateLimitMiddleware");
 
 const router = express.Router();
 
-function startOAuth(provider, options) {
-    return (req, res, next) => {
-        const prefix = provider === "google" ? "GOOGLE" : "GITHUB";
-        if (
-            !process.env[`${prefix}_CLIENT_ID`] ||
-            !process.env[`${prefix}_CLIENT_SECRET`] ||
-            !process.env[`${prefix}_CALLBACK_URL`]
-        ) {
-            return res.status(503).json({ message: `${provider} login is not configured` });
-        }
-        return passport.authenticate(provider, options)(req, res, next);
-    };
-}
-
 // Generate CSRF token
-router.get("/csrf-token", (req, res) => {
+router.get("/csrf-token", csrfTokenLimiter, (req, res) => {
     const csrfToken = generateCsrfToken(req, res);
 
     res.status(200).json({
@@ -62,15 +56,21 @@ router.get("/csrf-token", (req, res) => {
 // Google OAuth
 router.get(
     "/google",
-    startOAuth("google", {
-        scope: ["profile", "email"],
-        session: false
-    })
+    oauthStartLimiter,
+    issueOAuthState,
+    (req, res, next) =>
+        passport.authenticate("google", {
+            scope: ["profile", "email"],
+            session: false,
+            state: req.oauthState
+        })(req, res, next)
 );
 
 router.get(
     "/google/callback",
-    startOAuth("google", {
+    oauthStartLimiter,
+    verifyOAuthState,
+    passport.authenticate("google", {
         session: false,
         failureRedirect: "/api/auth/oauth-failed"
     }),
@@ -80,15 +80,21 @@ router.get(
 // GitHub OAuth
 router.get(
     "/github",
-    startOAuth("github", {
-        scope: ["user:email"],
-        session: false
-    })
+    oauthStartLimiter,
+    issueOAuthState,
+    (req, res, next) =>
+        passport.authenticate("github", {
+            scope: ["user:email"],
+            session: false,
+            state: req.oauthState
+        })(req, res, next)
 );
 
 router.get(
     "/github/callback",
-    startOAuth("github", {
+    oauthStartLimiter,
+    verifyOAuthState,
+    passport.authenticate("github", {
         session: false,
         failureRedirect: "/api/auth/oauth-failed"
     }),
@@ -97,7 +103,16 @@ router.get(
 
 // OAuth failure
 router.get("/oauth-failed", (req, res) => {
-    res.status(401).json({
+    // Browser flows get sent back to the SPA; API clients get JSON.
+    if ((req.get("accept") || "").includes("text/html")) {
+        const frontendUrl = (
+            process.env.FRONTEND_URL || "http://localhost:5173"
+        ).replace(/\/$/, "");
+
+        return res.redirect(`${frontendUrl}/?oauth=failed`);
+    }
+
+    return res.status(401).json({
         message:
             "Social login failed. Check your provider account and verified email."
     });
@@ -157,6 +172,9 @@ router.post(
     doubleCsrfProtection,
     resetPassword
 );
+
+// Session restore for the SPA (mirrors /users/me via the auth router).
+router.get("/me", requireAuth, getMyProfile);
 
 // Protected route
 router.get(

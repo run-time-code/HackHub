@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/auth/Login";
@@ -9,12 +9,26 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 
+// The OAuth callback redirects to /?oauth=... — preserve the outcome query
+// param when forwarding to /login, otherwise the login page never sees it.
+function RootRedirect() {
+  const location = useLocation();
+  const outcome = new URLSearchParams(location.search).get("oauth");
+
+  return (
+    <Navigate
+      to={outcome ? `/login?oauth=${encodeURIComponent(outcome)}` : "/login"}
+      replace
+    />
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
