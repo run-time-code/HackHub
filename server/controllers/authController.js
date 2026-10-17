@@ -31,19 +31,17 @@ const register = async (req, res) => {
         const { name, email, password } = req.body;
 
         if (!name || !email || !password) {
-            console.log("All fields are required");
+            return res.status(400).json({
+                message: "All fields are required"
+            });
+        }
 
         const passwordRegex = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
         if (!passwordRegex.test(password)) {
-                  return res.status(400).json({
-                  message:
-                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
-            });
-        }
-
             return res.status(400).json({
-                message: "All fields are required"
+                message:
+                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
             });
         }
 
@@ -86,16 +84,29 @@ const register = async (req, res) => {
             new Date(Date.now() + 15 * 60 * 1000);
 
         // Create user as UNVERIFIED
-        const user = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-            emailVerified: false,
-            emailVerificationTokenHash:
-                verificationTokenHash,
-            emailVerificationTokenExpiresAt:
-                verificationTokenExpiresAt
-        });
+        let user;
+
+        try {
+            user = await User.create({
+                name,
+                email,
+                password: hashedPassword,
+                emailVerified: false,
+                emailVerificationTokenHash:
+                    verificationTokenHash,
+                emailVerificationTokenExpiresAt:
+                    verificationTokenExpiresAt
+            });
+        } catch (createError) {
+            // Concurrent registration with the same email.
+            if (createError && createError.code === 11000) {
+                return res.status(409).json({
+                    message: "User already exists"
+                });
+            }
+
+            throw createError;
+        }
 
         // Send verification email
         try {
@@ -296,6 +307,24 @@ const resendVerification = async (req, res) => {
 // ==============================
 
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+const lockoutResponse = (res, lockUntil) => {
+    const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((lockUntil.getTime() - Date.now()) / 1000)
+    );
+
+    res.set("Retry-After", String(retryAfterSeconds));
+
+    return res.status(423).json({
+        message:
+            "Account temporarily locked due to failed login attempts. Please try again later.",
+        retryAfterSeconds
+    });
+};
+
 const login = async (req, res) => {
     try {
         const email =
@@ -327,28 +356,30 @@ const login = async (req, res) => {
             });
         }
 
+        // Soft-deleted accounts must not be able to sign in again.
+        if (user.deletedAt) {
+            return res.status(401).json({
+                message: "Invalid email or password"
+            });
+        }
+
         const now = new Date();
 
         // Enforce an active account lockout.
         if (user.lockUntil && user.lockUntil > now) {
-            const retryAfterSeconds = Math.ceil(
-                (user.lockUntil.getTime() - now.getTime()) / 1000
-            );
-
-            res.set(
-                "Retry-After",
-                String(retryAfterSeconds)
-            );
-
-            return res.status(423).json({
-                message:
-                    "Account temporarily locked due to failed login attempts. Please try again later.",
-                retryAfterSeconds
-            });
+            return lockoutResponse(res, user.lockUntil);
         }
 
         // Reset expired lockout state before checking the password.
+        // This is a best-effort reset only: failed attempts below come from
+        // atomic $inc updates, so a stale in-memory value here cannot
+        // under-count concurrent failures.
         if (user.lockUntil && user.lockUntil <= now) {
+            await User.updateOne(
+                { _id: user._id, lockUntil: { $lte: new Date() } },
+                { $set: { failedLoginAttempts: 0, lockUntil: null } }
+            );
+
             user.failedLoginAttempts = 0;
             user.lockUntil = null;
         }
@@ -359,38 +390,31 @@ const login = async (req, res) => {
         );
 
         if (!passwordMatch) {
-            user.failedLoginAttempts =
-                (user.failedLoginAttempts || 0) + 1;
-
-            const MAX_FAILED_ATTEMPTS = 5;
-            const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+            // Atomic increment: read-modify-write via user.save() under-counts
+            // concurrent failures, letting distributed guessing evade lockout.
+            const updated = await User.findOneAndUpdate(
+                { _id: user._id },
+                {
+                    $inc: { failedLoginAttempts: 1 }
+                },
+                { returnDocument: "after" }
+            ).select("failedLoginAttempts lockUntil");
 
             if (
-                user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS
+                updated &&
+                (updated.failedLoginAttempts || 0) >= MAX_FAILED_ATTEMPTS
             ) {
-                user.lockUntil = new Date(
+                const lockUntil = new Date(
                     Date.now() + LOCKOUT_DURATION_MS
                 );
-            }
 
-            await user.save();
-
-            // Do not disclose the remaining attempts.
-            if (user.lockUntil && user.lockUntil > new Date()) {
-                const retryAfterSeconds = Math.ceil(
-                    (user.lockUntil.getTime() - Date.now()) / 1000
+                await User.updateOne(
+                    { _id: user._id },
+                    { $set: { lockUntil } }
                 );
 
-                res.set(
-                    "Retry-After",
-                    String(retryAfterSeconds)
-                );
-
-                return res.status(423).json({
-                    message:
-                        "Account temporarily locked due to failed login attempts. Please try again later.",
-                    retryAfterSeconds
-                });
+                // Do not disclose the remaining attempts.
+                return lockoutResponse(res, lockUntil);
             }
 
             return res.status(401).json({

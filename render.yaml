@@ -1,7 +1,10 @@
 # HackHub staging blueprint (owner: Senthil Raja).
 # In Render: New > Blueprint > connect repo > select this file.
-# Secrets (MONGODB_URI, REDIS_URL, JWT_SECRET, CORS_ORIGIN) are set in the
-# Render dashboard, NOT here. Render provides HTTPS + domain automatically.
+# Secrets (MONGODB_URI, REDIS_URL, JWT_SECRET, CORS_ORIGIN, CSRF_SECRET,
+# ACCESS_TOKEN_SECRET, FRONTEND_URL, GOOGLE_*, GITHUB_*, SENTRY_DSN,
+# METRICS_TOKEN) are set in the Render dashboard, NOT here. Render provides
+# HTTPS + domain automatically. NOTE: CSRF_SECRET is required — the server
+# refuses to boot in staging/production without it.
 
 services:
   - type: web
@@ -40,4 +43,28 @@ services:
       - key: SENTRY_DSN
         sync: false
       - key: METRICS_TOKEN
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: CSRF_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CALLBACK_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false

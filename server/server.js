@@ -28,6 +28,10 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Behind a hosting proxy (Render) req.ip must come from X-Forwarded-For,
+// otherwise rate limiting and audit logs see the proxy IP for everyone.
+app.set("trust proxy", 1);
+
 // Connect to MongoDB.
 connectDB();
 
@@ -39,6 +43,7 @@ app.use(
     cors({
         origin:
             process.env.FRONTEND_URL ||
+            process.env.CORS_ORIGIN ||
             "http://localhost:5173",
         credentials: true,
         methods: [
@@ -60,7 +65,9 @@ app.use(
 // Core middleware.
 app.use(express.json({ limit: "10kb" }));
 app.use(sanitizeMiddleware);
-app.use(cookieParser());
+// Signed cookies back the OAuth `state` check (login-CSRF protection).
+// Falls back to JWT_SECRET so existing deployments keep working.
+app.use(cookieParser(process.env.COOKIE_SECRET || process.env.JWT_SECRET));
 app.use(passport.initialize());
 
 // Audit security-relevant authentication requests.

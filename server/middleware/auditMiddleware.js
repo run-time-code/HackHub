@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const logAuditEvent = require("../utils/auditLogger");
 
 const AUTH_EVENTS = [
@@ -45,10 +46,6 @@ const AUTH_EVENTS = [
 ];
 
 const auditMiddleware = (req, res, next) => {
-    if (mongoose.connection.readyState !== 1) {
-        return next();
-    }
-
     const requestPath = req.path.replace(/\/+$/, "") || "/";
 
     let eventDefinition = AUTH_EVENTS.find(
@@ -79,16 +76,31 @@ const auditMiddleware = (req, res, next) => {
 
     res.on("finish", () => {
         const statusCode = res.statusCode;
+
+        // Redirects (e.g. passport's failureRedirect) are not successes.
         const success =
-            statusCode >= 200 && statusCode < 400;
+            statusCode >= 200 && statusCode < 300;
 
         const submittedEmail =
             typeof req.body?.email === "string"
                 ? req.body.email.trim().toLowerCase().slice(0, 254)
                 : null;
 
+        // OAuth callbacks leave the raw provider profile on req.user; use
+        // the application user id stashed by the controller when present,
+        // and ignore any value that is not a valid ObjectId (a failed
+        // cast used to silently drop the whole audit event).
+        const requestedUserId =
+            req.auditUserId ||
+            req.user?._id ||
+            req.user?.id ||
+            null;
+
         const authenticatedUserId =
-            req.user?._id || req.user?.id || null;
+            requestedUserId &&
+            mongoose.isValidObjectId(requestedUserId)
+                ? requestedUserId
+                : null;
 
         // Record only a generic outcome, never tokens or passwords.
         let details = null;

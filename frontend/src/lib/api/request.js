@@ -1,40 +1,44 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-let csrfToken;
-let csrfRequest;
+import { getCsrfToken } from "./csrf";
 
-async function getCsrfToken() {
-  if (csrfToken) return csrfToken;
-  if (!csrfRequest) {
-    csrfRequest = fetch(`${BASE_URL}/auth/csrf-token`, { credentials: "include" })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok || !data.csrfToken) {
-          throw new Error(data.message || "Unable to initialize secure request");
-        }
-        csrfToken = data.csrfToken;
-        return csrfToken;
-      })
-      .finally(() => {
-        csrfRequest = null;
-      });
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
+
+async function fetchCsrfToken(forceRefresh = false) {
+  const token = await getCsrfToken({ forceRefresh });
+
+  if (!token) {
+    throw new Error("Unable to initialize secure request");
   }
-  return csrfRequest;
+
+  return token;
 }
 
 export async function apiRequest(path, { method = "GET", body } = {}) {
-  const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const isMutating = MUTATING_METHODS.includes(method.toUpperCase());
 
-  if (!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
-    headers["X-CSRF-Token"] = await getCsrfToken();
+  const send = (csrfToken) => {
+    const headers = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+    return fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      credentials: "include",
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  };
+
+  let csrfToken = isMutating ? await fetchCsrfToken() : null;
+  let response = await send(csrfToken);
+
+  // The CSRF cookie may have rotated since the token was cached;
+  // refresh once and retry.
+  if (response.status === 403 && isMutating) {
+    csrfToken = await fetchCsrfToken(true);
+    response = await send(csrfToken);
   }
-
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    credentials: "include",
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
 
   let data = null;
   try {
