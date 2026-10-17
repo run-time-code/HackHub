@@ -1,0 +1,70 @@
+name: Uptime checks
+
+# Scheduled availability checks for staging and production.
+# Setup and alert routing: docs/monitoring.md
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: health checks
+    runs-on: ubuntu-latest
+    env:
+      STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+      PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+      PRODUCTION_FRONTEND_URL: ${{ secrets.PRODUCTION_FRONTEND_URL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Check API and frontend endpoints
+        run: |
+          set -euo pipefail
+          failures=()
+
+          check() {
+            local name="$1" base="$2" path="$3" expect_health="${4:-no}"
+            if [ -z "$base" ]; then
+              echo "skip: $name is not configured"
+              return 0
+            fi
+
+            local url="${base%/}${path}" body status
+            body="$(mktemp)"
+            status="$(curl --silent --show-error --location --max-time 20 \
+              --output "$body" --write-out '%{http_code}' "$url")" || status="000"
+            if [ "$status" != "200" ]; then
+              failures+=("$name -> HTTP $status ($url)")
+              echo "fail: $name -> HTTP $status"
+              return 0
+            fi
+            if [ "$expect_health" = "yes" ] && ! grep -q '"status":"ok"' "$body"; then
+              failures+=("$name -> unexpected health body ($url)")
+              echo "fail: $name -> unexpected health body"
+              return 0
+            fi
+            echo "ok: $name -> HTTP 200"
+          }
+
+          check "staging API health" "${STAGING_API_URL:-}" /health yes
+          check "production API health" "${PRODUCTION_API_URL:-}" /health yes
+          check "production API /api/health" "${PRODUCTION_API_URL:-}" /api/health yes
+          check "production frontend" "${PRODUCTION_FRONTEND_URL:-}" / no
+
+          if [ "${#failures[@]}" -gt 0 ]; then
+            message="HackHub uptime check failed: $(IFS='; '; echo "${failures[*]}")"
+            echo "::error::$message"
+            if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+              payload="$(jq -n --arg text "$message" '{text: $text}')"
+              curl --silent --show-error --max-time 15 \
+                -H 'Content-Type: application/json' \
+                -d "$payload" "$SLACK_WEBHOOK_URL" || true
+            fi
+            exit 1
+          fi
+
+          echo "All configured endpoints are healthy."
