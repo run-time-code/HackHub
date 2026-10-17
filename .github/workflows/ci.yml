@@ -10,62 +10,30 @@ jobs:
   frontend:
     name: frontend (lint, test, build)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - id: check
-        run: |
-          if [ -f package.json ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No frontend/package.json found, skipping frontend steps."
-          fi
       - uses: actions/setup-node@v4
-        if: steps.check.outputs.exists == 'true'
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-        if: steps.check.outputs.exists == 'true'
-      - run: npm run lint
-        if: steps.check.outputs.exists == 'true'
-      - run: npm test --if-present
-        if: steps.check.outputs.exists == 'true'
-      - run: npm run build
-        if: steps.check.outputs.exists == 'true'
+      - run: npm run lint --workspace @hackhub/web
+      - run: npm test --workspace @hackhub/web --if-present
+      - run: npm run build --workspace @hackhub/web
 
   backend:
     name: backend (lint, test)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
     steps:
       - uses: actions/checkout@v4
-      - id: check
-        run: |
-          if [ -f package.json ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No server/package.json found, skipping backend steps."
-          fi
       - uses: actions/setup-node@v4
-        if: steps.check.outputs.exists == 'true'
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: server/package-lock.json
       - run: npm ci
-        if: steps.check.outputs.exists == 'true'
-      - run: npm run lint --if-present
-        if: steps.check.outputs.exists == 'true'
-      - run: npm test
-        if: steps.check.outputs.exists == 'true'
+      - run: npm run lint --workspace @hackhub/api --if-present
+      - run: npm test --workspace @hackhub/api
+
   gitleaks:
     name: Secret scanning (Gitleaks)
     runs-on: ubuntu-latest
@@ -77,7 +45,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Gitleaks
+        run: |
+          version=8.28.0
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz" \
+            --output /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          echo /tmp >> "$GITHUB_PATH"
+
       - name: Scan for leaked secrets
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gitleaks detect --source . --redact --verbose

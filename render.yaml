@@ -12,7 +12,7 @@ services:
     runtime: node
     plan: starter
     branch: develop
-    rootDir: server
+    rootDir: apps/api
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health

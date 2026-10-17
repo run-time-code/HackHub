@@ -62,3 +62,7 @@ vite.config.*.timestamp-*.mjs
 # Postman
 postman/
 .postman/
+
+# Turborepo
+turbo/
+.turbo/

@@ -1,0 +1,16 @@
+# Docker build context exclusions (context = repo root, see apps/api/Dockerfile)
+node_modules
+**/node_modules
+npm-debug.log*
+**/.env
+.git
+.github
+.gitignore
+coverage
+**/coverage
+tmp
+temp
+*.md
+**/dist
+.vercel
+.netlify

@@ -5,8 +5,8 @@ automatically. Weekly Demos run on staging.
 
 | Piece     | Target                        | Source of truth                    |
 |-----------|-------------------------------|------------------------------------|
-| Frontend  | Vercel (preview/staging)      | `frontend/`, `vercel.json`         |
-| API       | Render web service            | `render.yaml`, `server/Dockerfile` |
+| Frontend  | Vercel (preview/staging)      | `apps/web/`, `vercel.json`         |
+| API       | Render web service            | `render.yaml`, `apps/api/Dockerfile` |
 | Database  | MongoDB Atlas (staging)       | connection string in Render env    |
 | Pipeline  | GitHub Actions                | `.github/workflows/deploy-staging.yml` |
 
@@ -53,14 +53,14 @@ after inactivity can take ~1 minute. The workflow's health-wait loop
 ## 4. Vercel frontend (one time, with frontend team)
 
 1. Vercel > Add New Project > import the HackHub repo.
-2. Root Directory: `frontend/`. Framework: Vite (see `vercel.json`).
+2. Root Directory: repo root (monorepo; see `vercel.json`). Framework: Vite (see `vercel.json`).
 3. Production branch: `main`. All other branches (including `develop`)
    get preview URLs automatically — the `develop` preview URL IS the
    staging frontend.
 4. Staging env var on the project: `VITE_API_URL=https://<staging-api>`.
 5. For CLI deploys from the workflow, create tokens and store them as
    `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (next section).
-   Until `frontend/package.json` exists (frontend Week 1 tasks), the
+   Until the web app is present, the
    workflow's frontend job skips gracefully.
 
 ## 5. GitHub Environment `staging` (one time)
@@ -96,7 +96,7 @@ Same variable names everywhere, only values change:
 | `LOG_LEVEL`    | `debug`                              | `info`                               | `info`               |
 | `CORS_ORIGIN`  | `http://localhost:5173`              | staging frontend URL                 | live frontend URL    |
 
-Templates: `server/.env.example` (dev), `server/.env.staging.example`
+Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 (staging shape, no real values).
 
 ## 7. Verify (every Week 2+ push to `develop`)
@@ -115,7 +115,7 @@ Templates: `server/.env.example` (dev), `server/.env.staging.example`
 | Health wait times out | free-tier cold start or bad `MONGODB_URI` | wait 2 min and retry; check Render logs |
 | API boots then crashes (`JWT_SECRET ... staging`) | staging secret is `change_me`/missing | set a real `JWT_SECRET` in Render |
 | CORS errors on staging frontend | `CORS_ORIGIN` missing staging URL | set exact staging frontend URL in Render |
-| Frontend job skipped | `frontend/package.json` not merged yet | expected until frontend Week 1 lands |
+| Frontend job skipped | `apps/web/package.json` missing | expected until frontend Week 1 lands |
 
 ## Rollback
 

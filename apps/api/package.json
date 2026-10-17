@@ -1,5 +1,5 @@
 {
-  "name": "hackhub",
+  "name": "@hackhub/api",
   "version": "1.0.0",
   "private": true,
   "description": "HackHub Express API backend",
