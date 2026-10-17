@@ -6,8 +6,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const passport = require('passport');
 const pinoHttp = require('pino-http');
-const helmet = require('helmet');
-const passport = require('passport');
 const Sentry = require('@sentry/node');
 
 const config = require('./config');
@@ -30,11 +28,6 @@ require('../config/passport');
 // login, OAuth, CSRF), user profiles, saved hackathons and dashboards
 // still live. They are mounted on the production entrypoint (src/server.js)
 // so `npm start`, the Dockerfile and Render actually serve them.
-const sanitizeMiddleware = require('../middleware/sanitizeMiddleware');
-const auditMiddleware = require('../middleware/auditMiddleware');
-
-require('../config/passport');
-
 const legacyAuthRoutes = require('../routes/authRoutes');
 const legacySavedHackathonRoutes = require('../routes/savedHackathonRoutes');
 const legacyUserRoutes = require('../routes/userRoutes');
