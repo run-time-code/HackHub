@@ -17,6 +17,10 @@ const loginPayload = __ENV.LOGIN_PAYLOAD
   : { email: loginEmail, password: loginPassword };
 
 export const options = {
+  // Keep load-test output focused on timings instead of response payloads.
+  discardResponseBodies: true,
+  tags: { test: __ENV.TEST_NAME || 'hackhub-loadtest' },
+  summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'max'],
   scenarios: {
     browsing: {
       executor: 'constant-vus',
