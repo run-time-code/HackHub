@@ -1,8 +1,30 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+// Accept the httpOnly accessToken cookie as well as an Authorization:
+// Bearer header so API clients and tests can authenticate too.
+const extractToken = (req) => {
+    const header = req.headers.authorization;
+
+    if (typeof header === "string" && header.startsWith("Bearer ")) {
+        return header.slice("Bearer ".length).trim();
+    }
+
+    return req.cookies?.accessToken;
+};
+
+// Verify against every configured secret so tokens from either issuer keep
+// working until auth is unified (mirrors src/middleware/requireAuth).
+const secrets = () =>
+    [
+        process.env.ACCESS_TOKEN_SECRET,
+        process.env.JWT_SECRET
+    ].filter(
+        (secret) => typeof secret === "string" && secret.length > 0
+    );
+
 const requireAuth = async (req, res, next) => {
-    const token = req.cookies?.accessToken;
+    const token = extractToken(req);
 
     if (!token) {
         return res.status(401).json({
@@ -11,10 +33,21 @@ const requireAuth = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(
-            token,
-            process.env.ACCESS_TOKEN_SECRET
-        );
+        let decoded = null;
+        let lastError = null;
+
+        for (const secret of secrets()) {
+            try {
+                decoded = jwt.verify(token, secret);
+                break;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        if (!decoded) {
+            throw lastError || new Error("Invalid token");
+        }
 
         const user = await User.findById(decoded.id)
             .select("_id email role deletedAt tokenVersion");
