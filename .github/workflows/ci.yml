@@ -18,7 +18,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint --workspace @hackhub/web
-      - run: npm test --workspace @hackhub/web --if-present
+      - run: npm test --workspace @hackhub/web
       - run: npm run build --workspace @hackhub/web
 
   backend:
@@ -31,7 +31,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run lint --workspace @hackhub/api --if-present
+      - run: npm run lint --workspace @hackhub/api
       - run: npm test --workspace @hackhub/api
 
   gitleaks:

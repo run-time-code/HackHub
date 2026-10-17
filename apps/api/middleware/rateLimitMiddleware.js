@@ -142,6 +142,24 @@ const csrfTokenLimiter = rateLimit({
     legacyHeaders: false
 });
 
+// F-13: team/join-request writes share one per-user bucket (100/hour).
+// Authenticated users key by id; anonymous traffic falls back to IP via the
+// IPv6-safe helper.
+const { ipKeyGenerator } = rateLimit;
+const teamWriteLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 100,
+    keyGenerator: (req) => {
+        if (req.user && req.user.id) return `user:${req.user.id}`;
+        return ipKeyGenerator(req.ip);
+    },
+    message: {
+        message: "Too many team requests. Please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 module.exports = {
     loginLimiter,
     registerLimiter,
@@ -150,6 +168,7 @@ module.exports = {
     refreshTokenLimiter,
     oauthStartLimiter,
     csrfTokenLimiter,
+    teamWriteLimiter,
     issueOAuthState,
     verifyOAuthState
 };

@@ -64,4 +64,13 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, list, getOne, update, transferLeader, remove };
+async function removeMember(req, res, next) {
+  try {
+    const team = await teamsService.removeMember(req.params.id, req.params.userId, req.user.id);
+    send(res, 200, team, req);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, list, getOne, update, transferLeader, remove, removeMember };

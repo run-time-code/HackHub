@@ -1,15 +1,19 @@
 const { doubleCsrf } = require("csrf-csrf");
 
 const isProduction = process.env.NODE_ENV === "production";
+const isStaging = process.env.NODE_ENV === "staging";
 
-const isStrictEnv =
-    isProduction || process.env.NODE_ENV === "staging";
+// The SPA runs on a different origin than the API on every deployed
+// environment (production + staging), so the CSRF cookie must be
+// `SameSite=None; Secure` there. Local dev/CI keep Lax + non-secure so
+// `npm start` / `npm test` work over plain http://localhost.
+const isDeployed = isProduction || isStaging;
 
 // Fail fast on real deployments that forgot the secret, but fall back to a
 // deterministic value for local dev and CI so `npm start` / `npm test` boot.
 const csrfSecret =
     process.env.CSRF_SECRET ||
-    (isStrictEnv
+    (isDeployed
         ? null
         : "dev-only-insecure-csrf-secret");
 
@@ -28,19 +32,19 @@ const {
     getSessionIdentifier: (req) => req.ip,
 
     cookieName:
-        isProduction
+        isDeployed
             ? "__Host-psifi.x-csrf-token"
             : "psifi.x-csrf-token",
 
     cookieOptions: {
         httpOnly: true,
 
-        // The SPA runs on a different origin than the API in production, so
-        // a SameSite=Strict cookie would never be sent on cross-site XHR and
+        // The SPA runs on a different origin than the API when deployed, so
+        // a SameSite=Lax cookie would never be sent on cross-site XHR and
         // every protected request would fail CSRF validation.
-        sameSite: isProduction ? "none" : "lax",
+        sameSite: isDeployed ? "none" : "lax",
         path: "/",
-        secure: isProduction
+        secure: isDeployed
     },
 
     size: 32,

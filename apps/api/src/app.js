@@ -28,6 +28,12 @@ const legacyAuthRoutes = require('../routes/authRoutes');
 const legacySavedHackathonRoutes = require('../routes/savedHackathonRoutes');
 const legacyUserRoutes = require('../routes/userRoutes');
 const legacyDashboardRoutes = require('../routes/dashboardRoutes');
+// Admin routers lived only in the dead root server.js, so /api/admin/*
+// returned 404 on every deployment. Mount them here with CSRF.
+const { doubleCsrfProtection } = require('../middleware/csrfMiddleware');
+const adminHackathonRoutes = require('../routes/adminHackathonRoutes');
+const adminUserRoutes = require('../routes/adminUserRoutes');
+const adminReportRoutes = require('../routes/adminReportRoutes');
 
 function createApp() {
   const app = express();
@@ -73,6 +79,11 @@ function createApp() {
   app.use('/api/saved-hackathons', legacySavedHackathonRoutes);
   app.use('/api/users', legacyUserRoutes);
   app.use('/api/dashboard', legacyDashboardRoutes);
+
+  // Admin routers (previously only in dead root server.js).
+  app.use('/api/admin/hackathons', doubleCsrfProtection, adminHackathonRoutes);
+  app.use('/api/admin/users', doubleCsrfProtection, adminUserRoutes);
+  app.use('/api/admin/reports', doubleCsrfProtection, adminReportRoutes);
 
   if (config.sentryDsn) Sentry.setupExpressErrorHandler(app);
   app.use(notFound);

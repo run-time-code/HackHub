@@ -20,18 +20,29 @@ export async function getCsrfToken({ forceRefresh = false } = {}) {
         });
 
         if (!res.ok) {
+          // F-10: a failed fetch must not poison the cache for 10 minutes.
+          tokenPromise = null;
           return null;
         }
 
         const data = await res.json();
-        return data?.csrfToken || null;
+        const token = data?.csrfToken || null;
+        if (!token) {
+          tokenPromise = null;
+          return null;
+        }
+        return token;
       } catch {
+        // Network failure: clear immediately so the next call retries.
+        tokenPromise = null;
         return null;
       } finally {
         // Tokens are cheap to re-fetch; expire the cache after 10 minutes.
-        setTimeout(() => {
+        // unref so the timer never keeps vitest/node alive.
+        const t = setTimeout(() => {
           tokenPromise = null;
         }, 10 * 60 * 1000);
+        if (t && typeof t.unref === "function") t.unref();
       }
     })();
   }

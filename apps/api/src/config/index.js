@@ -11,7 +11,10 @@ const base = {
   isProd: env === 'production',
   port: Number(process.env.PORT || 5000),
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hackhub',
-  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+  // F-16: Redis is declared nowhere and used nowhere (the SSE bus and rate
+  // limits are in-process). Keep the field undefined so nothing reads a
+  // stale REDIS_URL; deployment is single-instance by design.
+  redisUrl: undefined,
   jwtSecret: process.env.JWT_SECRET || 'change_me',
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET || '',
   logLevel: process.env.LOG_LEVEL || (env === 'production' ? 'info' : 'debug'),

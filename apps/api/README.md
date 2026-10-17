@@ -72,7 +72,8 @@ Legacy flat files (`server/server.js`, `server/routes/*`, `server/controllers/*`
 Success: `{ "success": true, "data": {...}, "requestId": "..." }`
 Error: `{ "success": false, "error": { "code": "...", "message": "..." }, "requestId": "..." }`
 
-Every response carries `x-request-id` (reuses the incoming header when present).
+Every response carries `x-request-id` (client values accepted only when they
+match `^[A-Za-z0-9_-]{8,64}$`; anything else is replaced with a UUID).
 
 ### Config
 
@@ -83,7 +84,6 @@ Same variable names in every environment — only the values change.
 | `NODE_ENV` | `development` | `staging` | `production` |
 | `PORT` | `5000` | set by host (Render/Railway) | set by host |
 | `MONGODB_URI` | `mongodb://localhost:27017/hackhub` (compose: `mongodb://mongo:27017/hackhub`) | Atlas staging cluster | Atlas live cluster |
-| `REDIS_URL` | `redis://localhost:6379` (compose: `redis://redis:6379`) | hosted Redis staging | hosted Redis live |
 | `JWT_SECRET` | dev value only | secret store | secret store (required, must differ from `change_me`) |
 | `LOG_LEVEL` | `debug` | `info` | `info` |
 | `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
@@ -98,7 +98,7 @@ docker build -f apps/api/Dockerfile -t hackhub-api .
 docker run --env-file apps/api/.env -p 5000:5000 hackhub-api
 ```
 
-Local stack (API with live reload + MongoDB + Redis):
+Local stack (API with live reload + MongoDB):
 
 ```sh
 cp apps/api/.env.example apps/api/.env   # first time only
@@ -116,7 +116,7 @@ before starting. Source is mounted, so edits under `src/` reload via nodemon.
 - `npm run dev` — nodemon reload
 - `npm start` — production run
 
-Health: `GET /health` and `GET /api/health`.
+Health: `GET /health` and `GET /api/health` (`503` + `degraded` when Mongo is down).
 
 ### Monitoring
 
@@ -137,6 +137,9 @@ Health: `GET /health` and `GET /api/health`.
   `rolesNeeded`, `maxTeamSize`, `status`. `members`, `leader` and `hackathon`
   are immutable here; seats change through the join-request flow.
 - `DELETE /teams/:id` (auth, leader only).
+- `DELETE /teams/:id/members/:userId` (auth) — self-leave or leader-removal;
+  a freed seat reopens a closed team; the leader cannot leave without
+  transferring first (`MEMBER_NOT_FOUND` for unknown members).
 
 Auth accepts the login `accessToken` cookie or `Authorization: Bearer <token>`.
 Responses follow the shared `{ success, data, requestId }` envelope.

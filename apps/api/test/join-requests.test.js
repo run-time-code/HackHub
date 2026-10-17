@@ -71,7 +71,9 @@ describe('team collaboration', () => {
     for (const [key, user] of Object.entries({ leader, alice, bob, carol })) {
       tokens[key] = sign(String(user._id));
     }
-    hackathonId = new mongoose.Types.ObjectId().toHexString();
+    const Hackathon = require('../models/Hackathon');
+    const row = await Hackathon.create({ hackathon_id: 'join-flow-2026', title: 'Join Flow 2026' });
+    hackathonId = String(row._id);
 
     await new Promise((resolve) => {
       server = createApp().listen(0, resolve);

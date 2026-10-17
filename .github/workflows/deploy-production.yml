@@ -24,7 +24,7 @@ jobs:
         run: npm ci
       - name: Check API
         run: |
-          npm run lint --workspace @hackhub/api --if-present
+          npm run lint --workspace @hackhub/api
           npm test --workspace @hackhub/api
       - name: Check web app
         run: |

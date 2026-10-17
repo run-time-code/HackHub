@@ -3,7 +3,9 @@
 const { getHealth } = require('../services/healthService');
 
 function getHealthStatus(req, res) {
-  res.json({ success: true, data: getHealth(), requestId: req.id });
+  const health = getHealth();
+  const status = health.db === 'up' ? 200 : 503;
+  res.status(status).json({ success: health.db === 'up', data: health, requestId: req.id });
 }
 
 module.exports = { getHealthStatus };

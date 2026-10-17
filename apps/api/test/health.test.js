@@ -26,20 +26,33 @@ describe('health', () => {
   after(() => new Promise((resolve) => server.close(resolve)));
 
   it('GET /api/health returns the ok envelope', async () => {
-    const res = await fetch(`${base}/api/health`);
-    assert.equal(res.status, 200);
-    assert.ok(res.headers.get('x-request-id'), 'missing x-request-id header');
-    const body = await res.json();
-    assert.equal(body.success, true);
-    assert.equal(body.data.status, 'ok');
-    assert.equal(body.data.service, 'hackhub-api');
+    const mongoose = require('mongoose');
+    const orig = mongoose.connection.readyState;
+    Object.defineProperty(mongoose.connection, 'readyState', { value: 1, configurable: true });
+    try {
+      const res = await fetch(`${base}/api/health`);
+      assert.equal(res.status, 200);
+      assert.ok(res.headers.get('x-request-id'), 'missing x-request-id header');
+      const body = await res.json();
+      assert.equal(body.success, true);
+      assert.equal(body.data.status, 'ok');
+      assert.equal(body.data.db, 'up');
+      assert.equal(body.data.service, 'hackhub-api');
+    } finally {
+      Object.defineProperty(mongoose.connection, 'readyState', { value: orig, configurable: true });
+    }
   });
 
-  it('GET /health works at the root too', async () => {
+  it('GET /health reports degraded 503 when the database is down', async () => {
+    const { getHealth } = require('../src/services/healthService');
+    assert.equal(getHealth(0).db, 'down');
+    assert.equal(getHealth(0).status, 'degraded');
     const res = await fetch(`${base}/health`);
-    assert.equal(res.status, 200);
+    // No DB in this suite -> degraded.
+    assert.equal(res.status, 503);
     const body = await res.json();
-    assert.equal(body.success, true);
+    assert.equal(body.success, false);
+    assert.equal(body.data.db, 'down');
   });
 
   it('auth routes expose CSRF bootstrap and reject mutations without a token', async () => {

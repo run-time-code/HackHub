@@ -41,7 +41,7 @@ In GitHub: Settings > Branches > add a protection rule for `develop`
    The blueprint builds from the repository root and starts
    `npm start --workspace @hackhub/api` (the root lockfile is required).
 2. Set the secret env vars on the service (values from section 6 table):
-   `MONGODB_URI`, `REDIS_URL`, `JWT_SECRET`, `CORS_ORIGIN`.
+   `MONGODB_URI`, `JWT_SECRET`, `CORS_ORIGIN`.
 3. Deploy once manually, then open `https://<service>.onrender.com/health`
    and expect `{"success":true,"data":{"status":"ok",...}}`.
 4. Settings > Deploy Hook: copy the hook URL. It goes into GitHub as
@@ -89,7 +89,6 @@ Same variable names everywhere, only values change:
 | `NODE_ENV`     | `development`                        | `staging`                            | `production`         |
 | `PORT`         | `5000`                               | set by Render                        | set by host          |
 | `MONGODB_URI`  | `mongodb://localhost:27017/hackhub`  | Atlas staging cluster                | Atlas live cluster   |
-| `REDIS_URL`    | `redis://localhost:6379`             | hosted Redis / placeholder           | hosted Redis         |
 | `JWT_SECRET`   | dev value only                       | secret store (required, differs)     | secret store (required, differs) |
 | `ACCESS_TOKEN_SECRET` | separate secret store value       | separate secret store value          | separate secret store value |
 | `CSRF_SECRET`  | separate secret store value          | separate secret store value          | separate secret store value |

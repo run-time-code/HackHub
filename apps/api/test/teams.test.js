@@ -43,7 +43,9 @@ describe('teams', () => {
   before(async () => {
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
-    hackathonId = new mongoose.Types.ObjectId().toHexString();
+    const Hackathon = require('../models/Hackathon');
+    const row = await Hackathon.create({ hackathon_id: 'pixel-builders-2026', title: 'Pixel Builders 2026' });
+    hackathonId = String(row._id);
     leaderToken = sign(new mongoose.Types.ObjectId().toHexString());
     otherToken = sign(new mongoose.Types.ObjectId().toHexString());
     await new Promise((resolve) => {

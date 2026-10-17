@@ -25,7 +25,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run lint --workspace @hackhub/api --if-present
+      - run: npm run lint --workspace @hackhub/api
       - run: npm test --workspace @hackhub/api
 
   deploy-api:

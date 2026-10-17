@@ -5,6 +5,7 @@ const { Router } = require('express');
 const teamsController = require('../controllers/teamsController');
 const joinRequestsController = require('../controllers/joinRequestsController');
 const requireAuth = require('../middleware/requireAuth');
+const { teamWriteLimiter } = require('../../middleware/rateLimitMiddleware');
 
 const router = Router();
 
@@ -13,19 +14,21 @@ const router = Router();
 router.get('/', teamsController.list);
 
 // Leader creates a team for a hackathon.
-router.post('/', requireAuth, teamsController.create);
+router.post('/', requireAuth, teamWriteLimiter, teamsController.create);
 
 // Join requests (any authenticated non-member) and invitations (leader).
-router.post('/:id/requests', requireAuth, joinRequestsController.sendRequest);
+router.post('/:id/requests', requireAuth, teamWriteLimiter, joinRequestsController.sendRequest);
 router.get('/:id/requests', requireAuth, joinRequestsController.listForTeam);
-router.post('/:id/invitations', requireAuth, joinRequestsController.invite);
+router.post('/:id/invitations', requireAuth, teamWriteLimiter, joinRequestsController.invite);
 router.get('/:id/invitations', requireAuth, joinRequestsController.listInvitations);
 
 router.get('/:id', teamsController.getOne);
 
 // Leader-only from here on (enforced in the service layer).
-router.patch('/:id', requireAuth, teamsController.update);
-router.patch('/:id/leader', requireAuth, teamsController.transferLeader);
-router.delete('/:id', requireAuth, teamsController.remove);
+router.patch('/:id', requireAuth, teamWriteLimiter, teamsController.update);
+router.patch('/:id/leader', requireAuth, teamWriteLimiter, teamsController.transferLeader);
+// F-17: members can leave, leaders can remove; freed seat reopens a closed team.
+router.delete('/:id/members/:userId', requireAuth, teamWriteLimiter, teamsController.removeMember);
+router.delete('/:id', requireAuth, teamWriteLimiter, teamsController.remove);
 
 module.exports = router;

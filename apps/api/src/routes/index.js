@@ -6,6 +6,7 @@ const teamsRoutes = require('./teams');
 const teamRequestsRoutes = require('./teamRequests');
 const usersRoutes = require('./users');
 const notificationsRoutes = require('./notifications');
+const hackathonsRoutes = require('./hackathons');
 
 const router = Router();
 
@@ -14,9 +15,9 @@ router.use('/teams', teamsRoutes);
 router.use('/team-requests', teamRequestsRoutes);
 router.use('/users', usersRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/hackathons', hackathonsRoutes);
 
 // Future feature routers plug in here, e.g.:
 // router.use('/auth', require('./auth'));
-// router.use('/hackathons', require('./hackathons'));
 
 module.exports = router;

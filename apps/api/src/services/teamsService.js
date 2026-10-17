@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 const { Team } = require('../models/team');
 const { JoinRequest } = require('../models/joinRequest');
+const { hackathonExists } = require('./hackathonsService');
 const notifications = require('./notificationsService');
 
 const ALLOWED_UPDATE_FIELDS = ['name', 'description', 'rolesNeeded', 'maxTeamSize', 'status'];
@@ -21,6 +22,23 @@ function notFound() {
 
 function forbidden() {
   return { status: 403, code: 'TEAM_FORBIDDEN', message: 'Only the team leader can do this' };
+}
+
+// F-23: map Mongoose validation text to stable client messages instead of
+// leaking schema internals.
+function friendlyValidationError(err) {
+  const details = err && err.errors ? Object.values(err.errors) : [];
+  const first = details[0];
+  const kind = first && first.kind;
+  const path = first && first.path;
+  if (kind === 'maxlength') return badRequest(`${path} is too long`);
+  if (kind === 'minlength') return badRequest(`${path} is too short`);
+  if (kind === 'min') return badRequest(`${path} is too small`);
+  if (kind === 'max') return badRequest(`${path} is too large`);
+  if (kind === 'enum') return badRequest(`${path} has an invalid value`);
+  if (kind === 'required') return badRequest(`${path} is required`);
+  if (first && first.message) return badRequest('Invalid team data');
+  return badRequest(err && err.message ? err.message : 'Invalid team data');
 }
 
 function assertObjectId(value, name) {
@@ -73,6 +91,9 @@ async function createTeam(input, leaderId) {
     throw badRequest('hackathonId is required');
   }
   assertObjectId(hackathonId, 'hackathonId');
+  if (!(await hackathonExists(hackathonId))) {
+    throw badRequest('hackathonId does not reference an existing hackathon');
+  }
   const team = new Team({
     name: name.trim(),
     description: typeof description === 'string' ? description.trim() : '',
@@ -85,7 +106,7 @@ async function createTeam(input, leaderId) {
   try {
     await team.validate();
   } catch (err) {
-    throw badRequest(err.message);
+    throw friendlyValidationError(err);
   }
   await team.save();
   return serialize(team);
@@ -163,7 +184,7 @@ async function updateTeam(id, updates, requesterId) {
   try {
     await team.validate();
   } catch (err) {
-    throw badRequest(err.message);
+    throw friendlyValidationError(err);
   }
   await team.save();
   if (!wasClosed && team.status === 'closed') {
@@ -232,6 +253,56 @@ async function transferLeader(id, requesterId, newLeaderId) {
   return serialize(team);
 }
 
+// F-17: self-leave or leader-removal. A freed seat reopens a closed team.
+// The leader cannot leave without transferring first.
+async function removeMember(id, targetUserId, requesterId) {
+  assertObjectId(id, 'team id');
+  assertObjectId(targetUserId, 'user id');
+  const team = await Team.findById(id);
+  if (!team) {
+    throw notFound();
+  }
+  const isSelf = String(targetUserId) === String(requesterId);
+  const leader = isLeader(team, requesterId);
+  if (!isSelf && !leader) {
+    throw forbidden();
+  }
+  if (isSelf && isLeader(team, requesterId)) {
+    throw badRequest('Transfer leadership before leaving the team');
+  }
+  const index = (team.members || []).findIndex((m) => String(m.user) === String(targetUserId));
+  if (index === -1) {
+    throw { status: 404, code: 'MEMBER_NOT_FOUND', message: 'Team member not found' };
+  }
+  team.members.splice(index, 1);
+  if (team.status === 'closed' && 1 + team.members.length < team.maxTeamSize) {
+    team.status = 'open';
+  }
+  await team.save();
+  const removedIsLeaderAction = !isSelf;
+  await notifications.createNotification({
+    userId: targetUserId,
+    type: removedIsLeaderAction ? 'member_removed' : 'member_left',
+    title: removedIsLeaderAction ? 'Removed from team' : 'You left the team',
+    message: removedIsLeaderAction
+      ? `You were removed from ${team.name}.`
+      : `You left ${team.name}.`,
+    data: { teamId: String(team._id) },
+    email: false,
+  });
+  await notifications.createNotification({
+    userId: team.leader,
+    type: removedIsLeaderAction ? 'member_removed' : 'member_left',
+    title: removedIsLeaderAction ? 'Member removed' : 'Member left',
+    message: removedIsLeaderAction
+      ? `A member was removed from ${team.name}.`
+      : `A member left ${team.name}.`,
+    data: { teamId: String(team._id), userId: String(targetUserId) },
+    email: false,
+  });
+  return serialize(team);
+}
+
 module.exports = {
   createTeam,
   listTeams,
@@ -239,6 +310,7 @@ module.exports = {
   updateTeam,
   deleteTeam,
   transferLeader,
+  removeMember,
   isLeader,
   serialize,
 };
