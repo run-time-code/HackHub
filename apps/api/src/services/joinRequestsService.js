@@ -364,7 +364,7 @@ async function respond(requestId, userId, input = {}) {
         },
       },
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!acceptedTeam) {
     const current = await Team.findById(team._id);

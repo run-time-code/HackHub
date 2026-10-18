@@ -32,6 +32,8 @@ describe('teammate discovery', () => {
         availability: u.availability || 'available',
         lookingForTeam: u.lookingForTeam ?? false,
         discoverable: u.discoverable ?? false,
+        banned: u.banned ?? false,
+        deletedAt: u.deletedAt ?? null,
       }))
     );
   }
@@ -39,17 +41,20 @@ describe('teammate discovery', () => {
   before(async () => {
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
-    token = jwt.sign(
-      { id: new mongoose.Types.ObjectId().toHexString(), email: 'me@test.com', role: 'student' },
-      config.jwtSecret
-    );
     await seed([
       { name: 'Asha', skills: ['React', 'Node'], availability: 'available', lookingForTeam: true, discoverable: true },
       { name: 'Bala', skills: ['React'], availability: 'limited', lookingForTeam: true, discoverable: true },
       { name: 'Cara', skills: ['React', 'Node'], availability: 'available', lookingForTeam: true, discoverable: false },
       { name: 'Dev', skills: ['Python'], availability: 'available', lookingForTeam: true, discoverable: true },
       { name: 'Esha', skills: ['React'], availability: 'available', lookingForTeam: false, discoverable: true },
+      { name: 'Fina', skills: ['React'], availability: 'available', lookingForTeam: true, discoverable: true, banned: true },
+      { name: 'Gopal', skills: ['React'], availability: 'available', lookingForTeam: true, discoverable: true, deletedAt: new Date() },
     ]);
+    const currentUser = await User.create({ name: 'Current User', email: 'current@test.com' });
+    token = jwt.sign(
+      { id: String(currentUser._id), email: currentUser.email, role: currentUser.role },
+      config.jwtSecret
+    );
     await new Promise((resolve) => {
       server = createApp().listen(0, resolve);
     });
@@ -86,6 +91,19 @@ describe('teammate discovery', () => {
     const res = await get('/users/discover?skills=react,node,python');
     const names = (await res.json()).data.items.map((u) => u.name);
     assert.ok(!names.includes('Cara'), 'private user leaked into discovery');
+  });
+
+  it('excludes banned and deleted accounts from discovery', async () => {
+    const res = await get('/users/discover?skills=react');
+    const names = (await res.json()).data.items.map((u) => u.name);
+    assert.ok(!names.includes('Fina'), 'banned user leaked into discovery');
+    assert.ok(!names.includes('Gopal'), 'deleted user leaked into discovery');
+  });
+
+  it('does not expose soft-deleted public profiles', async () => {
+    const deletedUser = await User.findOne({ name: 'Gopal' });
+    const res = await fetch(`${base}/users/public/${deletedUser._id}`);
+    assert.equal(res.status, 404);
   });
 
   it('filters by availability', async () => {

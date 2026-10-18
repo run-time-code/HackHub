@@ -1,8 +1,10 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 const config = require('../config');
+const User = require('../../models/User');
 
 // Verifies the login session for the new API surface and attaches
 // req.user = { id, email, role }.
@@ -28,28 +30,49 @@ function secrets() {
   );
 }
 
-function requireAuth(req, _res, next) {
+async function requireAuth(req, _res, next) {
   const token = extractToken(req);
   if (!token) {
     return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Authentication required' });
   }
+  let payload;
   for (const secret of secrets()) {
     try {
-      const payload = jwt.verify(token, secret);
-      req.user = {
-        id: String(payload.id || payload.sub || ''),
-        email: payload.email,
-        role: payload.role,
-      };
-      if (!req.user.id) {
-        break;
-      }
-      return next();
+      payload = jwt.verify(token, secret);
+      break;
     } catch {
       // Try the next configured secret.
     }
   }
-  return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Invalid or expired token' });
+  if (!payload) {
+    return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Invalid or expired token' });
+  }
+
+  const id = String(payload.id || payload.sub || '');
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Invalid or expired token' });
+  }
+
+  try {
+    const user = await User.findById(id).select('_id email role tokenVersion deletedAt banned');
+    if (!user || user.deletedAt) {
+      return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Account not found or deactivated' });
+    }
+    if (user.banned) {
+      return next({ status: 403, code: 'FORBIDDEN', message: 'Your account has been banned' });
+    }
+    if ((payload.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+      return next({ status: 401, code: 'UNAUTHENTICATED', message: 'Session revoked. Please log in again.' });
+    }
+    req.user = {
+      id: String(user._id),
+      email: user.email,
+      role: user.role,
+    };
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 }
 
 module.exports = requireAuth;

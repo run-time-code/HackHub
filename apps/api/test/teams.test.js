@@ -14,6 +14,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const config = require('../src/config');
 const createApp = require('../src/app');
+const User = require('../models/User');
 
 describe('teams', () => {
   let server;
@@ -46,8 +47,14 @@ describe('teams', () => {
     const Hackathon = require('../models/Hackathon');
     const row = await Hackathon.create({ hackathon_id: 'pixel-builders-2026', title: 'Pixel Builders 2026' });
     hackathonId = String(row._id);
-    leaderToken = sign(new mongoose.Types.ObjectId().toHexString());
-    otherToken = sign(new mongoose.Types.ObjectId().toHexString());
+    const actorIds = [new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId()];
+    await User.insertMany(actorIds.map((id, index) => ({
+      _id: id,
+      name: `Actor ${index}`,
+      email: `actor${index}@test.com`,
+    })));
+    leaderToken = sign(String(actorIds[0]));
+    otherToken = sign(String(actorIds[1]));
     await new Promise((resolve) => {
       server = createApp().listen(0, resolve);
     });

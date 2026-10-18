@@ -169,7 +169,7 @@ const getPublicProfile = async (req, res) => {
     });
 }
 
-        const user = await User.findById(id).select(
+        const user = await User.findOne({ _id: id, deletedAt: null }).select(
             "name bio college location skills avatarUrl"
         );
 

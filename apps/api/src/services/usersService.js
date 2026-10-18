@@ -58,7 +58,7 @@ async function searchTeammates(query) {
   const lookingForTeam = parseBool(lookingParam, true);
 
   // Privacy rule: only users who explicitly opted in are ever returned.
-  const filter = { discoverable: true, lookingForTeam };
+  const filter = { discoverable: true, lookingForTeam, deletedAt: null, banned: { $ne: true } };
   if (availability !== undefined) {
     if (!AVAILABILITY.includes(availability)) {
       throw {

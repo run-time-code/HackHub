@@ -70,6 +70,23 @@ describe('notifications', () => {
     assert.equal(body.error.code, 'UNAUTHENTICATED');
   });
 
+  it('rejects revoked, banned and deleted sessions', async () => {
+    const revoked = await User.create({ name: 'Revoked', email: 'revoked@test.com' });
+    const revokedToken = sign(String(revoked._id));
+    revoked.tokenVersion += 1;
+    await revoked.save();
+    const revokedResponse = await api('GET', '/notifications', { token: revokedToken });
+    assert.equal(revokedResponse.res.status, 401);
+
+    const banned = await User.create({ name: 'Banned', email: 'banned@test.com', banned: true });
+    const bannedResponse = await api('GET', '/notifications', { token: sign(String(banned._id)) });
+    assert.equal(bannedResponse.res.status, 403);
+
+    const deleted = await User.create({ name: 'Deleted', email: 'deleted@test.com', deletedAt: new Date() });
+    const deletedResponse = await api('GET', '/notifications', { token: sign(String(deleted._id)) });
+    assert.equal(deletedResponse.res.status, 401);
+  });
+
   it('lists newest-first with an unread count and unread filter', async () => {
     await notificationsService.createNotification({
       userId,
