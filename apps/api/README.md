@@ -1,64 +1,65 @@
-# HackHub Backend
+# HackHub API (`@hackhub/api`)
 
-Backend API for **HackHub**, a platform that helps users discover and manage hackathons from different platforms in one place.
+Backend API for **HackHub**, a platform that helps users discover and manage
+hackathons from different platforms in one place.
 
-## Tech Stack
+## Tech stack
 
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- JWT Authentication
-- bcrypt
-- Postman for API testing
+- Node.js + Express.js
+- MongoDB + Mongoose
+- Cookie sessions: short-lived `accessToken` + rotating `refreshToken` (httpOnly cookies); bcrypt password hashing
+- Double-submit CSRF protection on every mutation
+- Passport strategies for Google and GitHub OAuth
+- helmet, rate limits, request sanitization, audit logging
+- Pino structured logs, Prometheus `/metrics`, Sentry (optional)
 
 ## Features
 
-### Authentication
+- **Authentication** — register/login/logout, access-token rotation via
+  `/auth/refresh`, CSRF bootstrap, email verification, password reset,
+  Google/GitHub OAuth, session restore (`/auth/me`, `/users/me`).
+- **Profiles & onboarding** — skills/interests, discoverability, password
+  change, session revocation, data export, soft-delete with a purge job.
+- **Saved hackathons & dashboard** — save/unsave/register/notes by slug plus a
+  dashboard summary.
+- **Teams** — create/join/leave, leadership transfer, join requests and
+  invitations, teammate discovery.
+- **Notifications** — in-app inbox with an SSE stream and best-effort email.
+- **Admin** — hackathon visibility/featured edits, user bans, reports.
 
-- User registration
-- User login
-- Password hashing using bcrypt
-- JWT-based authentication
-- Protected API routes
+Planned (not implemented): calendar & reminder persistence, hackathon facets
+and the Worth Score endpoints. See [docs/API_SPEC.md](../../docs/API_SPEC.md)
+for the full endpoint reference and the frontend's provisional assumptions.
 
-### Reminders
+## API structure (`apps/api/`)
 
-- Create hackathon reminders
-- View reminders
-- Delete reminders
-- Authentication required for reminder operations
-
-### Saved Hackathons
-
-- Save hackathons for later
-- Access saved hackathons
-- Manage saved hackathons through authenticated APIs
-
----
-
-## API structure (`server/src/`)
-
-Express backend skeleton — shared base for auth and hackathon data features.
+The production entrypoint is `src/server.js` (`npm start`), which builds the
+app via `src/app.js` (`createApp()`). It mounts the newer `src/` routers and
+the flat legacy routers under `/api`, so one process serves every feature. The
+old root `server.js` is a legacy duplicate and is not used by `npm start`,
+Docker, or Render.
 
 ### Layout
 
 ```text
-server/
+apps/api/
   src/
-    server.js            # entrypoint: listen + graceful shutdown
-    app.js               # createApp() factory (routes, middleware wiring)
+    server.js            # entrypoint: Mongo connect + graceful shutdown + Sentry + purge cron
+    app.js               # createApp() factory (security, logging, router mounts)
     config/index.js      # per-env config (development / staging / production)
-    routes/              # index.js aggregates; health.js = GET /health
+    routes/              # index.js: /health /teams /team-requests /users /notifications /hackathons
     controllers/         # thin HTTP layer (req/res + status codes)
     services/            # business logic (controllers call services)
-    models/              # Mongoose models (index.js re-exports)
+    models/              # Team, JoinRequest, Notification
     middleware/          # requestId, notFound, errorHandler
     utils/logger.js      # pino structured logger
+  routes/                # flat routers, mounted at /api:
+                         #   auth, users, saved-hackathons, dashboard, admin/{hackathons,users,reports}
+  controllers/           # auth, user, dashboard, hackathon tracking, admin, oauth
+  models/                # User, Hackathon, Registration, SavedHackathon, AuditLog
+  middleware/            # auth, CSRF, rate limits, sanitize, audit, upload
   .env.example           # copy to .env for local dev (never commit .env)
 ```
-
-Legacy flat files (`server/server.js`, `server/routes/*`, `server/controllers/*`, `server/models/*`) remain from the auth/reminder implementation and are still present after the merge.
 
 ### Layer rules
 
@@ -73,7 +74,37 @@ Success: `{ "success": true, "data": {...}, "requestId": "..." }`
 Error: `{ "success": false, "error": { "code": "...", "message": "..." }, "requestId": "..." }`
 
 Every response carries `x-request-id` (client values accepted only when they
-match `^[A-Za-z0-9_-]{8,64}$`; anything else is replaced with a UUID).
+match `^[A-Za-z0-9_-]{8,64}$`; anything else is replaced with a UUID). Legacy
+auth/profile routers use a plain `{ message, data }` shape.
+
+### Auth (`/api/auth`)
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| GET | `/csrf-token` | CSRF bootstrap; mutations send the token back as `X-CSRF-Token` |
+| POST | `/register` | `{ name, email, password }`; sends a verification email |
+| POST | `/login` | `{ email, password }`; sets session cookies and returns `user` |
+| POST | `/refresh` | Rotates the access token after its 15-minute expiry |
+| POST | `/logout` | Clears the session cookies |
+| GET | `/verify-email?token=` | Verifies an email address |
+| POST | `/resend-verification` | Re-sends the verification link |
+| POST | `/forgot-password` / `/reset-password` | Password reset flow |
+| GET | `/me` | Session restore (mirrors `/users/me`) |
+| GET | `/google`, `/github` | Same-window OAuth start; callbacks redirect to `FRONTEND_URL/?oauth=...` |
+
+### Saved hackathons & dashboard
+
+| Method | Endpoint | Notes |
+|---|---|---|
+| POST | `/saved-hackathons/save` · `/unsave` · `/register` · `/notes` | Tracking mutations (`{ hackathon }` slug) |
+| GET | `/saved-hackathons/status/:hackathon` | Status by slug |
+| GET | `/dashboard/summary` | Personal dashboard counts |
+
+### Admin (`/api/admin/*`, admin role + CSRF)
+
+`PATCH /hackathons/:hackathon_id/visibility`, `PATCH /hackathons/:hackathon_id/featured`,
+`PATCH /hackathons/:hackathon_id`, `PATCH /users/:userId/ban`, `PATCH /users/:userId/unban`,
+`GET /reports`.
 
 ### Config
 
@@ -85,8 +116,15 @@ Same variable names in every environment — only the values change.
 | `PORT` | `5000` | set by host (Render/Railway) | set by host |
 | `MONGODB_URI` | `mongodb://localhost:27017/hackhub` (compose: `mongodb://mongo:27017/hackhub`) | Atlas staging cluster | Atlas live cluster |
 | `JWT_SECRET` | dev value only | secret store | secret store (required, must differ from `change_me`) |
+| `ACCESS_TOKEN_SECRET` | dev value only | secret store | secret store |
+| `CSRF_SECRET` | dev value only | secret store | secret store |
+| `FRONTEND_URL` / `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional | optional | optional (enables Google sign-in) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | optional | optional | optional (enables GitHub sign-in) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | optional | optional | optional (enables email) |
+| `SENTRY_DSN` | empty (disabled) | backend Sentry DSN | backend Sentry DSN |
 | `LOG_LEVEL` | `debug` | `info` | `info` |
-| `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
+| `METRICS_TOKEN` | empty (`/metrics` hidden) | random scrape token | random scrape token |
 | `MAX_JOIN_REQUESTS_PER_DAY` | `10` | `10` | `10` |
 
 ### Docker
@@ -105,16 +143,16 @@ cp apps/api/.env.example apps/api/.env   # first time only
 docker compose -f apps/api/docker-compose.yml up --build
 ```
 
-This starts `api` (http://localhost:5000), `mongo` (localhost:27017),
-and `redis` (localhost:6379). The API waits for healthy Mongo/Redis
-before starting. Source is mounted, so edits under `src/` reload via nodemon.
-`Ctrl+C` stops; data survives in the `mongo-data` / `redis-data` volumes
-(`docker compose down -v` wipes them).
+This starts `api` (http://localhost:5000) and `mongo` (localhost:27017)
+with the source mounted for nodemon reload. `Ctrl+C` stops; data survives in
+the `mongo-data` volume (`docker compose down -v` wipes it).
 
 ### Scripts
 
 - `npm run dev` — nodemon reload
-- `npm start` — production run
+- `npm start` — production run (`src/server.js`)
+- `npm run lint` / `npm test` — ESLint, `node --test`
+- `npm run smoke:staging` — staging smoke checks
 
 Health: `GET /health` and `GET /api/health` (`503` + `degraded` when Mongo is down).
 
@@ -175,6 +213,13 @@ existing member (the outgoing leader becomes a member).
   declined, team full, leader change) are best-effort: no `RESEND_API_KEY`
   means no email, never a failed request.
 
+### Hackathons (`GET /hackathons`, also under `/api/...`)
+
+Public catalogue used by the team feature and the discovery screen:
+`GET /hackathons?q=&page=&limit=` (search + pagination) and
+`GET /hackathons/:id` (ObjectId **or** slug). Catalogue rows come from the
+`Hackathon` collection; import data with `tools/data-importer`.
+
 ### Teammate discovery (`GET /users/discover`, also under `/api/...`)
 
 Login required. Finds users by `skills` (comma-separated, best match first),
@@ -183,6 +228,21 @@ Login required. Finds users by `skills` (comma-separated, best match first),
 Privacy: only users who opted in (`discoverable`) are ever listed, and the
 card exposes `id`, `name`, `skills`, `availability`, `lookingForTeam` and
 `matchCount` only — no email, password or tokens.
+
+### Frontend integration
+
+The web app (`apps/web`) talks to this API with credentialed requests:
+
+- CORS must include the web origin in `FRONTEND_URL`/`CORS_ORIGIN`.
+- Mutations send `X-CSRF-Token` obtained from `GET /api/auth/csrf-token`.
+- OAuth sign-in uses same-window navigation to `/api/auth/google` and
+  `/api/auth/github`; callbacks redirect to `${FRONTEND_URL}/?oauth=...`.
+- Session tokens live in httpOnly cookies — the SPA keeps only `user` state
+  in memory.
+
+The frontend's provisional assumptions (calendar/reminders persistence and the
+`/saved` vs `/saved-hackathons/*` naming) are tracked in
+[docs/API_SPEC.md](../../docs/API_SPEC.md).
 
 ### Staging
 

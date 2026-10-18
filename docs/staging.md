@@ -60,11 +60,11 @@ after inactivity can take ~1 minute. The workflow's health-wait loop
 3. Production branch: `main`. All other branches (including `develop`)
    get preview URLs automatically — the `develop` preview URL IS the
    staging frontend.
-4. Staging env var on the project: `VITE_API_URL=https://<staging-api>`.
+4. Staging env var on the project: `VITE_API_BASE_URL=https://<staging-api>`
+   (`VITE_API_URL` is also accepted). The web app reads it at build time.
 5. For CLI deploys from the workflow, create tokens and store them as
    `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (next section).
-   Until the web app is present, the
-   workflow's frontend job skips gracefully.
+   The workflow's frontend job skips gracefully when those secrets are absent.
 
 ## 5. GitHub Environment `staging` (one time)
 
@@ -109,8 +109,11 @@ Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 1. Push to `develop` > Actions > "Deploy to staging" runs:
    backend checks > Render deploy > health wait > Vercel deploy > smoke.
 2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix apps/api`.
-3. Week 2 demo flow on staging: browse hackathons, search/filter, save,
-   dashboard, profile skills, recommendations + Worth Score.
+3. Demo flow on staging: sign up → verify email → log in (password or
+   Google/GitHub) → onboarding → browse the catalogue and save events →
+   dashboard tracking → calendar/reminders → account settings. Calendar and
+   saved-endpoint calls are provisional until the API confirms them
+   (see [API_SPEC.md](API_SPEC.md)).
 
 ## Troubleshooting
 

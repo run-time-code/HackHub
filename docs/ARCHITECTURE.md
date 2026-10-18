@@ -1,61 +1,122 @@
 # Architecture
 
 ## Overview
-HackHub is a MERN platform with a Vite React frontend, Express backend, MongoDB, and scheduled scrapers.
+
+HackHub is a **Turborepo + npm workspaces monorepo**: a React 19 "field guide"
+web app backed by an Express API and MongoDB. A Python importer feeds the
+hackathon catalogue; scheduled scrapers are still planned.
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────┐
-│  Scrapers   │────>│  Express API │────>│ MongoDB │
-│ (Cron Jobs) │     │  (JWT Auth)  │<────│ (Atlas) │
-└─────────────┘     └──────┬───────┘     └─────────┘
-                           │
-                    ┌──────▼───────┐
-                    │ React Client │
-                    │ Dashboard,   │
-                    │ Calendar,    │
-                    │ Team Finder  │
-                    └──────────────┘
+ [tools/data-importer] ──┐
+ [scrapers (planned)] ───┴──> [Express API — apps/api] <──> [MongoDB Atlas]
+                                     ▲
+                                     │  HTTPS, cookies + CSRF, credentialed CORS
+                            [React web app — apps/web]
+                            /auth panels · /app sections
 ```
 
-## Data Flow
-1. Cron jobs fetch from Devpost, Unstop, Devfolio, HackerEarth, MLH, Hack2Skill
-2. Normalize → deduplicate → store in MongoDB
-3. API exposes `/api/hackathons` with filters, search, Worth Score
-4. Client renders listings, dashboard, calendar, teammate finder
-5. Reminders via cron + email/push before deadlines
+## Monorepo layout
 
-## Database Schema (Mongoose)
+| Path | Purpose |
+|---|---|
+| `apps/web` | React 19 + Vite frontend (`@hackhub/web`) |
+| `apps/api` | Express API (`@hackhub/api`), deployed to Render |
+| `apps/backend-prototype` | Exploratory prototypes; **not** installed or deployed |
+| `tools/data-importer` | Python importer for the hackathon catalogue |
+| `tools/loadtest` | k6 load scenarios |
+| `tools/monitoring` | Grafana dashboard JSON |
+| `docs` | Architecture, API spec, staging, monitoring, operations |
 
-**User**
-```js
-{ name, email, passwordHash, skills:[String], interests:[String], avatar, teams:[ObjectId] }
-```
+## Frontend (`apps/web`)
 
-**Hackathon**
-```js
-{ title, organizer, source, url, description, domains:[String], skills:[String],
-  mode: 'online'|'offline'|'hybrid', location, prizePool, registrationDeadline, submissionDeadline,
-  startDate, endDate, worthScore: Number, featured: Boolean }
-```
+- React 19 + Vite, Tailwind CSS v4, `react-router-dom`, `react-hook-form` + `zod`.
+- **Routing** (`src/App.jsx`): auth panels share `/auth?panel=login|register|forgot|reset|verify`;
+  the protected product lives under `/app?section=dashboard|discover|calendar|preferences|settings`.
+  Workspace sections are lazy-loaded inside `components/Workspace.jsx`; legacy
+  URLs (`/login`, `/dashboard`, …) redirect to the matching panel/section.
+- **Session state**: `context/AuthContext.jsx` restores the session from
+  httpOnly cookies on load, listens for the `auth:unauthorized` event, and
+  exposes `login`/`logout`/`refreshSession` through `context/auth-context.js`.
+- **API clients**: `lib/api/request.js` (cookie + CSRF, refresh-once-and-replay,
+  unauthorized event) powers auth/session/account calls; `lib/api/client.js`
+  powers the catalogue and tracking modules (`hackathons.js`, `calendar.js`)
+  and unwraps the API's `{ success, data }` envelope.
+- **UI states**: API-dependent screens render loading, error and genuine empty
+  states — never mock data.
+- Sentry is optional via `VITE_SENTRY_DSN` (`src/main.jsx`).
 
-**Team**
-```js
-{ name, hackathon: ObjectId, members:[ObjectId], lookingFor:[String], inviteCode }
-```
+## Backend (`apps/api`)
 
-**Saved / Registration**
-```js
-{ user: ObjectId, hackathon: ObjectId, status: 'saved'|'registered'|'ongoing'|'completed' }
-```
+- **Entrypoint**: `src/server.js` (`npm start`) connects MongoDB, initializes
+  Sentry when configured, then builds the app with `createApp()` (`src/app.js`)
+  and handles graceful shutdown. `apps/api/server.js` at the package root is a
+  legacy duplicate and is not used by `npm start`, Docker or Render.
+- **Mounted routers** (single process, paths served under `/api`):
+  - `src/routes`: `/health`, `/teams`, `/team-requests`, `/users`, `/notifications`, `/hackathons`
+  - flat legacy routers: `/auth`, `/users`, `/saved-hackathons`, `/dashboard/summary`, `/admin/{hackathons,users,reports}`
+- **Security**: helmet, credentialed CORS restricted to `FRONTEND_URL`/`CORS_ORIGIN`,
+  request sanitization, rate limits (login, register, OAuth start, resets,
+  team writes, join requests), audit logging, trust proxy for Render.
+- **Background work**: nightly cron purges soft-deleted accounts past the
+  retention window. Notifications fan out over an in-process event bus (SSE) —
+  a multi-instance deployment would need a shared bus (Redis is intentionally
+  absent).
+- **Observability**: `requestId` on every response plus Pino JSON request logs,
+  `GET /metrics` (Prometheus, bearer `METRICS_TOKEN`), Sentry (optional),
+  `/health` + `/api/health`.
 
-## Worth Score Service
-Pure function `calcWorthScore(hackathon, userSkills)` → 0-100. See [WORTH_SCORE.md](WORTH_SCORE.md).
+## Auth flow
 
-## Auth
-JWT (access + refresh), bcrypt, protected routes via middleware.
+1. Email/password: `POST /auth/register` → verification email → `GET /auth/verify-email`
+   → `POST /auth/login` sets httpOnly `accessToken`/`refreshToken` cookies.
+2. Every mutation bootstraps a CSRF token from `GET /auth/csrf-token` and sends
+   it back as `X-CSRF-Token` (double-submit cookie).
+3. Access tokens expire after 15 minutes; `POST /auth/refresh` rotates them, and
+   the web client replays a single 401 request after a successful refresh.
+4. OAuth: same-window navigation to `GET /auth/google` or `/auth/github`
+   (signed `state` cookie), provider callback, then a redirect to
+   `${FRONTEND_URL}/?oauth=...` which the SPA exchanges for a session.
+5. API clients may still use `Authorization: Bearer <accessToken>`.
+
+## Data model (Mongoose)
+
+| Model | Key fields |
+|---|---|
+| `User` | name, email, password (hashed, `select: false`), googleId/githubId (sparse unique), role, banned + lockout fields, bio/college/location, skills, preferences, avatarUrl, availability, lookingForTeam, discoverable, emailVerified + verification/reset token hashes, deletedAt (soft delete), `tokenVersion` |
+| `Hackathon` | `hackathon_id` slug (unique), title, `registration_deadline` (string), is_active, is_hidden, is_featured |
+| `SavedHackathon` | user, hackathon slug, timestamps |
+| `Registration` | user, hackathon slug, registered, notes |
+| `Team` | name, description, hackathon (ObjectId), leader, members `[{ user, role, joinedAt }]`, rolesNeeded, maxTeamSize (2–10), status `open/closed` |
+| `JoinRequest` | team, user, type `request/invite`, initiatedBy, role, message, status `pending → accepted/declined/cancelled/expired`, 7-day TTL |
+| `Notification` | user, type, title, message, data, read/readAt |
+| `AuditLog` | event, userId, email, success, statusCode, ip, userAgent, details |
+
+Hackathons are referenced **by ObjectId** in teams and **by slug**
+(`hackathon_id`) in saved/registration records; the public catalogue exposes
+both (`id` and `slug`) so clients never guess.
+
+## Testing and CI
+
+- `apps/web`: Vitest for API client/validation logic, ESLint, `vite build`.
+- `apps/api`: `node --test` suites plus ESLint.
+- `.github/workflows/ci.yml` runs frontend (lint/test/build), backend
+  (lint/test) and Gitleaks on PRs and pushes to `main`/`develop`.
 
 ## Deployment
-- Frontend: Vercel / Netlify (static `dist`)
-- Backend: Render / Railway / Vercel Functions
-- DB: MongoDB Atlas
-- Cron: Vercel Cron or node-cron on server
+
+- **API**: Render web service built from `apps/api/Dockerfile` via `render.yaml`
+  (staging on `develop`, production on `main`). See [staging.md](staging.md) and
+  [production-operations.md](production-operations.md).
+- **Web**: Vercel builds `apps/web` from the repo root (`vercel.json`);
+  Netlify config is kept as a fallback.
+- **Database**: MongoDB Atlas (separate staging and production clusters).
+- **Monitoring**: [monitoring.md](monitoring.md).
+
+## Planned / known gaps
+
+- Hackathon scrapers and richer catalogue facets.
+- Calendar/reminder persistence and the Worth Score service
+  ([WORTH_SCORE.md](WORTH_SCORE.md)).
+- Reconciling the frontend's provisional `/saved` calls with the implemented
+  `/saved-hackathons/*` + `/dashboard/summary` routes (see
+  [API_SPEC.md](API_SPEC.md)).

@@ -1,5 +1,9 @@
 # Hackathon Worth Score
 
+> **Status: planned — not implemented yet.** No scoring service or endpoints
+> exist in `apps/api` today; the formula below is the agreed target spec.
+> See [API_SPEC.md](API_SPEC.md) ("Planned") for endpoint status.
+
 ## Purpose
 Help students decide if a hackathon is worth entering.
 

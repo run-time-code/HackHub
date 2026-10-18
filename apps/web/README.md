@@ -1,24 +1,38 @@
 # HackHub frontend
 
-The frontend is a React 19 + Vite application with routes for authentication, onboarding, dashboard tracking, hackathon discovery, calendar/reminders, and account settings.
+The frontend is a React 19 + Vite application ("field guide" UI) with routes
+for authentication, onboarding, dashboard tracking, hackathon discovery,
+calendar/reminders, and account settings.
 
 ## Local development
 
-Requirements: Node.js 18+ and npm.
+Requirements: Node.js 20+ and npm.
 
 ```sh
 npm install
 npm run dev
 ```
 
-Set `VITE_API_BASE_URL` to the backend API URL (for example, `http://localhost:5000/api`). `VITE_API_URL` is also accepted for compatibility with the repository's original environment example. If neither is set, the app uses `http://localhost:5000/api`. Google and GitHub sign-in navigate to the API's `/auth/google` and `/auth/github` routes, which start the provider handshake and redirect back to the SPA.
+Set `VITE_API_BASE_URL` to the backend API URL (for example, `http://localhost:5000/api`). `VITE_API_URL` is also accepted for compatibility with the deployment configs. If neither is set, the app uses `http://localhost:5000/api`. Copy `apps/web/.env.example` to `apps/web/.env` to get started; `VITE_SENTRY_DSN` optionally enables error reporting. Google and GitHub sign-in navigate to the API's `/auth/google` and `/auth/github` routes, which start the provider handshake and redirect back to the SPA.
 
 Useful checks:
 
 ```sh
 npm run lint
+npm test
 npm run build
 ```
+
+## Features
+
+- **Auth panels** (`/auth`) — login, registration, forgot/reset password, email
+  verification, and Google/GitHub sign-in, all in one panel shell.
+- **Onboarding wizard** — skills, interests, preferred mode, and location.
+- **Workspace** (`/app`) — lazy-loaded sections: `dashboard` (saved/registered/
+  ongoing/completed tracking), `discover` (catalogue search and save),
+  `calendar` (deadlines, reminders, reminder preferences), `preferences`
+  (onboarding wizard) and `settings` (password change, data export, account
+  deletion).
 
 ## Frontend routes
 

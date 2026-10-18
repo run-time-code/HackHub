@@ -45,15 +45,18 @@
 | **Worth Score (0-100)** | Data-driven score: skill relevance, learning value, prize pool, organizer reputation, difficulty |
 | **Personal Dashboard** | Single view for saved, registered, ongoing, completed hackathons |
 
+> **Status:** authentication (email/password + Google/GitHub OAuth), onboarding, dashboard tracking, discovery, calendar and account settings ship in the web app. Calendar/reminder persistence, Worth Score and the scrapers are still planned; endpoints the frontend assumes but the API does not implement yet are flagged in [docs/API_SPEC.md](docs/API_SPEC.md).
+
 ## Demo
 > Add your deployed link here: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`
 
 ## Tech Stack
 - **Frontend:** React 19, JavaScript, Tailwind CSS, Vite
-- **Backend:** Node.js, Express.js, JWT Auth
+- **Backend:** Node.js, Express.js, session cookies (JWT access/refresh) + CSRF, Passport (Google/GitHub OAuth)
 - **Database:** MongoDB (Mongoose)
-- **Scraping/Data:** Cheerio / Puppeteer, Cron jobs, Recommendation engine
-- **Deployment:** Vercel (frontend), Netlify fallback, MongoDB Atlas
+- **Data:** Python importer for the hackathon catalogue (`tools/data-importer`); scrapers planned
+- **Deployment:** Render (API), Vercel (web), MongoDB Atlas
+- **Monitoring:** Sentry, Prometheus `/metrics`, scheduled uptime checks
 - **Version Control:** GitHub
 
 ## Architecture
@@ -61,17 +64,18 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, 
 Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
 
 ```
-[Scrapers/Cron] -> [Express API] -> [MongoDB]
-                         |
-                    [React Dashboard + Calendar + Team Finder]
+[tools/data-importer] ──> [Express API /api] <──> [MongoDB Atlas]
+[scrapers (planned)] ────>        ▲
+                                  │  cookies + CSRF, Google/GitHub OAuth
+                     [React 19 web app (field guide)]
 ```
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+ (see `engines` in the root `package.json`)
 - MongoDB (local or Atlas)
-- npm / yarn / pnpm
+- npm (the repo uses npm workspaces with a single root lockfile)
 
 ### 1. Clone
 ```bash
@@ -90,7 +94,7 @@ Copy the example env files for the apps you run:
 cp apps/web/.env.example apps/web/.env
 cp apps/api/.env.example apps/api/.env
 ```
-See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, …; web: `VITE_API_BASE_URL`, …).
+See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons.
 
 ### 4. Run the apps
 ```bash
@@ -107,26 +111,33 @@ npm run dev --workspace @hackhub/web     # Vite web on :5173
 npm run build        # builds every workspace via Turborepo
 ```
 
+### 6. Checks
+```bash
+npm run check        # turbo lint + test + build across all workspaces
+```
+
 ## Project Structure
 This is a **Turborepo + npm workspaces monorepo**. One lockfile at the root; every app under `apps/` is a workspace.
 ```
 HackHub/
 ├── apps/
-│   ├── web/                  # React frontend (Vite) — @hackhub/web
-│   │   ├── components/       # Reusable UI
-│   │   ├── pages/            # Dashboard, Search, Calendar, Teams, Profile
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── lib/              # Utils, Worth Score logic
-│   │   └── styles/
+│   ├── web/                  # React 19 + Vite frontend — @hackhub/web
+│   │   └── src/
+│   │       ├── components/   # AppShell, Workspace, hackathon cards, auth forms
+│   │       ├── pages/        # Dashboard, Discover, Calendar, Settings, AuthPage, Onboarding…
+│   │       ├── context/      # Auth provider (+ shared hook)
+│   │       └── lib/          # API clients, hooks, validation, utils
 │   ├── api/                  # Express API — @hackhub/api (deployed to Render)
-│   │   ├── routes/           # hackathons, auth, teams, reminders
-│   │   ├── models/           # Mongoose schemas
-│   │   ├── controllers/
-│   │   ├── jobs/             # Scrapers & cron
-│   │   └── middleware/
+│   │   ├── src/              # production entrypoint: app factory, routes, services, models
+│   │   ├── routes/           # legacy-but-mounted auth, users, saved hackathons, dashboard, admin
+│   │   ├── models/           # User, Hackathon, Registration, SavedHackathon, AuditLog
+│   │   └── middleware/       # auth, CSRF, rate limits, sanitize, audit
 │   └── backend-prototype/    # @hackhub/backend-prototype (exploratory, not deployed)
-├── tools/                    # Non-JS tooling (Python importer, load tests)
-├── docs/                     # Documentation
+├── tools/
+│   ├── data-importer/        # Python importer for the hackathon catalogue
+│   ├── loadtest/             # k6 load scenarios
+│   └── monitoring/           # Grafana dashboard JSON
+├── docs/                     # Architecture, API spec, staging, monitoring, operations
 ├── turbo.json                # Turborepo pipeline (build/test/lint/dev)
 ├── package.json              # workspaces root + turbo scripts
 ├── package-lock.json         # single lockfile for the whole monorepo
@@ -137,6 +148,8 @@ HackHub/
 Add `--filter` to any task to run it for a single app and whatever it depends on, e.g. `npm run build -- --filter=@hackhub/web`.
 
 ## Hackathon Worth Score
+> Planned — the scoring service and endpoints are not implemented yet.
+
 Formula in `docs/WORTH_SCORE.md` — weighted composite (0-100):
 - Skill Relevance (30%)
 - Learning Opportunity (20%)
@@ -147,13 +160,19 @@ Formula in `docs/WORTH_SCORE.md` — weighted composite (0-100):
 Score tiers: `90+ Must Join` | `70-89 Worth It` | `50-69 Consider` | `<50 Skip`
 
 ## Roadmap
-See [docs/WEEKLY_PLAN.md](docs/WEEKLY_PLAN.md) and [ROADMAP.md](ROADMAP.md)
+Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
+[docs/API_SPEC.md](docs/API_SPEC.md); open frontend assumptions are flagged there.
 
-| Week | Focus |
+| Phase | Focus |
 |---|---|
 | 1 | Planning, UI design, DB setup, auth, basic listing |
-| 2 | Search/filters, dashboard, recommendations, Worth Score, teams |
+| 2 | Search/filters, dashboard, teams, teammate discovery |
 | 3 | Calendar/reminders, testing, integration, deployment, docs |
+| 4 | Security hardening, monitoring, staging/production operations |
+
+Still planned: hackathon scrapers, Worth Score service, calendar/reminder
+persistence, and reconciling the provisional frontend endpoints listed in
+[docs/API_SPEC.md](docs/API_SPEC.md).
 
 ## Team
 | Role | Responsibility |

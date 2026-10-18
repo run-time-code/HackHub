@@ -38,7 +38,7 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 | POST | `/saved-hackathons/register` | Mark registered |
 | POST | `/saved-hackathons/notes` | Notes |
 | GET | `/saved-hackathons/status/:hackathon` | Status by slug |
-| GET | `/dashboard` | Personal dashboard |
+| GET | `/dashboard/summary` | Personal dashboard counts |
 
 ## Teams
 | Method | Endpoint | Description |
@@ -137,8 +137,8 @@ export (ICS download/subscription) stays optional until the backend confirms it.
 The redesigned dashboard and discovery screens currently use `POST /saved`
 (`{ hackathonId }`), `GET /saved`, `PATCH /saved/:id`, and `DELETE /saved/:id`.
 The implemented backend uses `/saved-hackathons/*` (`{ hackathon }` slug) plus
-`GET /dashboard`. The frontend client must be reconciled with those routes
-before release.
+`GET /dashboard/summary`. The frontend client must be reconciled with those
+routes before release.
 
 ## Planned (not implemented)
 Calendar/reminders, hackathon facets, Worth Score endpoints.

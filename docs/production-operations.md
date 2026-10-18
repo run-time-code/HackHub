@@ -4,7 +4,7 @@
 
 The production workflow runs on pushes to `main` and manual dispatch. Before the first release, create a GitHub Environment named `production`, restrict it to `main`, and require an independent reviewer. The deployment job waits at that environment after backend tests and frontend lint/build pass.
 
-Provision a dedicated Render API service from `apps/api/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. OAuth credentials are optional; configure each provider's client ID, secret, and callback URL to enable it. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative. (No Redis: rate limits and the SSE bus are in-process, single instance.)
+Provision a dedicated Render API service from `apps/api/` on `main`, with automatic deploys disabled. Use a paid instance plan that supports zero-downtime deploys. Provision a separate production Atlas database and configure `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `FRONTEND_URL`, `CORS_ORIGIN`, `SENTRY_DSN`, and a random `METRICS_TOKEN` directly in Render. Do not copy staging credentials. OAuth credentials are optional; configure each provider's client ID, secret, and callback URL to enable it. Set the Vercel project production branch to `main`, attach the live domain, and disable provider-side automatic production deployment so the approval gate remains authoritative. (No Redis: rate limits and the SSE bus are in-process, single instance.)
 
 Add these secrets to the GitHub `production` environment:
 
@@ -60,4 +60,8 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point connects MongoDB and mounts the auth, profile, dashboard, team, teammate-discovery, join-request/invitation, and notification routes together. The separate `apps/backend-prototype/` package contains hackathon browse/search handlers but is not installed or mounted by the active `apps/api/` deployment; integrating those packages is still required before approving a full live release. A successful health check alone does not verify hackathon discovery.
+The active `npm start` entry point (`apps/api/src/server.js`) connects MongoDB and mounts the auth/profile/dashboard, saved-hackathon, team, teammate-discovery, join-request/invitation, notification, public hackathon catalogue and admin routes in one process. Remaining gaps before a full live release:
+
+- The redesigned web screens call a few endpoints the API does not implement yet (calendar and reminder persistence) or under different names (`/saved` vs `/saved-hackathons/*`, `GET /dashboard/summary`); see [API_SPEC.md](API_SPEC.md). Reconcile the frontend client before release.
+- The public catalogue serves whatever is in the `Hackathon` collection; populate it with `tools/data-importer` (scheduled scrapers are still planned). A successful health check alone does not verify hackathon discovery.
+- `apps/backend-prototype/` is exploratory only and is not deployed; the active API has its own hackathon routes, so it can be ignored rather than integrated.

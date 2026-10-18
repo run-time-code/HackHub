@@ -8,6 +8,7 @@ Briefly describe the change.
 - [ ] chore
 
 ## Checklist
-- [ ] Tests pass / build succeeds
+- [ ] `npm run check` passes (or the affected workspace's lint/test/build)
 - [ ] Screenshots for UI changes
-- [ ] Docs updated
+- [ ] Docs updated (`docs/`, README, app READMEs) when behavior or endpoints change
+- [ ] No secrets committed (Gitleaks runs in CI)
