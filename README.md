@@ -58,6 +58,7 @@
 
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, and DB schema overview.
+Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
 
 ```
 [Scrapers/Cron] -> [Express API] -> [MongoDB]
@@ -78,60 +79,62 @@ git clone https://github.com/run-time-code/HackHub.git
 cd HackHub
 ```
 
-### 2. Setup Frontend
+### 2. Install dependencies (monorepo, single install)
 ```bash
-cd frontend
 npm install
-npm run dev
 ```
 
-Configure `VITE_API_BASE_URL` in the frontend environment (for example, `http://localhost:5000/api`) to point at the backend.
-
-### 3. Setup Backend (when available)
+### 3. Environment variables
+Copy the example env files for the apps you run:
 ```bash
-cd server
-npm install
-cp .env.example .env
-npm run dev
+cp apps/web/.env.example apps/web/.env
+cp apps/api/.env.example apps/api/.env
 ```
+See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, …; web: `VITE_API_BASE_URL`, …).
 
-### 4. Environment Variables
-Create `.env` from `.env.example`:
+### 4. Run the apps
+```bash
+npm run dev          # starts API + web together via Turborepo
 ```
-MONGODB_URI=mongodb://localhost:27017/hackhub
-JWT_SECRET=your_secret
-VITE_API_BASE_URL=http://localhost:5000/api
+Or run them individually:
+```bash
+npm run dev --workspace @hackhub/api     # Express API on :5000
+npm run dev --workspace @hackhub/web     # Vite web on :5173
 ```
 
 ### 5. Build
 ```bash
-cd frontend
-npm run build
-npm run preview
+npm run build        # builds every workspace via Turborepo
 ```
 
 ## Project Structure
+This is a **Turborepo + npm workspaces monorepo**. One lockfile at the root; every app under `apps/` is a workspace.
 ```
 HackHub/
-├── frontend/
-│   └── src/                # React frontend (Vite)
-│       ├── components/     # Reusable UI
-│       ├── pages/          # Auth, onboarding, dashboard, discovery, calendar, settings
-│       ├── context/        # Authentication state
-│       └── lib/            # API clients, hooks, and validation
-├── server/                 # Express backend (planned)
-│   ├── routes/             # hackathons, auth, teams, reminders
-│   ├── models/             # Mongoose schemas
-│   ├── controllers/
-│   ├── jobs/               # Scrapers & cron
-│   └── middleware/
-├── docs/                   # Documentation
-├── public/
-├── vite.config.ts
-├── vercel.json
+├── apps/
+│   ├── web/                  # React frontend (Vite) — @hackhub/web
+│   │   ├── components/       # Reusable UI
+│   │   ├── pages/            # Dashboard, Search, Calendar, Teams, Profile
+│   │   ├── hooks/            # Custom hooks
+│   │   ├── lib/              # Utils, Worth Score logic
+│   │   └── styles/
+│   ├── api/                  # Express API — @hackhub/api (deployed to Render)
+│   │   ├── routes/           # hackathons, auth, teams, reminders
+│   │   ├── models/           # Mongoose schemas
+│   │   ├── controllers/
+│   │   ├── jobs/             # Scrapers & cron
+│   │   └── middleware/
+│   └── backend-prototype/    # @hackhub/backend-prototype (exploratory, not deployed)
+├── tools/                    # Non-JS tooling (Python importer, load tests)
+├── docs/                     # Documentation
+├── turbo.json                # Turborepo pipeline (build/test/lint/dev)
+├── package.json              # workspaces root + turbo scripts
+├── package-lock.json         # single lockfile for the whole monorepo
+├── vercel.json               # builds @hackhub/web
 ├── netlify.toml
 └── README.md
 ```
+Add `--filter` to any task to run it for a single app and whatever it depends on, e.g. `npm run build -- --filter=@hackhub/web`.
 
 ## Hackathon Worth Score
 Formula in `docs/WORTH_SCORE.md` — weighted composite (0-100):

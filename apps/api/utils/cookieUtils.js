@@ -1,0 +1,20 @@
+const isProduction = ["production", "staging"].includes(process.env.NODE_ENV);
+
+const accessCookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 15 * 60 * 1000
+};
+
+const refreshCookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000
+};
+
+module.exports = {
+    accessCookieOptions,
+    refreshCookieOptions
+};

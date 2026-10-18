@@ -1,0 +1,48 @@
+# Local stack: API + MongoDB.
+# Usage (from the repository root):
+#   cp apps/api/.env.example apps/api/.env
+#   docker compose -f apps/api/docker-compose.yml up --build
+#
+# Build context is the repo root because the Dockerfile installs the npm
+# workspace; the compose file itself can stay next to the API.
+# NOTE: no Redis service — rate limits and the SSE bus are in-process, so the
+# API runs as a single instance.
+name: hackhub
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "${PORT:-5000}:5000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/hackhub
+    volumes:
+      # Live reload: host source overwrites the copy baked into the image.
+      - ./src:/app/apps/api/src
+    command: npm run dev --workspace @hackhub/api
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

@@ -1,0 +1,23 @@
+{
+  "name": "hackhub",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HackHub monorepo — web app, API, and internal tooling",
+  "packageManager": "npm@11.21.1",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "check": "turbo run lint test build"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
