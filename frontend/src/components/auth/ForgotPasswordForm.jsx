@@ -33,7 +33,7 @@ export default function ForgotPasswordForm() {
         <p className="mt-2 text-sm text-gray-600">
           If an account exists for that email, we've sent a password reset link.
         </p>
-        <Link to="/login" className="mt-4 inline-block text-blue-600 hover:underline">
+        <Link to="/auth?panel=login" className="mt-4 inline-flex min-h-11 items-center text-amber-800 hover:underline">
           Back to login
         </Link>
       </div>
@@ -42,7 +42,10 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex w-full max-w-sm flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Reset your password</h1>
+      <div>
+        <p className="field-label">ACCOUNT RECOVERY</p>
+        <h2 className="auth-panel-title">Find your way back.</h2>
+      </div>
       <p className="text-sm text-gray-600">
         Enter your email and we'll send you a link to reset your password.
       </p>
@@ -50,29 +53,33 @@ export default function ForgotPasswordForm() {
       <AuthErrorBanner error={error} />
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Email</label>
+        <label htmlFor="forgot-email" className="text-sm font-medium text-gray-700">Email</label>
         <input
+          id="forgot-email"
           type="email"
+          autoComplete="email"
           placeholder="you@example.com"
-          className={`rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "forgot-email-error" : undefined}
+          className={`rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500 ${
             errors.email ? "border-red-500" : "border-gray-300"
           }`}
           {...register("email")}
         />
-        {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
+        {errors.email && <span id="forgot-email-error" className="text-xs text-red-600">{errors.email.message}</span>}
       </div>
 
       <button
         type="submit"
         disabled={isLoading}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
       >
         {isLoading ? "Sending..." : "Send reset link"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
         Remembered your password?{" "}
-        <Link to="/login" className="text-blue-600 hover:underline">
+        <Link to="/auth?panel=login" className="font-semibold text-amber-800 hover:underline">
           Log in
         </Link>
       </p>

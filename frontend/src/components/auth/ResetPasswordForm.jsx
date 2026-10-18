@@ -23,7 +23,7 @@ export default function ResetPasswordForm() {
   async function onSubmit(values) {
     try {
       await mutate(values);
-      navigate("/login");
+      navigate("/auth?panel=login");
     } catch {
       // error already captured by useAuthMutation
     }
@@ -34,7 +34,7 @@ export default function ResetPasswordForm() {
       <div className="w-full max-w-sm text-center">
         <h1 className="text-xl font-semibold text-gray-900">Invalid or expired link</h1>
         <p className="mt-2 text-sm text-gray-600">Please request a new password reset link.</p>
-        <Link to="/forgot-password" className="mt-4 inline-block text-blue-600 hover:underline">
+        <Link to="/auth?panel=forgot" className="mt-4 inline-flex min-h-11 items-center text-amber-800 hover:underline">
           Request new link
         </Link>
       </div>
@@ -43,7 +43,10 @@ export default function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex w-full max-w-sm flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Set a new password</h1>
+      <div>
+        <p className="field-label">SECURE YOUR WORK</p>
+        <h2 className="auth-panel-title">Set a new password.</h2>
+      </div>
 
       <AuthErrorBanner error={error} />
 
@@ -64,7 +67,7 @@ export default function ResetPasswordForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
       >
         {isLoading ? "Updating..." : "Update password"}
       </button>

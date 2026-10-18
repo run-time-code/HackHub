@@ -4,9 +4,10 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { loginSchema } from "../../lib/validation/authSchemas";
 import { loginUser } from "../../lib/api/auth";
 import { useAuthMutation } from "../../lib/hooks/useAuthMutation";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/auth-context";
 import PasswordInput from "./PasswordInput";
 import AuthErrorBanner from "./AuthErrorBanner";
+import SocialAuthButtons from "./SocialAuthButtons";
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -24,7 +25,9 @@ export default function LoginForm() {
     try {
       const result = await mutate(values);
       login(result.user);
-      const redirectTo = location.state?.from?.pathname || "/dashboard";
+      const redirectTo = location.state?.from
+        ? `${location.state.from.pathname}${location.state.from.search || ""}`
+        : "/app?section=dashboard";
       navigate(redirectTo, { replace: true });
     } catch {
       // error already captured by useAuthMutation
@@ -33,21 +36,31 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex w-full max-w-sm flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-900">Log in to HackHub</h1>
+      <div>
+        <p className="field-label">YOUR WORKBENCH</p>
+        <h2 className="auth-panel-title">Welcome back.</h2>
+        <p className="mt-1 text-sm text-slate-600">Sign in to pick up where you left off.</p>
+      </div>
 
       <AuthErrorBanner error={error} />
+      <SocialAuthButtons />
+      <div className="auth-divider"><span>OR EMAIL AND PASSWORD</span></div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Email</label>
+        <label htmlFor="login-email" className="text-sm font-medium text-gray-700">Email</label>
         <input
+          id="login-email"
           type="email"
           placeholder="you@example.com"
-          className={`rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${
+          autoComplete="email"
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "login-email-error" : undefined}
+          className={`rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500 ${
             errors.email ? "border-red-500" : "border-gray-300"
           }`}
           {...register("email")}
         />
-        {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
+        {errors.email && <span id="login-email-error" className="text-xs text-red-600">{errors.email.message}</span>}
       </div>
 
       <PasswordInput
@@ -58,7 +71,7 @@ export default function LoginForm() {
       />
 
       <div className="text-right text-sm">
-        <Link to="/forgot-password" className="text-blue-600 hover:underline">
+        <Link to="/auth?panel=forgot" className="text-amber-800 hover:underline">
           Forgot password?
         </Link>
       </div>
@@ -66,15 +79,15 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
       >
         {isLoading ? "Logging in..." : "Log in"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
         Don't have an account?{" "}
-        <Link to="/register" className="text-blue-600 hover:underline">
-          Sign up
+        <Link to="/auth?panel=register" className="font-semibold text-amber-800 hover:underline">
+          Make an account
         </Link>
       </p>
     </form>

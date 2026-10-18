@@ -1,9 +1,10 @@
 import RegisterForm from "../../components/auth/RegisterForm";
+import AuthLayout from "../../components/AuthLayout";
 
 export default function Register() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <RegisterForm />
-    </div>
+    </AuthLayout>
   );
 }

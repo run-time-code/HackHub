@@ -1,16 +1,32 @@
-# React + Vite
+# HackHub frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend is a React 19 + Vite application with routes for authentication, onboarding, dashboard tracking, hackathon discovery, calendar/reminders, and account settings.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requirements: Node.js 18+ and npm.
 
-## React Compiler
+```sh
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Set `VITE_API_BASE_URL` to the backend API URL (for example, `http://localhost:5000/api`). `VITE_API_URL` is also accepted for compatibility with the repository's original environment example. If neither is set, the app uses `http://localhost:5000/api`. Google and GitHub OAuth start endpoints default to `/auth/oauth/google` and `/auth/oauth/github`; set `VITE_GOOGLE_OAUTH_START_URL` or `VITE_GITHUB_OAUTH_START_URL` to override them.
 
-## Expanding the ESLint configuration
+Useful checks:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```sh
+npm run lint
+npm run build
+```
+
+## Frontend routes
+
+- Public auth panels share `/auth?panel=...`; the older auth URLs redirect to the matching panel.
+- Protected product sections share `/app?section=...`; older section URLs redirect to their matching section.
+
+Auth requests include credentials for cookie sessions. The API client also accepts an access token returned in an auth response in memory; it does not persist bearer tokens to local storage.
+
+## Backend integration
+
+The API contract and any unconfirmed frontend assumptions are documented in [`../docs/API_SPEC.md`](../docs/API_SPEC.md). API-dependent screens display loading, error, and genuine empty states; they do not substitute mock records when the backend is unavailable. Confirm the marked provisional endpoints and response shapes with the backend owners before production deployment.

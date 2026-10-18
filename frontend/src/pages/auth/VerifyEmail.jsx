@@ -1,24 +1,32 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { verifyEmail } from "../../lib/api/auth";
+import AuthLayout from "../../components/AuthLayout";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const pending = searchParams.get("pending");
 
-  const [status, setStatus] = useState(pending ? "pending" : "verifying");
+  const [verification, setVerification] = useState(null);
+  const status = !token ? (pending ? "pending" : "error") :
+    verification?.token === token ? verification.status : "verifying";
 
   useEffect(() => {
-    if (!token) return;
-    setStatus("verifying");
+    if (!token) return undefined;
+    let isCurrent = true;
     verifyEmail(token)
-      .then(() => setStatus("success"))
-      .catch(() => setStatus("error"));
+      .then(() => {
+        if (isCurrent) setVerification({ token, status: "success", error: null });
+      })
+      .catch((error) => {
+        if (isCurrent) setVerification({ token, status: "error", error: error.message });
+      });
+    return () => { isCurrent = false; };
   }, [token]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <div className="w-full max-w-sm text-center">
         {status === "pending" && (
           <>
@@ -29,13 +37,13 @@ export default function VerifyEmail() {
           </>
         )}
 
-        {status === "verifying" && <p className="text-sm text-gray-600">Verifying your email...</p>}
+        {status === "verifying" && <p className="text-sm text-gray-600" role="status">Verifying your email...</p>}
 
         {status === "success" && (
           <>
             <h1 className="text-xl font-semibold text-gray-900">Email verified 🎉</h1>
             <p className="mt-2 text-sm text-gray-600">You can now log in to your account.</p>
-            <Link to="/login" className="mt-4 inline-block text-blue-600 hover:underline">
+            <Link to="/auth?panel=login" className="mt-4 inline-flex min-h-11 items-center text-amber-800 hover:underline">
               Go to login
             </Link>
           </>
@@ -45,14 +53,16 @@ export default function VerifyEmail() {
           <>
             <h1 className="text-xl font-semibold text-gray-900">Verification failed</h1>
             <p className="mt-2 text-sm text-gray-600">
-              This link may have expired. Please request a new one from the login page.
+              {verification?.token === token && verification.error
+                ? verification.error
+                : "This link may have expired. Please request a new one from the login page."}
             </p>
-            <Link to="/login" className="mt-4 inline-block text-blue-600 hover:underline">
+            <Link to="/auth?panel=login" className="mt-4 inline-flex min-h-11 items-center text-amber-800 hover:underline">
               Back to login
             </Link>
           </>
         )}
       </div>
-    </div>
+    </AuthLayout>
   );
 }

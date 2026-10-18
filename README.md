@@ -49,7 +49,7 @@
 > Add your deployed link here: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`
 
 ## Tech Stack
-- **Frontend:** React.js + Next.js, TypeScript, Tailwind CSS, Vite
+- **Frontend:** React 19, JavaScript, Tailwind CSS, Vite
 - **Backend:** Node.js, Express.js, JWT Auth
 - **Database:** MongoDB (Mongoose)
 - **Scraping/Data:** Cheerio / Puppeteer, Cron jobs, Recommendation engine
@@ -80,10 +80,12 @@ cd HackHub
 
 ### 2. Setup Frontend
 ```bash
+cd frontend
 npm install
-cp .env.example .env
 npm run dev
 ```
+
+Configure `VITE_API_BASE_URL` in the frontend environment (for example, `http://localhost:5000/api`) to point at the backend.
 
 ### 3. Setup Backend (when available)
 ```bash
@@ -98,11 +100,12 @@ Create `.env` from `.env.example`:
 ```
 MONGODB_URI=mongodb://localhost:27017/hackhub
 JWT_SECRET=your_secret
-VITE_API_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
 ### 5. Build
 ```bash
+cd frontend
 npm run build
 npm run preview
 ```
@@ -110,12 +113,12 @@ npm run preview
 ## Project Structure
 ```
 HackHub/
-├── src/                    # React frontend (Vite)
-│   ├── components/         # Reusable UI
-│   ├── pages/              # Dashboard, Search, Calendar, Teams, Profile
-│   ├── hooks/              # Custom hooks
-│   ├── lib/                # Utils, Worth Score logic
-│   └── styles/
+├── frontend/
+│   └── src/                # React frontend (Vite)
+│       ├── components/     # Reusable UI
+│       ├── pages/          # Auth, onboarding, dashboard, discovery, calendar, settings
+│       ├── context/        # Authentication state
+│       └── lib/            # API clients, hooks, and validation
 ├── server/                 # Express backend (planned)
 │   ├── routes/             # hackathons, auth, teams, reminders
 │   ├── models/             # Mongoose schemas
