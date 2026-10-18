@@ -1,8 +1,11 @@
 openapi: 3.0.3
 
 info:
-  title: HackHub Authentication API
-  description: Authentication API for the HackHub backend
+  title: HackHub API (auth, teams, discovery)
+  description: >-
+    OpenAPI coverage for authentication, team collaboration and teammate
+    discovery. The full endpoint reference — dashboard, saved hackathons,
+    notifications, admin, health and metrics — lives in docs/API_SPEC.md.
   version: 1.0.0
 
 servers:

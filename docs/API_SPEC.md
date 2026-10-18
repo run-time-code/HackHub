@@ -15,9 +15,12 @@ Base URL: `/api`
 | POST | `/auth/refresh` | Rotate session after 15-min expiry |
 | POST | `/auth/logout` | Clear session |
 | GET | `/auth/csrf-token` | CSRF bootstrap |
+| GET | `/auth/verify-email?token=` | Verify email address |
+| POST | `/auth/resend-verification` | Re-send verification link |
 | POST | `/auth/forgot-password` | Request reset |
 | POST | `/auth/reset-password` | Reset with token |
 | GET | `/auth/me` | Session restore (mirrors `/users/me`) |
+| GET | `/auth/google` · `/auth/github` | Start OAuth handshake (same-window); callback redirects to `${FRONTEND_URL}/?oauth=...` |
 | GET | `/users/me` | Current user (secret-free) |
 
 ## Hackathons (public catalogue for the team feature)
