@@ -108,5 +108,37 @@ Every response carries `x-request-id` (client values accepted only when they
 match `^[A-Za-z0-9_-]{8,64}$`); include it in bug reports.
 Server-Sent Events (`/notifications/stream`) are exempt from the JSON envelope.
 
+## Frontend integration notes
+
+The Vite app (`apps/web`) calls the endpoints below. Rows marked **Frontend
+assumption** have no backend implementation in this repository yet and need
+agreement from the API owners before deployment.
+
+### Calendar & reminders — frontend assumption
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/calendar?month=YYYY-MM` | Events for the month; the app tolerates `date`/`start`/`startsAt`/`startDate` and nested `hackathon` data |
+| POST | `/reminders` | Create reminder `{ hackathonId, eventType, daysBefore, channel }` |
+| GET | `/reminders` | List reminders |
+| GET | `/reminders/preferences` | **Frontend assumption**; saved default reminder settings |
+| PUT | `/reminders/preferences` | **Frontend assumption**; save `{ defaultDaysBefore, channels, quietHours: { start, end } }` (IST) |
+
+Month, week, and agenda views use the month-based calendar endpoint. Calendar
+export (ICS download/subscription) stays optional until the backend confirms it.
+
+### Account settings
+| Method | Endpoint | Description |
+|---|---|---|
+| PUT | `/users/me/change-password` | Change password (`{ currentPassword, newPassword }`) |
+| DELETE | `/users/me` | Delete the authenticated account |
+| GET | `/users/me/export` | Personal data export as JSON |
+
+### Saved hackathons / dashboard — needs reconciliation
+The redesigned dashboard and discovery screens currently use `POST /saved`
+(`{ hackathonId }`), `GET /saved`, `PATCH /saved/:id`, and `DELETE /saved/:id`.
+The implemented backend uses `/saved-hackathons/*` (`{ hackathon }` slug) plus
+`GET /dashboard`. The frontend client must be reconciled with those routes
+before release.
+
 ## Planned (not implemented)
 Calendar/reminders, hackathon facets, Worth Score endpoints.

@@ -1,49 +1,89 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCurrentUser, logoutUser as logoutApi } from "../lib/api/auth";
-
-const AuthContext = createContext(null);
+import { setAccessToken } from "../lib/api/client";
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // true while we check for an existing session
+  const [authError, setAuthError] = useState(null);
+
+  const refreshSession = useCallback(async () => {
+    setIsLoading(true);
+    setAuthError(null);
+    try {
+      const data = await getCurrentUser();
+      setUser(data?.user || data);
+    } catch (error) {
+      setUser(null);
+      if (error.status !== 401) setAuthError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
+    let isMounted = true;
     getCurrentUser()
-      .then((data) => setUser(data.user))
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
-
+      .then((data) => {
+        if (isMounted) setUser(data?.user || data);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setUser(null);
+        if (error.status !== 401) setAuthError(error);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     function handleUnauthorized() {
       setUser(null);
     }
     window.addEventListener("auth:unauthorized", handleUnauthorized);
-    return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
   }, []);
 
   function login(userData) {
-    setUser(userData);
+    setUser(userData?.user || userData);
+    setAuthError(null);
   }
 
   async function logout() {
     try {
       await logoutApi();
-    } catch {
-      // clear local state even if the API call fails
+    } catch (error) {
+      setAccessToken(null);
+      if (error.status !== 401) {
+        setAuthError(new Error(`The server did not confirm logout: ${error.message}`));
+      }
+    } finally {
+      setUser(null);
     }
-    setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        authError,
+        clearAuthError: () => setAuthError(null),
+        refreshSession,
+        login,
+        logout,
+      }}
+    >
+      {authError && (
+        <div className="session-alert" role="alert">
+          <span>Authentication needs attention: {authError.message}</span>
+          <button type="button" onClick={refreshSession}>Retry</button>
+          <button type="button" onClick={() => setAuthError(null)} aria-label="Dismiss session error">Dismiss</button>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );
-}
-
-// The provider and its shared hook intentionally live in the same context module.
-// eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside an AuthProvider");
-  return ctx;
 }

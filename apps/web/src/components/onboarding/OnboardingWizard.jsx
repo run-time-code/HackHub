@@ -15,9 +15,9 @@ const INTEREST_OPTIONS = [
 ];
 const STEPS = ["Skills", "Interests", "Mode", "Location"];
 
-export default function OnboardingWizard() {
+export default function OnboardingWizard({ userKey }) {
   const navigate = useNavigate();
-  const { data, updateField, clearProgress } = useOnboardingProgress();
+  const { data, updateField, clearProgress } = useOnboardingProgress(userKey);
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,10 +40,22 @@ export default function OnboardingWizard() {
 
   function validateCurrentStep() {
     setError(null);
-    if (step === 0 && skills.length === 0) return setError("Pick at least one skill"), false;
-    if (step === 1 && interests.length === 0) return setError("Pick at least one interest"), false;
-    if (step === 2 && !preferredMode) return setError("Choose a preferred mode"), false;
-    if (step === 3 && location.trim().length < 2) return setError("Enter your location"), false;
+    if (step === 0 && skills.length === 0) {
+      setError("Pick at least one skill");
+      return false;
+    }
+    if (step === 1 && interests.length === 0) {
+      setError("Pick at least one interest");
+      return false;
+    }
+    if (step === 2 && !preferredMode) {
+      setError("Choose a preferred mode");
+      return false;
+    }
+    if (step === 3 && location.trim().length < 2) {
+      setError("Enter your location");
+      return false;
+    }
     return true;
   }
 
@@ -64,7 +76,7 @@ export default function OnboardingWizard() {
   function handleSkip() {
     // Skip entirely — no validation, just leave the wizard.
     // Progress already saved in localStorage in case they come back.
-    navigate("/dashboard");
+    navigate("/app?section=dashboard");
   }
 
   async function handleFinish() {
@@ -78,9 +90,9 @@ export default function OnboardingWizard() {
     setIsSaving(true);
     setError(null);
     try {
-      await saveOnboarding(payload);
+      await saveOnboarding(parsed.data);
       clearProgress();
-      navigate("/dashboard");
+      navigate("/app?section=dashboard");
     } catch (err) {
       setError(err.message || "Failed to save your preferences");
     } finally {
@@ -92,46 +104,56 @@ export default function OnboardingWizard() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         {/* Progress indicator */}
-        <div className="mb-6 flex gap-2">
+        <div className="mb-6 flex gap-2" role="progressbar" aria-label="Onboarding progress" aria-valuetext={STEPS[step]} aria-valuemin="1" aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
           {STEPS.map((label, i) => (
             <div
               key={label}
-              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-blue-600" : "bg-gray-200"}`}
+              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-emerald-800" : "bg-gray-200"}`}
             />
           ))}
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="onboarding-sheet rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">
+            <div>
+              <p className="field-label">YOUR FIELD NOTES / 04</p>
+              <h1 className="product-heading mt-2 text-3xl">
               {STEPS[step]} <span className="text-sm font-normal text-gray-400">({step + 1}/{STEPS.length})</span>
-            </h1>
-            <button type="button" onClick={handleSkip} className="text-sm text-gray-500 hover:text-gray-700">
+              </h1>
+            </div>
+            <button type="button" onClick={handleSkip} className="min-h-11 px-2 text-sm text-gray-500 hover:text-gray-700">
               Skip for now
             </button>
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {step === 0 && (
-            <SelectableChips options={SKILL_OPTIONS} selected={skills} onToggle={toggleSkill} />
+            <p className="mb-4 text-sm text-gray-600">Choose the skills you can bring to a team or want to use in a project.</p>
+          )}
+          {step === 1 && (
+            <p className="mb-4 text-sm text-gray-600">Pick the domains and topics you would like to explore.</p>
+          )}
+          {step === 0 && (
+            <SelectableChips options={SKILL_OPTIONS} selected={skills} onToggle={toggleSkill} label="Select your skills" />
           )}
 
           {step === 1 && (
-            <SelectableChips options={INTEREST_OPTIONS} selected={interests} onToggle={toggleInterest} />
+            <SelectableChips options={INTEREST_OPTIONS} selected={interests} onToggle={toggleInterest} label="Select your interests and domains" />
           )}
 
           {step === 2 && (
-            <div className="flex flex-col gap-2">
+            <fieldset className="flex flex-col gap-2">
+              <legend className="sr-only">Preferred hackathon format</legend>
               {["online", "offline", "hybrid"].map((mode) => (
                 <label
                   key={mode}
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm capitalize ${
-                    preferredMode === mode ? "border-blue-600 bg-blue-50" : "border-gray-300"
+                    preferredMode === mode ? "border-emerald-800 bg-emerald-50" : "border-gray-300"
                   }`}
                 >
                   <input
@@ -140,22 +162,27 @@ export default function OnboardingWizard() {
                     value={mode}
                     checked={preferredMode === mode}
                     onChange={() => updateField("preferredMode", mode)}
-                    className="accent-blue-600"
+                    className="accent-emerald-800"
                   />
                   {mode}
                 </label>
               ))}
-            </div>
+            </fieldset>
           )}
 
           {step === 3 && (
-            <input
-              type="text"
-              placeholder="City, Country"
-              value={location}
-              onChange={(e) => updateField("location", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div>
+              <label htmlFor="onboarding-location" className="mb-2 block text-sm font-medium text-gray-700">Preferred city or region</label>
+              <input
+                id="onboarding-location"
+                type="text"
+                autoComplete="address-level2"
+                placeholder="City, Country"
+                value={location}
+                onChange={(e) => updateField("location", e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
           )}
 
           <div className="mt-6 flex justify-between">
@@ -171,7 +198,7 @@ export default function OnboardingWizard() {
               type="button"
               onClick={handleNext}
               disabled={isSaving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
             >
               {isSaving ? "Saving..." : step === STEPS.length - 1 ? "Finish" : "Next"}
             </button>

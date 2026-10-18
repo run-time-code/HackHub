@@ -49,7 +49,7 @@
 > Add your deployed link here: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`
 
 ## Tech Stack
-- **Frontend:** React.js + Next.js, TypeScript, Tailwind CSS, Vite
+- **Frontend:** React 19, JavaScript, Tailwind CSS, Vite
 - **Backend:** Node.js, Express.js, JWT Auth
 - **Database:** MongoDB (Mongoose)
 - **Scraping/Data:** Cheerio / Puppeteer, Cron jobs, Recommendation engine

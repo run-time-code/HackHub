@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
 
-const STORAGE_KEY = "hackhub_onboarding_progress";
-
-// Persists partial onboarding answers to localStorage so a user who
-// closes the tab mid-wizard picks up right where they left off.
-export function useOnboardingProgress() {
+export function useOnboardingProgress(userKey) {
+  const storageKey = `hackhub_onboarding_progress:${encodeURIComponent(userKey)}`;
   const [data, setData] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      return {
+        skills: Array.isArray(parsed.skills) ? parsed.skills.filter((item) => typeof item === "string") : [],
+        interests: Array.isArray(parsed.interests) ? parsed.interests.filter((item) => typeof item === "string") : [],
+        preferredMode: ["online", "offline", "hybrid"].includes(parsed.preferredMode) ? parsed.preferredMode : "",
+        location: typeof parsed.location === "string" ? parsed.location : "",
+      };
     } catch {
       return {};
     }
@@ -16,18 +21,22 @@ export function useOnboardingProgress() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(storageKey, JSON.stringify(data));
     } catch {
-      // storage full or unavailable — non-critical, just skip persisting
+      // Preference drafts are still usable in memory when browser storage is unavailable.
     }
-  }, [data]);
+  }, [data, storageKey]);
 
   function updateField(field, value) {
     setData((prev) => ({ ...prev, [field]: value }));
   }
 
   function clearProgress() {
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      // The server save has already succeeded; clearing this optional draft must not undo it.
+    }
     setData({});
   }
 

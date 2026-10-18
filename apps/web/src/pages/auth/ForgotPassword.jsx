@@ -1,9 +1,10 @@
 import ForgotPasswordForm from "../../components/auth/ForgotPasswordForm";
+import AuthLayout from "../../components/AuthLayout";
 
 export default function ForgotPassword() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <ForgotPasswordForm />
-    </div>
+    </AuthLayout>
   );
 }
