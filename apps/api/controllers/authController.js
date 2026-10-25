@@ -766,11 +766,12 @@ const resetPassword = async (req, res) => {
         user.passwordResetTokenExpiresAt =
             null;
 
-        // Invalidate existing refresh token
-        user.refreshTokenHash =
-            null;
+        // Invalidate existing refresh and access tokens
+user.refreshTokenHash = null;
+user.tokenVersion = (user.tokenVersion || 0) + 1;
 
-        await user.save();
+await user.save();
+       
 
         console.log(
             `Password reset successful: ${user.email}`
