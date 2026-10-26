@@ -51,6 +51,10 @@ export function AuthProvider({ children }) {
     setAuthError(null);
   }
 
+  function updateUser(partial) {
+    setUser((current) => (current ? { ...current, ...partial } : current));
+  }
+
   async function logout() {
     try {
       await logoutApi();
@@ -73,6 +77,7 @@ export function AuthProvider({ children }) {
         clearAuthError: () => setAuthError(null),
         refreshSession,
         login,
+        updateUser,
         logout,
       }}
     >
