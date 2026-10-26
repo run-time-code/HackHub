@@ -1,0 +1,629 @@
+openapi: 3.0.3
+info:
+  title: HackHub API
+  version: 1.1.0
+  description: >
+    Hackathon discovery, user authentication, reminder preferences, and
+    notifications. Hackathon ingestion is an internal service used by the
+    importer and is not exposed as a public HTTP endpoint.
+servers:
+  - url: http://localhost:5000/api
+    description: Local development
+tags:
+  - name: Hackathons
+  - name: Authentication
+  - name: Users
+  - name: Notifications
+paths:
+  /hackathons:
+    get:
+      tags: [Hackathons]
+      summary: Search and filter hackathons
+      description: >
+        Returns canonical hackathons and facet counts for the active filters.
+        Facets are independent of the current cursor page. Cursors are opaque
+        and must be reused with the same sort.
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: skills
+          description: Comma-separated skill values.
+          schema: { type: string }
+        - in: query
+          name: domain
+          description: Comma-separated domain values.
+          schema: { type: string }
+        - in: query
+          name: mode
+          schema: { type: string, enum: [ONLINE, OFFLINE, HYBRID] }
+        - in: query
+          name: location
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [upcoming, ongoing, completed, inactive] }
+        - in: query
+          name: source
+          description: MongoDB ObjectId for a source.
+          schema: { type: string }
+        - in: query
+          name: minPrize
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: maxPrize
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: fromDate
+          description: Inclusive registration deadline start (ISO 8601).
+          schema: { type: string, format: date-time }
+        - in: query
+          name: toDate
+          description: Inclusive registration deadline end (ISO 8601).
+          schema: { type: string, format: date-time }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [default, deadline, prize_high, prize_low, newest], default: default }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - in: query
+          name: cursor
+          description: Opaque cursor returned by the previous response.
+          schema: { type: string }
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: Hackathon page and filtered facet counts.
+          headers:
+            ETag:
+              schema: { type: string }
+            Cache-Control:
+              schema: { type: string }
+            X-Cache:
+              schema: { type: string, enum: [HIT, MISS] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HackathonListResponse"
+        "304":
+          description: Response has not changed.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /hackathons/{idOrSlug}:
+    get:
+      tags: [Hackathons]
+      summary: Get a hackathon by MongoDB ID or slug
+      parameters:
+        - in: path
+          name: idOrSlug
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: Hackathon detail.
+          headers:
+            ETag:
+              schema: { type: string }
+            Cache-Control:
+              schema: { type: string }
+            X-Cache:
+              schema: { type: string, enum: [HIT, MISS] }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { $ref: "#/components/schemas/Hackathon" }
+        "304":
+          description: Response has not changed.
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user and send an email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 12, maxLength: 72 }
+      responses:
+        "201":
+          description: Account created; verification email sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email address is already registered.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "503":
+          description: Account created but verification email delivery failed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Sign in with a verified email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 1, maxLength: 72 }
+      responses:
+        "200":
+          description: Authenticated; access and refresh tokens returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Email address has not been verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Rotate the refresh token and issue a new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New token pair.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify an email address with its one-time token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Email verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /auth/resend-verification:
+    post:
+      tags: [Authentication]
+      summary: Request a new verification email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202":
+          description: Request accepted without disclosing whether the account exists.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /auth/password/forgot:
+    post:
+      tags: [Authentication]
+      summary: Request password reset instructions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202":
+          description: Request accepted without disclosing whether the account exists.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /auth/password/reset:
+    post:
+      tags: [Authentication]
+      summary: Set a new password using a one-time reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 12, maxLength: 72 }
+      responses:
+        "200":
+          description: Password changed and existing refresh session revoked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current user's refresh token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get the signed-in user's public profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: "#/components/schemas/User" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/me/reminder-preferences:
+    get:
+      tags: [Users]
+      summary: Get the signed-in user's reminder preferences
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Reminder preferences.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderPreferencesResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Users]
+      summary: Update preferences and resync pending reminders
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReminderPreferencesUpdate" }
+      responses:
+        "200":
+          description: Preferences saved and pending reminders synchronized.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReminderPreferencesResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List the signed-in user's notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - in: query
+          name: cursor
+          description: Opaque cursor from the previous page.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Notification page and unread count.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationListResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark all of the signed-in user's notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Number of notifications updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      updatedCount: { type: integer }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark one of the signed-in user's notifications as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200":
+          description: Updated notification.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/Notification" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IfNoneMatch:
+      in: header
+      name: If-None-Match
+      schema: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Missing, invalid, or expired access token.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          required: [message]
+          properties:
+            message: { type: string }
+    MessageResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+    TokenResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: object
+          required: [accessToken, refreshToken, tokenType, expiresIn]
+          properties:
+            accessToken: { type: string }
+            refreshToken: { type: string }
+            tokenType: { type: string, example: Bearer }
+            expiresIn: { type: integer, example: 900 }
+    AuthResponse:
+      allOf:
+        - $ref: "#/components/schemas/TokenResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user: { $ref: "#/components/schemas/User" }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [student, admin] }
+        emailVerified: { type: boolean }
+        timeZone: { type: string, example: America/New_York }
+        reminderPreferences:
+          $ref: "#/components/schemas/ReminderPreferences"
+    ReminderPreferences:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        emailReminders: { type: boolean }
+        registrationDeadlineHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        submissionDeadlineHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        eventStartHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        eventEndHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+    ReminderPreferencesUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        timeZone: { type: string, example: America/New_York }
+        enabled: { type: boolean }
+        emailReminders: { type: boolean }
+        registrationDeadlineHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        submissionDeadlineHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        eventStartHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+        eventEndHours:
+          type: array
+          maxItems: 5
+          items: { type: number, minimum: 0, maximum: 8760 }
+    ReminderPreferencesResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            timeZone: { type: string }
+            reminderPreferences:
+              $ref: "#/components/schemas/ReminderPreferences"
+            queuedJobsCreated: { type: integer }
+    Notification:
+      type: object
+      properties:
+        _id: { type: string }
+        user: { type: string }
+        hackathon: { type: string }
+        reminderJob: { type: string }
+        type:
+          type: string
+          enum: [registration_deadline, submission_deadline, event_start, event_end]
+        title: { type: string }
+        message: { type: string }
+        readAt: { type: string, format: date-time, nullable: true }
+        emailSentAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    NotificationListResponse:
+      type: object
+      required: [success, data, pagination, unreadCount]
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Notification" }
+        pagination:
+          type: object
+          properties:
+            limit: { type: integer }
+            hasMore: { type: boolean }
+            nextCursor: { type: string, nullable: true }
+        unreadCount: { type: integer }
+    Hackathon:
+      type: object
+      additionalProperties: true
+    HackathonListResponse:
+      type: object
+      required: [success, data, pagination, facets]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Hackathon" }
+        pagination:
+          type: object
+          required: [limit, hasMore, nextCursor]
+          properties:
+            limit: { type: integer }
+            hasMore: { type: boolean }
+            nextCursor: { type: string, nullable: true }
+        facets:
+          type: object
+          additionalProperties: true
