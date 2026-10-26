@@ -13,6 +13,9 @@ const router = Router();
 // GET /teams?hackathonId=<id>&status=open&page=1&limit=20
 router.get('/', teamsController.list);
 
+// Must stay above GET /:id so "mine" is never parsed as a team id.
+router.get('/mine', requireAuth, teamsController.listMine);
+
 // Leader creates a team for a hackathon.
 router.post('/', requireAuth, teamWriteLimiter, teamsController.create);
 

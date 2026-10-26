@@ -160,6 +160,22 @@ const teamWriteLimiter = rateLimit({
     legacyHeaders: false
 });
 
+// F-24: public feedback intake is anonymous, so throttle by IP.
+const feedbackLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    keyGenerator: (req) => ipKeyGenerator(req.ip),
+    message: {
+        success: false,
+        error: {
+            code: "RATE_LIMITED",
+            message: "Too many feedback submissions. Please try again later."
+        }
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 module.exports = {
     loginLimiter,
     registerLimiter,
@@ -169,6 +185,7 @@ module.exports = {
     oauthStartLimiter,
     csrfTokenLimiter,
     teamWriteLimiter,
+    feedbackLimiter,
     issueOAuthState,
     verifyOAuthState
 };

@@ -61,11 +61,18 @@ async function cancelPendingRequests(teamId) {
 function serialize(team) {
   const obj = team.toObject ? team.toObject({ virtuals: true }) : team;
   const size = 1 + (obj.members ? obj.members.length : 0);
+  const hackathon = obj.hackathon;
+  const hackathonId = hackathon && hackathon._id ? hackathon._id : hackathon;
+  const hackathonTitle =
+    hackathon && typeof hackathon === 'object' && hackathon.title !== undefined
+      ? hackathon.title
+      : null;
   return {
     id: String(obj._id || obj.id),
     name: obj.name,
     description: obj.description,
-    hackathon: String(obj.hackathon),
+    hackathon: String(hackathonId),
+    hackathonTitle,
     leader: String(obj.leader),
     members: (obj.members || []).map((m) => ({
       user: String(m.user),
@@ -109,6 +116,7 @@ async function createTeam(input, leaderId) {
     throw friendlyValidationError(err);
   }
   await team.save();
+  await team.populate('hackathon', 'title');
   return serialize(team);
 }
 
@@ -128,7 +136,11 @@ async function listTeams(query) {
     filter.status = status;
   }
   const [items, total] = await Promise.all([
-    Team.find(filter).sort({ createdAt: -1 }).skip((pageNum - 1) * limitNum).limit(limitNum),
+    Team.find(filter)
+      .populate('hackathon', 'title')
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum),
     Team.countDocuments(filter),
   ]);
   return { items: items.map(serialize), page: pageNum, limit: limitNum, total };
@@ -136,11 +148,23 @@ async function listTeams(query) {
 
 async function getTeamById(id) {
   assertObjectId(id, 'team id');
-  const team = await Team.findById(id);
+  const team = await Team.findById(id).populate('hackathon', 'title');
   if (!team) {
     throw notFound();
   }
   return serialize(team);
+}
+
+// Teams the caller leads or belongs to. Kept separate from the public
+// hackathon-filtered list: this one is personal and always requires auth.
+async function listMyTeams(userId) {
+  assertObjectId(userId, 'user id');
+  const teams = await Team.find({
+    $or: [{ leader: userId }, { 'members.user': userId }],
+  })
+    .populate('hackathon', 'title')
+    .sort({ updatedAt: -1 });
+  return { items: teams.map(serialize) };
 }
 
 async function updateTeam(id, updates, requesterId) {
@@ -190,6 +214,7 @@ async function updateTeam(id, updates, requesterId) {
   if (!wasClosed && team.status === 'closed') {
     await cancelPendingRequests(team._id);
   }
+  await team.populate('hackathon', 'title');
   return serialize(team);
 }
 
@@ -250,6 +275,7 @@ async function transferLeader(id, requesterId, newLeaderId) {
     data: { teamId: String(team._id) },
   });
 
+  await team.populate('hackathon', 'title');
   return serialize(team);
 }
 
@@ -300,12 +326,14 @@ async function removeMember(id, targetUserId, requesterId) {
     data: { teamId: String(team._id), userId: String(targetUserId) },
     email: false,
   });
+  await team.populate('hackathon', 'title');
   return serialize(team);
 }
 
 module.exports = {
   createTeam,
   listTeams,
+  listMyTeams,
   getTeamById,
   updateTeam,
   deleteTeam,

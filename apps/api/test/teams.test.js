@@ -94,6 +94,7 @@ describe('teams', () => {
     assert.equal(body.data.size, 1);
     assert.equal(body.data.openSlots, 3);
     assert.equal(body.data.status, 'open');
+    assert.equal(body.data.hackathonTitle, 'Pixel Builders 2026');
     assert.ok(body.data.leader);
     teamId = body.data.id;
   });

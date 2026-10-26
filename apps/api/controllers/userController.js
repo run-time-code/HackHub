@@ -11,6 +11,117 @@ const {
 const Registration = require("../models/Registration");
 const Hackathon = require("../models/Hackathon");
 
+const DEFAULT_LINKS = Object.freeze({
+    github: "",
+    linkedin: "",
+    portfolio: ""
+});
+
+function plainObject(value) {
+    if (!value) {
+        return {};
+    }
+
+    if (typeof value.toObject === "function") {
+        return value.toObject();
+    }
+
+    return value;
+}
+
+function serializeLinks(links) {
+    const source = plainObject(links) || {};
+
+    return {
+        github: typeof source.github === "string" ? source.github : "",
+        linkedin: typeof source.linkedin === "string" ? source.linkedin : "",
+        portfolio: typeof source.portfolio === "string" ? source.portfolio : ""
+    };
+}
+
+function serializePastHackathons(pastHackathons) {
+    if (!Array.isArray(pastHackathons)) {
+        return [];
+    }
+
+    return pastHackathons.map((entry) => {
+        const source = plainObject(entry) || {};
+
+        return {
+            name: typeof source.name === "string" ? source.name : "",
+            year: typeof source.year === "string" ? source.year : "",
+            projectUrl: typeof source.projectUrl === "string" ? source.projectUrl : ""
+        };
+    });
+}
+
+function serializeSkillProficiency(skillProficiency) {
+    const source = plainObject(skillProficiency);
+
+    if (!source || typeof source !== "object" || Array.isArray(source)) {
+        return {};
+    }
+
+    return { ...source };
+}
+
+function pruneSkillProficiency(user, skills) {
+    const allowed = new Set(Array.isArray(skills) ? skills : []);
+    const current = serializeSkillProficiency(user.skillProficiency);
+    const pruned = Object.fromEntries(
+        Object.entries(current).filter(([skill]) => allowed.has(skill))
+    );
+
+    user.skillProficiency = pruned;
+    user.markModified("skillProficiency");
+}
+
+function serializeOwnProfile(user) {
+    return {
+        id: String(user._id),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        bio: user.bio || "",
+        college: user.college || "",
+        location: user.location || "",
+        headline: user.headline || "",
+        year: user.year || "",
+        links: serializeLinks(user.links),
+        pastHackathons: serializePastHackathons(user.pastHackathons),
+        skills: user.skills || [],
+        skillProficiency: serializeSkillProficiency(user.skillProficiency),
+        preferences: user.preferences || {},
+        avatarUrl: user.avatarUrl || "",
+        availability: user.availability,
+        lookingForTeam: Boolean(user.lookingForTeam),
+        discoverable: Boolean(user.discoverable),
+        emailVerified: Boolean(user.emailVerified),
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+    };
+}
+
+function serializePublicProfile(user) {
+    return {
+        id: String(user._id),
+        name: user.name,
+        bio: user.bio || "",
+        college: user.college || "",
+        location: user.location || "",
+        headline: user.headline || "",
+        year: user.year || "",
+        skills: user.skills || [],
+        skillProficiency: serializeSkillProficiency(user.skillProficiency),
+        links: serializeLinks(user.links),
+        pastHackathons: serializePastHackathons(user.pastHackathons),
+        avatarUrl: user.avatarUrl || "",
+        availability: user.availability,
+        lookingForTeam: Boolean(user.lookingForTeam),
+        createdAt: user.createdAt
+    };
+}
+
 const getMyProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select(
@@ -29,19 +140,8 @@ const getMyProfile = async (req, res) => {
 
         return res.status(200).json({
             message: "Profile retrieved successfully",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                bio: user.bio,
-                college: user.college,
-                location: user.location,
-                skills: user.skills,
-                preferences: user.preferences,
-                avatarUrl: user.avatarUrl
-    }
-});
+            user: serializeOwnProfile(user)
+        });
 
     } catch (error) {
         console.error("Get profile error:", error);
@@ -74,6 +174,7 @@ const saveOnboarding = async (req, res) => {
         }
 
         user.skills = [...new Set(skills.map(skill => skill.trim()))];
+        pruneSkillProficiency(user, user.skills);
         user.location = location.trim();
         user.preferences = {
             ...(user.preferences || {}),
@@ -101,7 +202,21 @@ if (!validation.success) {
     });
 }
 
-const { name, bio, college, location, preferences } = validation.data;
+const {
+    name,
+    bio,
+    college,
+    location,
+    headline,
+    year,
+    links,
+    pastHackathons,
+    skillProficiency,
+    preferences,
+    availability,
+    lookingForTeam,
+    discoverable
+} = validation.data;
         const user = await User.findById(req.user.id);
 
         if (!user) {
@@ -127,29 +242,64 @@ const { name, bio, college, location, preferences } = validation.data;
         if (location !== undefined) {
             user.location = location;
         }
-        
+
+        if (headline !== undefined) {
+            user.headline = headline;
+        }
+
+        if (year !== undefined) {
+            user.year = year;
+        }
+
+        if (links !== undefined) {
+            user.links = {
+                ...DEFAULT_LINKS,
+                ...serializeLinks(user.links),
+                ...links
+            };
+            user.markModified("links");
+        }
+
+        if (pastHackathons !== undefined) {
+            user.pastHackathons = pastHackathons.map((entry) => ({
+                name: entry.name || "",
+                year: entry.year || "",
+                projectUrl: entry.projectUrl || ""
+            }));
+        }
+
+        if (skillProficiency !== undefined) {
+            user.skillProficiency = {
+                ...serializeSkillProficiency(user.skillProficiency),
+                ...skillProficiency
+            };
+            user.markModified("skillProficiency");
+        }
+
         if (preferences !== undefined) {
             user.preferences = preferences;
         }
+
+        if (availability !== undefined) {
+            user.availability = availability;
+        }
+
+        if (lookingForTeam !== undefined) {
+            user.lookingForTeam = lookingForTeam;
+        }
+
+        if (discoverable !== undefined) {
+            user.discoverable = discoverable;
+        }
+
         await user.save();
 
         console.log(`Profile updated for user: ${user.email}`);
 
         return res.status(200).json({
-    message: "Profile updated successfully",
-    user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        bio: user.bio,
-        college: user.college,
-        location: user.location,
-        skills: user.skills,
-        preferences: user.preferences,
-        avatarUrl: user.avatarUrl
-    }
-});
+            message: "Profile updated successfully",
+            user: serializeOwnProfile(user)
+        });
 
     } catch (error) {
         console.error("Update profile error:", error);
@@ -170,7 +320,8 @@ const getPublicProfile = async (req, res) => {
 }
 
         const user = await User.findOne({ _id: id, deletedAt: null }).select(
-            "name bio college location skills avatarUrl"
+            "name bio college location headline year skills skillProficiency " +
+            "links pastHackathons avatarUrl availability lookingForTeam createdAt"
         );
 
         if (!user) {
@@ -185,7 +336,7 @@ const getPublicProfile = async (req, res) => {
 
         return res.status(200).json({
             message: "Public profile retrieved successfully",
-            user
+            user: serializePublicProfile(user)
         });
 
     } catch (error) {
@@ -234,6 +385,7 @@ const updateMySkills = async (req, res) => {
         }
 
         user.skills = uniqueSkills;
+        pruneSkillProficiency(user, uniqueSkills);
 
         await user.save();
 
@@ -529,7 +681,12 @@ const exportMyData = async (req, res) => {
                 bio: user.bio,
                 college: user.college,
                 location: user.location,
+                headline: user.headline || "",
+                year: user.year || "",
+                links: serializeLinks(user.links),
+                pastHackathons: serializePastHackathons(user.pastHackathons),
                 skills: user.skills,
+                skillProficiency: serializeSkillProficiency(user.skillProficiency),
                 preferences: user.preferences,
                 avatarUrl: user.avatarUrl,
                 availability: user.availability,

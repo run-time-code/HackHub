@@ -58,7 +58,12 @@ function serialize(doc) {
       }
     : { id: String(obj.user && (obj.user._id || obj.user)) };
   const team = obj.team && obj.team.name
-    ? { id: String(obj.team._id), name: obj.team.name, status: obj.team.status }
+    ? {
+        id: String(obj.team._id),
+        name: obj.team.name,
+        status: obj.team.status,
+        leader: obj.team.leader ? String(obj.team.leader) : null,
+      }
     : { id: String(obj.team && (obj.team._id || obj.team)) };
   return {
     id: String(obj._id || obj.id),
@@ -258,9 +263,18 @@ async function listMine(userId, query = {}) {
   const pageNum = Math.max(Number(query.page) || 1, 1);
   const limitNum = Math.min(Math.max(Number(query.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
   await expireStale();
+
+  // Leaders must see pending requests aimed at their teams even though they
+  // neither sent them nor were invited. Only pending rows are added so the
+  // default inbox does not turn into every historical request for a team.
+  const ledTeams = await Team.find({ leader: userId }).select('_id').lean();
+  const ledTeamIds = ledTeams.map((team) => team._id);
   const filter = {
     $or: [{ user: userId }, { initiatedBy: userId }],
   };
+  if (ledTeamIds.length > 0) {
+    filter.$or.push({ team: { $in: ledTeamIds }, status: PENDING_STATUS });
+  }
   if (query.status) {
     if (!['pending', 'accepted', 'declined', 'cancelled', 'expired'].includes(query.status)) {
       throw badRequest('invalid status filter');
@@ -273,7 +287,7 @@ async function listMine(userId, query = {}) {
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
-      .populate('team', 'name status')
+      .populate('team', 'name status leader')
       .populate('user', 'name skills availability'),
     JoinRequest.countDocuments(filter),
   ]);

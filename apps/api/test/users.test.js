@@ -127,7 +127,24 @@ describe('teammate discovery', () => {
     const item = (await res.json()).data.items[0];
     assert.deepEqual(
       Object.keys(item).sort(),
-      ['availability', 'id', 'lookingForTeam', 'matchCount', 'name', 'skills']
+      [
+        'availability',
+        'avatarUrl',
+        'bio',
+        'college',
+        'headline',
+        'id',
+        'location',
+        'lookingForTeam',
+        'matchCount',
+        'matchScore',
+        'matchedInterests',
+        'matchedSkills',
+        'name',
+        'skillProficiency',
+        'skills',
+        'year',
+      ]
     );
   });
 });
