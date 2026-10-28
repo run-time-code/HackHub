@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -12,10 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      - name: Check root lockfile
+        run: |
+          test -f package-lock.json
+          node -e "const p=require('./package-lock.json'); if (!p.lockfileVersion || !p.packages) process.exit(1)"
+
       - run: npm ci
       - run: npm run lint --workspace @hackhub/web
       - run: npm test --workspace @hackhub/web
@@ -26,10 +33,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      - name: Check root lockfile
+        run: |
+          test -f package-lock.json
+          node -e "const p=require('./package-lock.json'); if (!p.lockfileVersion || !p.packages) process.exit(1)"
+
       - run: npm ci
       - run: npm run lint --workspace @hackhub/api
       - run: npm test --workspace @hackhub/api
