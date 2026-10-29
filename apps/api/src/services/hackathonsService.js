@@ -21,25 +21,29 @@ function escapeRegExp(value) {
 
 function serialize(doc) {
   const obj = doc.toObject ? doc.toObject() : doc;
-  const prize = obj.prize ?? obj.prizePool ?? null;
+  const prize = obj.prize ?? obj.prize_pool ?? null;
   return {
     id: String(obj._id || obj.id),
+    _id: String(obj._id || obj.id),
     slug: obj.hackathon_id,
+    hackathonId: obj.hackathon_id,
     title: obj.title,
     description: obj.description || '',
     organizer: obj.organizer || '',
+    url: obj.url || obj.sourceUrl || '',
     mode: obj.mode || '',
     location: obj.location || '',
-    url: obj.url || obj.sourceUrl || '',
     prize: prize === null ? null : String(prize),
     prizePool: prize === null ? '' : String(prize),
     skills: Array.isArray(obj.skills) ? obj.skills : [],
-    domains: Array.isArray(obj.domain) ? obj.domain : [],
+    domains: Array.isArray(obj.domains) ? obj.domains : (Array.isArray(obj.domain) ? obj.domain : []),
     theme: obj.theme || '',
     registrationDeadline: obj.registration_deadline || null,
     submissionDeadline: obj.submission_deadline || null,
-    eventStartDate: obj.event_start_date || null,
-    eventEndDate: obj.event_end_date || null,
+    eventStartDate: obj.event_start_date ?? (obj.event_start || null),
+    eventEndDate: obj.event_end_date ?? (obj.event_end || null),
+    source: obj.source || '',
+    externalId: obj.external_id || '',
     isActive: obj.is_active !== false,
     isHidden: Boolean(obj.is_hidden),
     isFeatured: Boolean(obj.is_featured),
@@ -48,9 +52,9 @@ function serialize(doc) {
   };
 }
 
-// F-05a: public read surface for the team feature. Hidden rows are excluded;
-// teams reference the same rows by ObjectId (see `id`), while saved/
-// registration records keep the long-lived `slug`.
+// Public read surface for the team/discovery features. Hidden rows are excluded;
+// teams reference the same rows by ObjectId (see `id`), while saved/registration
+// records keep the long-lived `slug`.
 async function listHackathons(query = {}) {
   const { q, domain, mode, skill, active, page = 1, limit = DEFAULT_LIMIT } = query || {};
   const pageNum = Math.max(Number(page) || 1, 1);
@@ -68,17 +72,18 @@ async function listHackathons(query = {}) {
       ],
     });
   }
-  if (domain !== undefined && String(domain).trim() !== '') {
+  if (domain !== undefined && String(domain).trim() !== '' && String(domain).toLowerCase() !== 'all') {
     const needle = escapeRegExp(String(domain).trim());
     conditions.push({
       $or: [
+        { domains: { $regex: needle, $options: 'i' } },
         { domain: { $regex: needle, $options: 'i' } },
         { theme: { $regex: needle, $options: 'i' } },
       ],
     });
   }
-  if (mode !== undefined && String(mode).trim() !== '') {
-    filter.mode = { $regex: `^${escapeRegExp(String(mode).trim())}$`, $options: 'i' };
+  if (mode !== undefined && String(mode).trim() !== '' && String(mode).toLowerCase() !== 'all') {
+    filter.mode = String(mode).trim().toLowerCase() === 'in-person' ? 'offline' : String(mode).trim().toLowerCase();
   }
   if (skill !== undefined && String(skill).trim() !== '') {
     filter.skills = { $regex: escapeRegExp(String(skill).trim()), $options: 'i' };
@@ -108,8 +113,8 @@ async function getHackathonById(idOrSlug) {
   return serialize(doc);
 }
 
-// F-05a: teams must reference a real hackathon row instead of persisting
-// orphan teams with a random ObjectId.
+// Teams must reference a real hackathon row instead of persisting orphan teams
+// with a random ObjectId.
 async function hackathonExists(hackathonId) {
   if (!hackathonId || !mongoose.Types.ObjectId.isValid(hackathonId)) return false;
   const count = await Hackathon.countDocuments({ _id: hackathonId });

@@ -15,36 +15,81 @@ const hackathonSchema = new mongoose.Schema(
         },
 
         registration_deadline: {
-            type: String
+            type: Date,
+            default: null
         },
 
-        // Optional enrichment. The importer and admin tools may fill these;
-        // the public API tolerates their absence.
         submission_deadline: {
-            type: String
+            type: Date,
+            default: null
+        },
+
+        event_start: {
+            type: Date,
+            default: null
+        },
+
+        event_end: {
+            type: Date,
+            default: null
         },
 
         description: {
             type: String,
+            default: "",
             trim: true
         },
 
         organizer: {
             type: String,
-            trim: true
-        },
-
-        mode: {
-            type: String,
-            trim: true
-        },
-
-        location: {
-            type: String,
+            default: "",
             trim: true
         },
 
         url: {
+            type: String,
+            default: ""
+        },
+
+        mode: {
+            type: String,
+            default: "online"
+        },
+
+        location: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        domains: {
+            type: [String],
+            default: []
+        },
+
+        skills: {
+            type: [String],
+            default: []
+        },
+
+        prize_pool: {
+            type: String,
+            default: ""
+        },
+
+        source: {
+            type: String,
+            default: ""
+        },
+
+        external_id: {
+            type: String,
+            default: "",
+            index: true
+        },
+
+        // Optional enrichment populated by the importer/admin tools.
+        theme: {
             type: String,
             trim: true
         },
@@ -56,29 +101,6 @@ const hackathonSchema = new mongoose.Schema(
 
         prize: {
             type: mongoose.Schema.Types.Mixed
-        },
-
-        skills: {
-            type: [String],
-            default: []
-        },
-
-        domain: {
-            type: [String],
-            default: []
-        },
-
-        theme: {
-            type: String,
-            trim: true
-        },
-
-        event_start_date: {
-            type: String
-        },
-
-        event_end_date: {
-            type: String
         },
 
         is_active: {
