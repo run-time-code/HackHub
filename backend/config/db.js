@@ -1,0 +1,23 @@
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+    try {
+        const configuredPoolSize = Number(process.env.MONGODB_MAX_POOL_SIZE);
+        const maxPoolSize = Number.isInteger(configuredPoolSize) && configuredPoolSize > 0
+            ? configuredPoolSize
+            : 10;
+        const databaseName = process.env.MONGODB_DATABASE || "HackHub";
+        await mongoose.connect(process.env.MONGODB_URI, {
+            dbName: databaseName,
+            maxPoolSize,
+            serverSelectionTimeoutMS: 10000
+        });
+
+        console.log("MongoDB connected successfully");
+    } catch (error) {
+        console.error("MongoDB connection failed:", error.message);
+        process.exit(1);
+    }
+};
+
+module.exports = connectDB;

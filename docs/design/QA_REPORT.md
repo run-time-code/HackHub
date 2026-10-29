@@ -12,8 +12,8 @@ provider secrets and are listed as a release step, not a code gap.
 |---|---|---|
 | Lint (web + API) | `npm run check` | Pass, 0 errors |
 | Web unit tests | `vitest run` via `npm run check` | 6 files / 25 tests pass |
-| API contract tests | `node --test test/*.test.js` via `npm run check` | 16 suites / 87 tests pass |
-| Production build | `vite build` via `npm run check` | Pass (3496 modules, ~12s) |
+| API contract tests | `node --test test/*.test.js` via `npm run check` | 17 suites / 90 tests pass |
+| Production build | `vite build` via `npm run check` | Pass (3519 modules, ~3.4s) |
 | New API coverage | `apps/api/test/calendar-reminders-saved.test.js` | 8 tests pass: calendar months, catalogue filters, reminder CRUD, preferences, saved CRUD, account aliases, ownership isolation |
 
 The API contract suite runs against an in-memory MongoDB, so it exercises the

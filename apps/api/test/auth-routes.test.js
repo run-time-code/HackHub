@@ -11,6 +11,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const crypto = require('node:crypto');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const createApp = require('../src/app');
@@ -73,4 +74,41 @@ describe('auth routes mounted on the src entrypoint', () => {
     const res = await fetch(`${base}/auth/me`);
     assert.equal(res.status, 401);
   });
+
+  it('POST /auth/refresh renews the session using a valid refresh token', async () => {
+  const refreshToken = crypto.randomBytes(32).toString('hex');
+  const refreshTokenHash = crypto
+    .createHash('sha256')
+    .update(refreshToken)
+    .digest('hex');
+
+  const user = await User.create({
+    name: 'Persistent Session User',
+    email: 'persistent-session@example.com',
+    emailVerified: true,
+    refreshTokenHash,
+  });
+
+  const csrfRes = await fetch(`${base}/auth/csrf-token`);
+  const { csrfToken } = await csrfRes.json();
+  const csrfCookie = (csrfRes.headers.get('set-cookie') || '').split(';')[0];
+
+  const res = await fetch(`${base}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'x-csrf-token': csrfToken,
+      cookie: `${csrfCookie}; refreshToken=${refreshToken}`,
+    },
+  });
+
+  assert.equal(res.status, 200);
+
+  const setCookie = res.headers.get('set-cookie') || '';
+  assert.match(setCookie, /accessToken=/);
+  assert.match(setCookie, /refreshToken=/);
+
+  const updatedUser = await User.findById(user._id);
+  assert.notEqual(updatedUser.refreshTokenHash, refreshTokenHash);
+});
+
 });

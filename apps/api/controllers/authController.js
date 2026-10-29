@@ -152,12 +152,11 @@ const register = async (req, res) => {
 // ==============================
 // VERIFY EMAIL
 // ==============================
-
 const verifyEmail = async (req, res) => {
     try {
         const { token } = req.query;
 
-        if (!token) {
+        if (!token || typeof token !== "string") {
             return res.status(400).json({
                 message: "Verification token is required"
             });
@@ -165,28 +164,31 @@ const verifyEmail = async (req, res) => {
 
         const tokenHash = hashToken(token);
 
-        const user = await User.findOne({
-            emailVerificationTokenHash: tokenHash,
-            emailVerificationTokenExpiresAt: {
-                $gt: new Date()
+        const user = await User.findOneAndUpdate(
+            {
+                emailVerificationTokenHash: tokenHash,
+                emailVerificationTokenExpiresAt: {
+                    $gt: new Date()
+                }
+            },
+            {
+                $set: {
+                    emailVerified: true,
+                    emailVerificationTokenHash: null,
+                    emailVerificationTokenExpiresAt: null
+                }
+            },
+            {
+                new: true,
+                runValidators: true
             }
-        });
+        );
 
         if (!user) {
             return res.status(400).json({
-                message:
-                    "Invalid or expired verification token"
+                message: "Invalid or expired verification token"
             });
         }
-
-        // Complete registration
-        user.emailVerified = true;
-
-        // Make verification token single-use
-        user.emailVerificationTokenHash = null;
-        user.emailVerificationTokenExpiresAt = null;
-
-        await user.save();
 
         console.log(
             `Email verified successfully: ${user.email}`
@@ -208,7 +210,6 @@ const verifyEmail = async (req, res) => {
         });
     }
 };
-
 
 // ==============================
 // RESEND VERIFICATION
@@ -705,12 +706,35 @@ const forgotPassword = async (req, res) => {
 // ==============================
 // RESET PASSWORD
 // ==============================
+// ==============================
+// RESET PASSWORD
+// ==============================
 
 const resetPassword = async (req, res) => {
     try {
-        const { token, password } = req.body;
+        const { token, password } = req.body || {};
 
-        const passwordRegex = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+        // Validate required fields
+        if (!token || !password) {
+            return res.status(400).json({
+                message: "Token and password are required"
+            });
+        }
+
+        // Validate input types
+        if (
+            typeof token !== "string" ||
+            typeof password !== "string"
+        ) {
+            return res.status(400).json({
+                message: "Token and password must be strings"
+            });
+        }
+
+        // Require at least 8 characters, one uppercase letter,
+        // and one special character.
+        const passwordRegex =
+            /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
         if (!passwordRegex.test(password)) {
             return res.status(400).json({
@@ -719,33 +743,37 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        if (!token || !password) {
-            return res.status(400).json({
-                message:
-                    "Token and password are required"
-            });
-        }
+        // Hash the supplied reset token and new password
+        const tokenHash = hashToken(token);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                message:
-                    "Password must be at least 8 characters long"
-            });
-        }
-
-        const tokenHash =
-            hashToken(token);
-
-        const user = await User.findOne({
-            passwordResetTokenHash:
-                tokenHash,
-            passwordResetTokenExpiresAt: {
-                $gt: new Date()
+        // Atomically update the password and consume the token.
+        // Only one request can successfully use a reset token.
+        const user = await User.findOneAndUpdate(
+            {
+                passwordResetTokenHash: tokenHash,
+                passwordResetTokenExpiresAt: {
+                    $gt: new Date()
+                }
+            },
+            {
+                $set: {
+                    password: hashedPassword,
+                    passwordResetTokenHash: null,
+                    passwordResetTokenExpiresAt: null,
+                    refreshTokenHash: null
+                },
+                $inc: {
+                    tokenVersion: 1
+                }
+            },
+            {
+                new: true,
+                runValidators: true
             }
-        });
+        );
 
+        // Reject invalid, expired, or previously used tokens
         if (!user) {
             return res.status(400).json({
                 message:
@@ -753,32 +781,12 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        const hashedPassword =
-            await bcrypt.hash(password, 10);
-
-        user.password =
-            hashedPassword;
-
-        // Make reset token single-use
-        user.passwordResetTokenHash =
-            null;
-
-        user.passwordResetTokenExpiresAt =
-            null;
-
-        // Invalidate existing refresh token
-        user.refreshTokenHash =
-            null;
-
-        await user.save();
-
         console.log(
             `Password reset successful: ${user.email}`
         );
 
         return res.status(200).json({
-            message:
-                "Password reset successful"
+            message: "Password reset successful"
         });
 
     } catch (error) {
@@ -792,8 +800,6 @@ const resetPassword = async (req, res) => {
         });
     }
 };
-
-
 // ==============================
 // EXPORTS
 // ==============================
