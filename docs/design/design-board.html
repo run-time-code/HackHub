@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HackHub — Design Board v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F3F0E7;--surface:#FBFAF5;--surface2:#ECE8DC;--ink:#161A15;--ink2:#3D453C;
+    --muted:#6E7569;--line:#D8D2C3;--signal:#E8592E;--moss:#2E5B44;--lime:#D9F27A;
+    --serif:"Instrument Serif",Georgia,serif;--sans:"Manrope",system-ui,sans-serif;
+    --mono:"JetBrains Mono",monospace;--radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);line-height:1.6;background-image:radial-gradient(#c9c3b2 .6px,transparent .6px);background-size:16px 16px}
+  .wrap{max-width:1240px;margin:0 auto;padding:48px 32px 96px}
+  .eyebrow{font:600 11px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--signal)}
+  .rule{border:0;border-top:1px solid var(--line);margin:40px 0}
+  h1{font:400 clamp(3.5rem,7vw,6.4rem)/.9 var(--serif);letter-spacing:-.05em;margin:14px 0 20px}
+  h1 em{font-style:italic;color:var(--signal)}
+  h2{font:400 2.4rem/1.05 var(--serif);letter-spacing:-.04em;margin:0 0 8px}
+  h3{font:600 1rem/1.4 var(--sans);margin:0 0 6px}
+  p{margin:0;color:var(--ink2)}
+  .muted{color:var(--muted)}
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:4px 4px 0 #E4DFD2}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;background:var(--surface)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--moss)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:12px 18px;border:1px solid transparent;font:700 14px/1 var(--sans);cursor:default}
+  .btn-primary{background:var(--signal);color:#fffaf3}
+  .btn-secondary{background:transparent;border-color:var(--line);color:var(--ink)}
+  .btn-ghost{background:var(--surface2);color:var(--ink)}
+  .swatch{height:92px;border-radius:12px;border:1px solid rgba(22,26,21,.12)}
+  .mono{font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+  .mini-nav{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:rgba(251,250,245,.8);border-radius:12px;padding:12px 16px;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:10px;font:700 15px var(--serif);letter-spacing:-.02em}
+  .mark{width:30px;height:30px;display:grid;place-items:center;background:var(--ink);color:var(--surface);font:700 15px var(--serif);border-radius:3px;position:relative}
+  .mark:after{content:"";position:absolute;right:-4px;bottom:-4px;width:9px;height:9px;border-radius:50%;background:var(--signal);border:2px solid var(--surface)}
+  .hero-mock{position:relative;overflow:hidden;padding:42px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(140deg,#F7F4EA,#ECE6D7);min-height:340px}
+  .orb{position:absolute;right:-60px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E7FFA3,#C8E85D 45%,transparent 70%);filter:blur(18px);opacity:.55}
+  .hero-mock h1{font-size:clamp(2.8rem,5vw,4.6rem);max-width:600px;position:relative}
+  .hero-mock .card{position:absolute;right:32px;bottom:30px;width:260px;transform:rotate(-2deg);box-shadow:8px 8px 0 #DCD5C4}
+  .hero-mock .card.two{right:210px;bottom:120px;transform:rotate(3deg);width:210px;opacity:.95}
+  .avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#2E5B44,#8AAF7A);color:#fff;font-weight:800;font-size:13px}
+  .skill{display:inline-block;border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:4px 9px;font:600 11px var(--mono);color:var(--ink2)}
+  .match{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--mono);color:var(--moss);border:2px solid var(--moss);background:conic-gradient(var(--moss) 0 94%,var(--surface2) 94%)}
+  .match span{background:var(--surface);width:44px;height:44px;border-radius:50%;display:grid;place-items:center}
+  .type-row{display:flex;align-items:baseline;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line);padding:14px 0}
+  .type-row p{font-family:var(--serif);font-size:2rem;letter-spacing:-.04em}
+  .footer-note{margin-top:56px;border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;color:var(--muted);font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+  @media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}.hero-mock .card{display:none}.wrap{padding:32px 20px 64px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">HackHub · Work Area 3 · Design board v1.0</div>
+    <h1>The Builder's Field Guide,<br><em>reimagined.</em></h1>
+    <p style="max-width:680px">A living archive for student builders: warm paper, deep ink, one signal colour, editorial type and motion with manners. This board mirrors the production tokens in <code>apps/web/src/styles/tokens.css</code>.</p>
+  </header>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">01 / Colour</div>
+    <h2>A warm system with one signal.</h2>
+    <p class="muted" style="margin-bottom:20px">Light theme shown. Dark theme remaps the same semantic roles.</p>
+    <div class="grid g4">
+      <div><div class="swatch" style="background:#F3F0E7"></div><p class="mono" style="margin-top:8px">CANVAS · F3F0E7</p></div>
+      <div><div class="swatch" style="background:#FBFAF5"></div><p class="mono" style="margin-top:8px">SURFACE · FBFAF5</p></div>
+      <div><div class="swatch" style="background:#161A15"></div><p class="mono" style="margin-top:8px">INK · 161A15</p></div>
+      <div><div class="swatch" style="background:#E8592E"></div><p class="mono" style="margin-top:8px">SIGNAL · E8592E</p></div>
+      <div><div class="swatch" style="background:#2E5B44"></div><p class="mono" style="margin-top:8px">MOSS · 2E5B44</p></div>
+      <div><div class="swatch" style="background:#D9F27A"></div><p class="mono" style="margin-top:8px">LIME · D9F27A</p></div>
+      <div><div class="swatch" style="background:#ECE8DC"></div><p class="mono" style="margin-top:8px">SURFACE 2 · ECE8DC</p></div>
+      <div><div class="swatch" style="background:#D8D2C3"></div><p class="mono" style="margin-top:8px">LINE · D8D2C3</p></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">02 / Typography</div>
+    <h2>Serif for story. Sans for action. Mono for signal.</h2>
+    <div class="grid g2" style="margin-top:20px">
+      <div class="card">
+        <div class="type-row"><p>Find your people.</p><span class="mono">INSTRUMENT SERIF / 400</span></div>
+        <div class="type-row"><p style="font-style:italic">Build the improbable.</p><span class="mono">SERIF ITALIC</span></div>
+        <div class="type-row"><p style="font:600 1.15rem var(--sans);letter-spacing:-.01em">Ship with a crew, not a cold start.</p><span class="mono">MANROPE / 600</span></div>
+        <div class="type-row" style="border:0"><p class="mono" style="font-size:.8rem;letter-spacing:.16em;color:var(--signal)">SEASON 01 / OPEN CALL</p><span class="mono">JETBRAINS MONO</span></div>
+      </div>
+      <div class="card" style="background:var(--ink);color:var(--surface);border-color:#2C332A">
+        <div class="eyebrow" style="color:var(--lime)">Voice</div>
+        <h2 style="color:var(--surface);font-size:2rem;margin-top:10px">Direct, warm, specific.</h2>
+        <p style="color:#BDC3B8">Short sentences. Verbs first. No hype. Buttons name the action. Empty states offer the next move. Privacy is explained in plain language.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">
+          <span class="pill" style="background:#1D231B;border-color:#333B31;color:#D9DFD3"><span class="dot"></span>Available</span>
+          <span class="pill" style="background:#1D231B;border-color:#333B31;color:#D9DFD3">94% match</span>
+          <span class="pill" style="background:#1D231B;border-color:#333B31;color:#D9DFD3">3 / 4 seats</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">03 / Landing hero</div>
+    <h2>The first five seconds.</h2>
+    <div class="hero-mock" style="margin-top:20px">
+      <div class="orb"></div>
+      <div class="mini-nav" style="position:relative">
+        <div class="brand"><span class="mark">H</span>HackHub</div>
+        <div style="display:flex;gap:20px;align-items:center"><span class="mono">DISCOVER</span><span class="mono">HOW IT WORKS</span><span class="mono">BUILDERS</span><span class="btn btn-primary" style="padding:9px 14px;font-size:12px">Start free</span></div>
+      </div>
+      <div class="eyebrow" style="position:relative">Season 01 · The builder network</div>
+      <h1 style="position:relative">Find your people.<br><em>Build the improbable.</em></h1>
+      <p style="position:relative;max-width:440px">Hackathons, teammates, and deadlines in one field guide for student builders. Show up with a crew, not a cold start.</p>
+      <div style="display:flex;gap:10px;margin-top:22px;position:relative"><span class="btn btn-primary">Start building — free</span><span class="btn btn-secondary">See how it works</span></div>
+      <div class="card two"><div style="display:flex;justify-content:space-between;align-items:center"><span class="pill"><span class="dot" style="background:var(--signal)"></span>Team</span><span class="mono">3/4</span></div><h3 style="font:500 1.5rem var(--serif);margin:10px 0 4px">Orbital Drift</h3><p class="mono">NASA SPACE APPS '26</p><div style="display:flex;gap:6px;margin-top:14px"><span class="skill">React</span><span class="skill">ML</span><span class="skill">Design</span></div></div>
+      <div class="card"><div style="display:flex;gap:10px;align-items:center"><div class="avatar">AM</div><div><h3 style="margin:0">Aarav Mehta</h3><p class="mono">FRONTEND · VIT '27</p></div><div class="match"><span>94</span></div></div><div style="display:flex;gap:5px;margin-top:14px"><span class="skill">React</span><span class="skill">Node</span><span class="skill">Figma</span></div><p style="margin-top:12px;font-size:12px;color:var(--moss)">● Available this week</p></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">04 / Components</div>
+    <h2>Printed cards. Calm controls.</h2>
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card">
+        <h3>Buttons</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><span class="btn btn-primary">Send invitation</span><span class="btn btn-secondary">Cancel</span><span class="btn btn-ghost">View profile</span></div>
+      </div>
+      <div class="card">
+        <h3>Profile card</h3>
+        <div style="display:flex;gap:12px;align-items:center;margin-top:14px"><div class="avatar">IS</div><div style="flex:1"><strong>Ishaan Rao</strong><p class="mono">ML · IIIT-H '26</p></div><div class="match"><span>87</span></div></div>
+        <div style="display:flex;gap:5px;margin-top:12px"><span class="skill">PyTorch</span><span class="skill">NLP</span><span class="skill">AWS</span></div>
+      </div>
+      <div class="card">
+        <h3>Team card</h3>
+        <div style="display:flex;justify-content:space-between;margin-top:14px"><span class="pill"><span class="dot"></span>Open</span><span class="mono">3 / 4</span></div>
+        <h3 style="font:500 1.7rem var(--serif);margin-top:12px">Orbital Drift</h3>
+        <p class="mono">NASA SPACE APPS '26</p>
+        <div style="display:flex;gap:5px;margin-top:12px"><span class="skill">ML engineer</span><span class="skill">Designer</span></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">05 / Motion & accessibility</div>
+    <h2>Motion with manners.</h2>
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card"><span class="mono">EASE / cubic-bezier(.22,1,.36,1)</span><h3 style="margin-top:10px">Entrances</h3><p>12–24px rise, 240ms, 70ms stagger, once.</p></div>
+      <div class="card"><span class="mono">SPRING / 180 · 20</span><h3 style="margin-top:10px">Tilt & cards</h3><p>Max 4°. Hover lift 4px. No parallax on touch.</p></div>
+      <div class="card"><span class="mono">PREFERS-REDUCED-MOTION</span><h3 style="margin-top:10px">Full stop</h3><p>Durations collapse, marquee freezes, counters jump to final.</p></div>
+    </div>
+    <div class="card" style="margin-top:18px;display:flex;gap:16px;align-items:center"><span class="match" style="border-color:var(--moss)"><span>AA</span></span><div><h3>Accessible by construction</h3><p>44px targets, visible 2px focus rings, labelled controls, focus-trapped dialogs, live-region counts, 4.5:1 body contrast.</p></div></div>
+  </section>
+
+  <div class="footer-note"><span>HackHub · Design board v1.0 · Divyashree</span><span>Tokens mirrored in production CSS</span></div>
+</div>
+</body>
+</html>

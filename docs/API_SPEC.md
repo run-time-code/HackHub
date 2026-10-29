@@ -22,6 +22,10 @@ Base URL: `/api`
 | GET | `/auth/me` | Session restore (mirrors `/users/me`) |
 | GET | `/auth/google` · `/auth/github` | Start OAuth handshake (same-window); callback redirects to `${FRONTEND_URL}/?oauth=...` |
 | GET | `/users/me` | Current user (secret-free) |
+| PUT | `/users/me` | Update profile (CSRF). Accepts `headline`, `year`, `links{github,linkedin,portfolio}`, `pastHackathons[{name,year,projectUrl}]`, `skillProficiency{skill: beginner\|intermediate\|advanced\|expert}`, `availability`, `lookingForTeam`, `discoverable`, plus existing fields. Links must be empty or http(s) URLs. |
+
+`GET /users/me` returns `id,name,email,role,bio,college,location,headline,year,links,pastHackathons,skills,skillProficiency,preferences,avatarUrl,availability,lookingForTeam,discoverable,emailVerified,createdAt,updatedAt`.
+`GET /users/public/:id` returns `id,name,bio,college,location,headline,year,skills,skillProficiency,links,pastHackathons,avatarUrl,availability,lookingForTeam,createdAt` and never email, preferences or discoverable.
 
 ## Hackathons (public catalogue for the team feature)
 | Method | Endpoint | Query | Description |
@@ -48,7 +52,8 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 |---|---|---|
 | POST | `/teams` | Create team (leader = caller) |
 | GET | `/teams?hackathonId=<id>&status=open&page=1&limit=20` | List teams by hackathon |
-| GET | `/teams/:id` | Team detail with members, size and open slots |
+| GET | `/teams/mine` | Teams I lead or belong to, newest first (`{ items }`, auth required) |
+| GET | `/teams/:id` | Team detail with members, size, open slots and `hackathonTitle` |
 | PATCH | `/teams/:id` | Leader edits name/description/rolesNeeded/maxTeamSize/status |
 | DELETE | `/teams/:id` | Leader deletes the team (pending requests are cancelled) |
 | PATCH | `/teams/:id/leader` | Leader hands off to an existing member (`{ userId }`) |
@@ -57,7 +62,7 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 ## Teammate discovery
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/users/discover?skills=react,node&availability=available&lookingForTeam=true` | Opt-in users only, ranked by skill match |
+| GET | `/users/discover?q=&skills=react,node&interests=ai,climate&availability=available&lookingForTeam=true` | Opt-in users only, ranked by skill/interest match. `q` searches name/headline/skills; `interests` is comma-separated (max 10). Items expose profile enrichment plus `matchCount,matchScore,matchedSkills,matchedInterests`. |
 
 ## Join requests and invitations
 | Method | Endpoint | Description |
@@ -65,7 +70,7 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 | POST | `/teams/:id/requests` | Ask to join (`{ role?, message? }`) |
 | POST | `/teams/:id/invitations` | Leader invites a user (`{ userId, role?, message? }`) |
 | GET | `/teams/:id/requests?type=request\|invite` | Leader lists pending rows |
-| GET | `/team-requests/mine?status=pending` | My sent requests and received/sent invitations |
+| GET | `/team-requests/mine?status=pending` | My sent requests, received/sent invitations, and pending requests targeting teams I lead. Each `team` object includes `leader`. |
 | PATCH | `/team-requests/:id` | Respond (`{ action: "accept" \| "decline" }`) |
 | DELETE | `/team-requests/:id` | Cancel a pending request/invitation |
 
@@ -75,6 +80,12 @@ rolling 24 hours. Team writes are additionally throttled at 100/hour per
 user (`teamWriteLimiter`). Duplicates, self-requests, full/closed teams, and
 accepting when the team filled up are rejected. Filling the last seat closes
 the team automatically and cancels the remaining queue.
+
+## Public stats & feedback
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/stats` | Public counters `{hackathons,teams,builders,openTeams,matches}` |
+| POST | `/feedback` | Anonymous feedback (`{ type: general\|bug\|feature\|content, message: 5-2000 chars, page?, email? }`) |
 
 ## Notifications
 | Method | Endpoint | Description |

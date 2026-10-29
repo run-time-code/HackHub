@@ -1,6 +1,34 @@
 
 const mongoose = require("mongoose");
 
+const pastHackathonSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 120
+        },
+
+        year: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 10
+        },
+
+        projectUrl: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 300
+        }
+    },
+    {
+        _id: false
+    }
+);
+
 const userSchema = new mongoose.Schema(
     {
         name: {
@@ -85,6 +113,55 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: "",
             trim: true
+        },
+
+        headline: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 120
+        },
+
+        year: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 20
+        },
+
+        links: {
+            github: {
+                type: String,
+                default: "",
+                trim: true,
+                maxlength: 300
+            },
+            linkedin: {
+                type: String,
+                default: "",
+                trim: true,
+                maxlength: 300
+            },
+            portfolio: {
+                type: String,
+                default: "",
+                trim: true,
+                maxlength: 300
+            }
+        },
+
+        pastHackathons: {
+            type: [pastHackathonSchema],
+            default: [],
+            validate: {
+                validator: (items) => Array.isArray(items) && items.length <= 10,
+                message: "pastHackathons cannot contain more than 10 entries"
+            }
+        },
+
+        skillProficiency: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {}
         },
 
         skills: {

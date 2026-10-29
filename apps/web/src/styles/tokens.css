@@ -1,0 +1,170 @@
+/* ==========================================================================
+   HackHub design tokens
+   Single source of truth: docs/design/DESIGN_SYSTEM.md
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --canvas: #f3f0e7;
+  --canvas-raised: #f7f4ea;
+  --surface: #fbfaf5;
+  --surface-2: #ece8dc;
+  --surface-3: #e4dfd2;
+  --surface-inverse: #161a15;
+
+  /* Ink */
+  --ink: #161a15;
+  --ink-2: #3d453c;
+  --muted: #6e7569;
+  --faint: #8f9588;
+  --line: #d8d2c3;
+  --line-strong: #bdb6a4;
+
+  /* Accent */
+  --signal: #e8592e;
+  --signal-hover: #d24a21;
+  --signal-ink: #8c2c11;
+  --signal-soft: #f7e3d8;
+  --moss: #2e5b44;
+  --moss-strong: #234736;
+  --moss-soft: #dfe9df;
+  --lime: #d9f27a;
+  --lime-soft: #eef9be;
+  --danger: #b42318;
+  --danger-soft: #fbe9e6;
+  --info: #2f5d8a;
+  --info-soft: #e2ecf5;
+  --warning: #9a5b0b;
+  --warning-soft: #f8edda;
+
+  /* Semantic */
+  --success: var(--moss);
+  --focus: var(--signal);
+  --shadow-solid: #e0dacc;
+  --shadow-card: 0 1px 0 rgb(22 26 21 / 4%), 4px 4px 0 var(--shadow-solid);
+  --shadow-lift: 0 18px 40px -22px rgb(22 26 21 / 35%), 6px 6px 0 var(--shadow-solid);
+  --shadow-modal: 0 40px 100px -30px rgb(22 26 21 / 45%);
+  --glow-signal: 0 24px 80px -30px rgb(232 89 46 / 55%);
+  --glow-lime: 0 24px 100px -30px rgb(190 224 81 / 45%);
+
+  /* Type */
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --sans: "Manrope Variable", "Manrope", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --text-display-xl: clamp(3.6rem, 7.8vw, 7.8rem);
+  --text-display: clamp(2.9rem, 5.3vw, 5rem);
+  --text-h1: clamp(2.25rem, 3.8vw, 3.55rem);
+  --text-h2: clamp(1.8rem, 2.7vw, 2.65rem);
+  --text-h3: clamp(1.2rem, 1.5vw, 1.4rem);
+  --text-body: 1rem;
+  --text-sm: 0.875rem;
+  --text-xs: 0.75rem;
+  --text-micro: 0.6875rem;
+  --tracking-display: -0.05em;
+  --tracking-tight: -0.03em;
+  --tracking-label: 0.14em;
+
+  /* Space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --space-11: 80px;
+  --space-12: 96px;
+  --gutter: clamp(20px, 4vw, 56px);
+  --container: 1280px;
+  --container-narrow: 880px;
+  --container-reading: 720px;
+  --nav-height: 76px;
+  --app-nav-height: 72px;
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+  --dur-slow: 480ms;
+  --dur-cinematic: 800ms;
+
+  /* Layers */
+  --z-base: 1;
+  --z-sticky: 30;
+  --z-nav: 40;
+  --z-dropdown: 50;
+  --z-overlay: 70;
+  --z-modal: 80;
+  --z-toast: 90;
+  --z-command: 100;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #0b0e0b;
+  --canvas-raised: #0f1310;
+  --surface: #121612;
+  --surface-2: #191f18;
+  --surface-3: #20271f;
+  --surface-inverse: #f2efe4;
+
+  --ink: #f2efe4;
+  --ink-2: #d4d2c5;
+  --muted: #9ca596;
+  --faint: #7c8578;
+  --line: #2b3329;
+  --line-strong: #3d473a;
+
+  --signal: #ff6b3d;
+  --signal-hover: #ff835d;
+  --signal-ink: #ffb49a;
+  --signal-soft: #2c1912;
+  --moss: #7fb695;
+  --moss-strong: #9bcaae;
+  --moss-soft: #16251c;
+  --lime: #cff56a;
+  --lime-soft: #263013;
+  --danger: #ff8a80;
+  --danger-soft: #2b1513;
+  --info: #8cb8e0;
+  --info-soft: #12202d;
+  --warning: #e4b168;
+  --warning-soft: #2a2113;
+
+  --shadow-solid: #050705;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 4%), 4px 4px 0 var(--shadow-solid);
+  --shadow-lift: 0 24px 60px -30px #000, 6px 6px 0 var(--shadow-solid);
+  --shadow-modal: 0 40px 100px -20px #000;
+  --glow-signal: 0 24px 100px -30px rgb(255 107 61 / 40%);
+  --glow-lime: 0 30px 120px -40px rgb(207 245 106 / 30%);
+}
+
+/* High contrast preference */
+@media (prefers-contrast: more) {
+  :root {
+    --muted: #4c5349;
+    --line: #a9a292;
+    --line-strong: #7d7666;
+  }
+  [data-theme="dark"] {
+    --muted: #c3cabf;
+    --line: #596554;
+    --line-strong: #7c8a75;
+  }
+}

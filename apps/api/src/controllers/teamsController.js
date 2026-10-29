@@ -24,6 +24,15 @@ async function list(req, res, next) {
   }
 }
 
+async function listMine(req, res, next) {
+  try {
+    const result = await teamsService.listMyTeams(req.user.id);
+    send(res, 200, result, req);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getOne(req, res, next) {
   try {
     const team = await teamsService.getTeamById(req.params.id);
@@ -73,4 +82,13 @@ async function removeMember(req, res, next) {
   }
 }
 
-module.exports = { create, list, getOne, update, transferLeader, remove, removeMember };
+module.exports = {
+  create,
+  list,
+  listMine,
+  getOne,
+  update,
+  transferLeader,
+  remove,
+  removeMember,
+};

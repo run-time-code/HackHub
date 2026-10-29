@@ -1,0 +1,272 @@
+/* ==========================================================================
+   Motion helpers — decorative, interruptible, reduced-motion safe.
+   ========================================================================== */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal--left {
+  transform: translateX(-24px);
+}
+
+.reveal--right {
+  transform: translateX(24px);
+}
+
+.reveal--scale {
+  transform: scale(0.96);
+}
+
+.reveal--left.is-visible,
+.reveal--right.is-visible,
+.reveal--scale.is-visible {
+  transform: none;
+}
+
+.stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: hh-stagger-in var(--dur-slow) var(--ease-out) forwards;
+}
+
+.stagger > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.stagger > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.stagger > *:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.stagger > *:nth-child(5) {
+  animation-delay: 280ms;
+}
+
+.stagger > *:nth-child(6) {
+  animation-delay: 350ms;
+}
+
+.hover-lift {
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+}
+
+.press {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.press:active {
+  transform: scale(0.97);
+}
+
+.float-slow {
+  animation: hh-float 7s var(--ease-in-out) infinite;
+}
+
+.float-slower {
+  animation: hh-float 11s var(--ease-in-out) 1.2s infinite;
+}
+
+.spin-slow {
+  animation: hh-spin 14s linear infinite;
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    100deg,
+    var(--ink) 20%,
+    var(--signal) 42%,
+    var(--ink) 62%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: hh-text-shimmer 6s var(--ease-in-out) infinite;
+}
+
+.tilt-3d {
+  transform-style: preserve-3d;
+  transition: transform var(--dur-slow) var(--ease-out);
+  will-change: transform;
+}
+
+.tilt-3d:hover {
+  transform: perspective(900px) rotateX(2deg) rotateY(-4deg) translateY(-4px);
+}
+
+.glowing {
+  box-shadow: var(--glow-signal);
+}
+
+/* Page transition wrapper used by route components. */
+.page-enter {
+  animation: hh-page-rise var(--dur-slow) var(--ease-out) both;
+}
+
+.page-enter--fast {
+  animation-duration: var(--dur-base);
+}
+
+/* Underline that draws in on hover. */
+.draw-link {
+  position: relative;
+}
+
+.draw-link::after {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--signal);
+  content: "";
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.draw-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* Animated dotted route between steps. */
+.dotted-route {
+  background-image: linear-gradient(
+    to bottom,
+    var(--line-strong) 42%,
+    transparent 42%,
+    transparent 100%
+  );
+  background-size: 1px 9px;
+}
+
+@keyframes hh-stagger-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hh-page-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes hh-text-shimmer {
+  0%,
+  100% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes hh-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes hh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hh-confetti-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx, 0), 65vh, 0) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* A lightweight confetti burst that does not need canvas-confetti. */
+.confetti-burst {
+  position: fixed;
+  z-index: var(--z-toast);
+  top: 12vh;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.confetti-burst i {
+  position: absolute;
+  display: block;
+  width: 7px;
+  height: 11px;
+  border-radius: 1px;
+  background: var(--signal);
+  animation: hh-confetti-fall 1.2s var(--ease-in-out) forwards;
+}
+
+.confetti-burst i:nth-child(3n) {
+  background: var(--lime);
+}
+
+.confetti-burst i:nth-child(3n + 1) {
+  background: var(--moss);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .stagger > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .float-slow,
+  .float-slower,
+  .spin-slow,
+  .shimmer-text {
+    animation: none;
+  }
+
+  .tilt-3d:hover {
+    transform: none;
+  }
+
+  .confetti-burst {
+    display: none;
+  }
+}
