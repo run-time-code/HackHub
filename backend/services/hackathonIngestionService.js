@@ -1,0 +1,640 @@
+const Hackathon = require("../models/Hackathon");
+const Organizer = require("../models/Organizer");
+const Source = require("../models/Source");
+const Tag = require("../models/Tag");
+const IngestionQuarantine = require("../models/IngestionQuarantine");
+const { makeCanonicalKey } = require("../utils/canonicalHackathon");
+
+const {
+    invalidateHackathonCache
+} = require("./cacheService");
+const { syncHackathonReminders } = require("./syncHackathonReminders");
+
+
+// ======================================================
+// CREATE SLUG
+// ======================================================
+
+const createSlug = (title, externalId) => {
+
+    const titlePart =
+        String(title || "hackathon")
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+
+    return `${titlePart}-${externalId}`;
+};
+
+
+// ======================================================
+// NORMALIZE ARRAY
+// ======================================================
+
+const normalizeArray = (value) => {
+
+    if (!value) {
+        return [];
+    }
+
+    if (Array.isArray(value)) {
+
+        return value
+            .map(item => String(item).trim())
+            .filter(Boolean);
+    }
+
+    return String(value)
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+};
+
+
+// ======================================================
+// VALIDATE HACKATHON
+// ======================================================
+
+const validateHackathon = (data) => {
+
+    const errors = [];
+
+    if (!data.title) {
+        errors.push("title is required");
+    }
+
+    if (!data.externalId) {
+        errors.push("externalId is required");
+    }
+
+    if (!data.source) {
+        errors.push("source is required");
+    }
+
+    if (data.prize !== undefined && (!Number.isFinite(Number(data.prize)) || Number(data.prize) < 0)) {
+        errors.push("prize must be a non-negative number");
+    }
+
+    for (const field of [
+        "registrationDeadline",
+        "submissionDeadline",
+        "eventStartDate",
+        "eventEndDate"
+    ]) {
+        if (data[field] && Number.isNaN(new Date(data[field]).getTime())) {
+            errors.push(`${field} must be a valid date`);
+        }
+    }
+
+    return errors;
+};
+
+// ======================================================
+// UPSERT ONE HACKATHON
+// ======================================================
+
+const upsertHackathon = async (data) => {
+
+    // --------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------
+
+    const errors = validateHackathon(data);
+
+    if (errors.length > 0) {
+        return {
+            success: false,
+            quarantined: true,
+            errors
+        };
+    }
+
+
+    // --------------------------------------------------
+    // SOURCE
+    // --------------------------------------------------
+
+    const source =
+        await Source.findOneAndUpdate(
+            {
+                name: data.source
+            },
+            {
+                $set: {
+                    website:
+                        data.sourceWebsite || "",
+
+                    apiUrl:
+                        data.apiUrl || "",
+
+                    isActive: true
+                }
+            },
+            {
+                upsert: true,
+                new: true
+            }
+        );
+
+
+    // --------------------------------------------------
+    // ORGANIZER
+    // --------------------------------------------------
+
+    const organizerName =
+        data.organizer ||
+        "Unknown Organizer";
+
+
+    const organizer =
+        await Organizer.findOneAndUpdate(
+            {
+                name: organizerName
+            },
+            {
+                $setOnInsert: {
+                    name: organizerName
+                }
+            },
+            {
+                upsert: true,
+                new: true
+            }
+        );
+
+
+    // --------------------------------------------------
+    // TAGS
+    // --------------------------------------------------
+
+    const tagNames =
+        normalizeArray(data.tags);
+
+    const tagIds = [];
+
+
+    for (const tagName of tagNames) {
+
+        const normalizedTag =
+            tagName
+                .toLowerCase()
+                .trim();
+
+
+        const tag =
+            await Tag.findOneAndUpdate(
+                {
+                    name: normalizedTag
+                },
+                {
+                    $setOnInsert: {
+                        name: normalizedTag
+                    }
+                },
+                {
+                    upsert: true,
+                    new: true
+                }
+            );
+
+
+        tagIds.push(tag._id);
+    }
+
+
+    // --------------------------------------------------
+    // EXTERNAL ID
+    // --------------------------------------------------
+
+    const externalId =
+        String(data.externalId);
+
+
+    // --------------------------------------------------
+    // CHECK EXISTING HACKATHON
+    // --------------------------------------------------
+
+    const existing =
+        await Hackathon.findOne({
+            source: source._id,
+            externalId: externalId
+        });
+
+    const canonicalKey =
+        makeCanonicalKey(
+            data.title,
+            organizerName,
+            data.eventStartDate
+        );
+
+    const canonicalMatch = canonicalKey
+        ? await Hackathon.findOne({
+            canonicalKey,
+            isCanonical: true,
+            source: { $ne: source._id }
+        })
+        : null;
+
+
+    // --------------------------------------------------
+    // PREPARE HACKATHON DATA
+    // --------------------------------------------------
+
+    const hackathonData = {
+
+        title:
+            data.title,
+
+        slug:
+            data.slug ||
+            createSlug(
+                data.title,
+                `${source._id}-${externalId}`
+            ),
+
+        description:
+            data.description || "",
+
+        organizer:
+            organizer._id,
+
+        source:
+            source._id,
+
+        externalId:
+            externalId,
+
+        tags:
+            tagIds,
+
+        tagNames:
+            tagNames.map((name) => name.toLowerCase()),
+
+        skills:
+            normalizeArray(data.skills),
+
+        domain:
+            normalizeArray(data.domain),
+
+        mode:
+            ["ONLINE", "OFFLINE", "HYBRID"]
+                .includes(
+                    String(
+                        data.mode || "ONLINE"
+                    ).toUpperCase()
+                )
+                ? String(
+                    data.mode || "ONLINE"
+                ).toUpperCase()
+                : "ONLINE",
+
+        location:
+            data.location || "",
+
+        registrationDeadline:
+            data.registrationDeadline
+                ? new Date(
+                    data.registrationDeadline
+                )
+                : null,
+
+        submissionDeadline:
+            data.submissionDeadline
+                ? new Date(
+                    data.submissionDeadline
+                )
+                : null,
+
+        eventStartDate:
+            data.eventStartDate
+                ? new Date(
+                    data.eventStartDate
+                )
+                : null,
+
+        eventEndDate:
+            data.eventEndDate
+                ? new Date(
+                    data.eventEndDate
+                )
+                : null,
+
+        prize:
+            Number(data.prize || 0),
+
+        status:
+            data.status || "upcoming",
+
+        sourceUrl:
+            data.sourceUrl || "",
+
+        isActive:
+            data.isActive !== false
+    };
+
+    if (canonicalMatch) {
+        const listing = await Hackathon.findOneAndUpdate(
+            {
+                source: source._id,
+                externalId
+            },
+            {
+                $set: {
+                    ...hackathonData,
+                    canonicalKey,
+                    isCanonical: false
+                },
+                $addToSet: {
+                    sourceListings: {
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+                runValidators: true
+            }
+        );
+
+        await Hackathon.updateOne(
+            { _id: canonicalMatch._id },
+            {
+                $addToSet: {
+                    sourceListings: {
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }
+                }
+            }
+        );
+
+        return {
+            success: true,
+            created: !existing,
+            updated: !!existing,
+            canonicalId: canonicalMatch._id,
+            hackathon: listing
+        };
+    }
+
+    // --------------------------------------------------
+    // UPSERT HACKATHON
+    // --------------------------------------------------
+
+    const hackathon =
+        await Hackathon.findOneAndUpdate(
+            {
+                source: source._id,
+                externalId: externalId
+            },
+            {
+                $set: {
+                    ...hackathonData,
+                    canonicalKey,
+                    isCanonical: true
+                },
+                $setOnInsert: {
+                    sourceListings: [{
+                        source: source._id,
+                        externalId,
+                        sourceUrl: data.sourceUrl || ""
+                    }]
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+                runValidators: true
+            }
+        );
+
+    await Hackathon.updateOne(
+        { _id: hackathon._id },
+        {
+            $addToSet: {
+                sourceListings: {
+                    source: source._id,
+                    externalId,
+                    sourceUrl: data.sourceUrl || ""
+                }
+            }
+        }
+    );
+
+    // --------------------------------------------------
+    // RESULT
+    // --------------------------------------------------
+
+    return {
+
+        success: true,
+
+        created:
+            !existing,
+
+        updated:
+            !!existing,
+
+        hackathon
+    };
+};
+
+
+// ======================================================
+// BULK INGESTION
+// ======================================================
+
+const ingestHackathons = async (records) => {
+
+    const result = {
+
+        received:
+            records.length,
+
+        inserted:
+            0,
+
+        updated:
+            0,
+
+        quarantined:
+            0,
+
+        failed:
+            0,
+
+        reminderSyncFailures:
+            0,
+
+        errors:
+            []
+    };
+
+
+    // --------------------------------------------------
+    // PROCESS EVERY RECORD
+    // --------------------------------------------------
+
+    for (const record of records) {
+
+        try {
+
+            const response =
+                await upsertHackathon(record);
+
+
+            // ------------------------------------------
+            // QUARANTINED RECORD
+            // ------------------------------------------
+
+            if (response.quarantined) {
+
+                await IngestionQuarantine.create({
+                    record,
+                    issues: response.errors
+                });
+
+                result.quarantined++;
+
+                result.errors.push({
+
+                    title:
+                        record.title ||
+                        "Unknown",
+
+                    errors:
+                        response.errors
+                });
+
+                continue;
+            }
+
+            try {
+                const hackathonForReminders = response.canonicalId
+                    ? await Hackathon.findById(response.canonicalId)
+                    : response.hackathon;
+
+                if (!hackathonForReminders) {
+                    throw new Error("Saved hackathon was not found for reminder sync");
+                }
+
+                await syncHackathonReminders(hackathonForReminders);
+            } catch (error) {
+                result.reminderSyncFailures++;
+                console.error(
+                    "Failed to create hackathon reminder jobs:",
+                    error.message
+                );
+                result.errors.push({
+                    title: record.title || "Unknown",
+                    reminderError: error.message
+                });
+            }
+
+
+            // ------------------------------------------
+            // INSERTED
+            // ------------------------------------------
+
+            if (response.created) {
+
+                result.inserted++;
+            }
+
+
+            // ------------------------------------------
+            // UPDATED
+            // ------------------------------------------
+
+            if (response.updated) {
+
+                result.updated++;
+            }
+
+        }
+
+        catch (error) {
+
+            result.failed++;
+
+            try {
+                await IngestionQuarantine.create({
+                    record,
+                    issues: [error.message],
+                    status: "failed"
+                });
+            } catch (quarantineError) {
+                console.error(
+                    "Failed to persist ingestion quarantine record:",
+                    quarantineError.message
+                );
+            }
+
+            result.errors.push({
+
+                title:
+                    record.title ||
+                    "Unknown",
+
+                error:
+                    error.message
+            });
+        }
+    }
+
+
+    // ==================================================
+    // REDIS CACHE INVALIDATION
+    // ==================================================
+
+    /*
+     * Hackathon data has changed.
+     *
+     * Remove old cached GET responses so the next
+     * API request gets fresh data from MongoDB.
+     */
+
+    try {
+
+        await invalidateHackathonCache();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Redis cache invalidation failed:",
+            error.message
+        );
+    }
+
+
+    // --------------------------------------------------
+    // RETURN RESULT
+    // --------------------------------------------------
+
+    return result;
+};
+
+
+// ======================================================
+// EXPORT
+// ======================================================
+
+module.exports = {
+
+    createSlug,
+
+    normalizeArray,
+
+    validateHackathon,
+
+    upsertHackathon,
+
+    ingestHackathons
+};
