@@ -18,6 +18,12 @@ const registrationSchema = new mongoose.Schema(
       default: false,
     },
 
+    status: {
+      type: String,
+      enum: ["saved", "registered", "ongoing", "completed"],
+      default: "saved",
+    },
+
     notes: {
       type: String,
       default: "",
