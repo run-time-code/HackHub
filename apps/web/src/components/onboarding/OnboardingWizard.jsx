@@ -1,19 +1,92 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Globe2,
+  MapPin,
+  Shuffle,
+  Sparkles,
+} from "lucide-react";
+import Brand from "../layout/Brand";
+import ThemeToggle from "../layout/ThemeToggle";
+import Button from "../ui/Button";
+import { Field, Input } from "../ui/Field";
 import { onboardingSchema } from "../../lib/validation/onboardingSchema";
 import { saveOnboarding } from "../../lib/api/profile";
 import { useOnboardingProgress } from "../../lib/hooks/useOnboardingProgress";
 import SelectableChips from "./SelectableChips";
 
 const SKILL_OPTIONS = [
-  "JavaScript", "Python", "React", "Node.js", "UI/UX Design",
-  "Machine Learning", "Data Science", "Java", "C++", "Mobile Dev",
+  "JavaScript",
+  "Python",
+  "React",
+  "Node.js",
+  "UI/UX Design",
+  "Machine Learning",
+  "Data Science",
+  "Java",
+  "C++",
+  "Mobile Dev",
 ];
 const INTEREST_OPTIONS = [
-  "Web Dev", "AI/ML", "Blockchain", "Cybersecurity", "IoT",
-  "Fintech", "Healthtech", "Gaming", "Sustainability", "EdTech",
+  "Web Dev",
+  "AI/ML",
+  "Blockchain",
+  "Cybersecurity",
+  "IoT",
+  "Fintech",
+  "Healthtech",
+  "Gaming",
+  "Sustainability",
+  "EdTech",
 ];
 const STEPS = ["Skills", "Interests", "Mode", "Location"];
+const STEP_CONTENT = [
+  {
+    chapter: "01 / Skills",
+    title: "What do you bring to the table?",
+    deck: "Choose the skills you want a team to know about. Honest, useful, and changeable later.",
+  },
+  {
+    chapter: "02 / Interests",
+    title: "What pulls you in?",
+    deck: "Pick the problems and domains you would happily lose a weekend inside.",
+  },
+  {
+    chapter: "03 / Mode",
+    title: "Where do you do your best work?",
+    deck: "We use this to surface rooms that fit the way you like to build.",
+  },
+  {
+    chapter: "04 / Location",
+    title: "Where are you building from?",
+    deck: "A city or region is enough. It helps us show nearby rooms without pinning you to a map.",
+  },
+];
+const MODES = [
+  {
+    value: "online",
+    label: "Online",
+    copy: "A room made of tabs, calls and time zones.",
+    icon: Globe2,
+  },
+  {
+    value: "offline",
+    label: "In person",
+    copy: "Same table, shared snacks, stronger momentum.",
+    icon: MapPin,
+  },
+  {
+    value: "hybrid",
+    label: "Hybrid",
+    copy: "A little of both, wherever the weekend lands.",
+    icon: Shuffle,
+  },
+];
 
 export default function OnboardingWizard({ userKey }) {
   const navigate = useNavigate();
@@ -26,6 +99,7 @@ export default function OnboardingWizard({ userKey }) {
   const interests = data.interests || [];
   const preferredMode = data.preferredMode || "";
   const location = data.location || "";
+  const content = STEP_CONTENT[step];
 
   function toggleSkill(skill) {
     updateField("skills", skills.includes(skill) ? skills.filter((s) => s !== skill) : [...skills, skill]);
@@ -76,7 +150,7 @@ export default function OnboardingWizard({ userKey }) {
   function handleSkip() {
     // Skip entirely — no validation, just leave the wizard.
     // Progress already saved in localStorage in case they come back.
-    navigate("/app?section=dashboard");
+    navigate("/dashboard");
   }
 
   async function handleFinish() {
@@ -92,7 +166,7 @@ export default function OnboardingWizard({ userKey }) {
     try {
       await saveOnboarding(parsed.data);
       clearProgress();
-      navigate("/app?section=dashboard");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.message || "Failed to save your preferences");
     } finally {
@@ -101,110 +175,203 @@ export default function OnboardingWizard({ userKey }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        {/* Progress indicator */}
-        <div className="mb-6 flex gap-2" role="progressbar" aria-label="Onboarding progress" aria-valuetext={STEPS[step]} aria-valuemin="1" aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
-          {STEPS.map((label, i) => (
-            <div
-              key={label}
-              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-emerald-800" : "bg-gray-200"}`}
-            />
-          ))}
+    <div className="onboarding page-enter">
+      <header className="onboarding__top">
+        <div className="container onboarding__top-inner">
+          <Brand to="/dashboard" className="onboarding__brand" />
+          <div className="onboarding__top-actions">
+            <span className="onboarding__counter">
+              {String(step + 1).padStart(2, "0")} / 04
+            </span>
+            <ThemeToggle compact />
+            <button type="button" onClick={handleSkip} className="onboarding__skip">
+              Skip for now <ArrowUpRight aria-hidden="true" />
+            </button>
+          </div>
         </div>
+      </header>
 
-        <div className="onboarding-sheet rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+      <main className="onboarding__main container">
+        <aside className="onboarding__rail">
+          <span className="eyebrow eyebrow--plain">First entry / The field notes</span>
+          <h2 className="onboarding__rail-title">
+            A few notes before the room fills up.
+          </h2>
+          <p className="onboarding__rail-copy">
+            Your card is not a résumé. It is a small, living record of what you
+            want to make and who you want to make it with.
+          </p>
+
+          <div
+            className="onboarding__steps"
+            role="progressbar"
+            aria-label="Onboarding progress"
+            aria-valuetext={STEPS[step]}
+            aria-valuemin="1"
+            aria-valuemax={STEPS.length}
+            aria-valuenow={step + 1}
+          >
+            {STEPS.map((label, index) => {
+              const state = index < step ? "done" : index === step ? "active" : "next";
+              return (
+                <div
+                  className={`onboarding__step is-${state}`}
+                  key={label}
+                  aria-current={index === step ? "step" : undefined}
+                >
+                  <span className="onboarding__step-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="onboarding__step-name">{label}</span>
+                  <span className="onboarding__step-mark" aria-hidden="true">
+                    {state === "done" ? <Check /> : <span />}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <blockquote className="onboarding__quote">
+            <p>“Nobody arrives assembled. That is the point.”</p>
+            <span>Field note · 00</span>
+          </blockquote>
+        </aside>
+
+        <section className="onboarding__sheet" aria-labelledby="onboarding-title">
+          <div className="onboarding__mobile-progress" aria-hidden="true">
+            {STEPS.map((label, index) => (
+              <span
+                className={index <= step ? "is-filled" : ""}
+                key={label}
+              />
+            ))}
+          </div>
+
+          <div className="onboarding__sheet-head">
             <div>
-              <p className="field-label">YOUR FIELD NOTES / 04</p>
-              <h1 className="product-heading mt-2 text-3xl">
-              {STEPS[step]} <span className="text-sm font-normal text-gray-400">({step + 1}/{STEPS.length})</span>
+              <span className="eyebrow eyebrow--plain">
+                <Sparkles aria-hidden="true" /> Field note {String(step + 1).padStart(2, "0")}
+              </span>
+              <h1 className="onboarding__sheet-title" id="onboarding-title">
+                {content.title}
               </h1>
             </div>
-            <button type="button" onClick={handleSkip} className="min-h-11 px-2 text-sm text-gray-500 hover:text-gray-700">
-              Skip for now
-            </button>
+            <span className="onboarding__chapter">{content.chapter}</span>
           </div>
+
+          <p className="onboarding__deck">{content.deck}</p>
 
           {error && (
-            <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
+            <div className="alert alert--danger onboarding__alert" role="alert">
+              <AlertCircle aria-hidden="true" />
+              <div className="alert__body">
+                <strong>One small thing.</strong>
+                <p>{error}</p>
+              </div>
             </div>
           )}
 
-          {step === 0 && (
-            <p className="mb-4 text-sm text-gray-600">Choose the skills you can bring to a team or want to use in a project.</p>
-          )}
-          {step === 1 && (
-            <p className="mb-4 text-sm text-gray-600">Pick the domains and topics you would like to explore.</p>
-          )}
-          {step === 0 && (
-            <SelectableChips options={SKILL_OPTIONS} selected={skills} onToggle={toggleSkill} label="Select your skills" />
-          )}
-
-          {step === 1 && (
-            <SelectableChips options={INTEREST_OPTIONS} selected={interests} onToggle={toggleInterest} label="Select your interests and domains" />
-          )}
-
-          {step === 2 && (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="sr-only">Preferred hackathon format</legend>
-              {["online", "offline", "hybrid"].map((mode) => (
-                <label
-                  key={mode}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm capitalize ${
-                    preferredMode === mode ? "border-emerald-800 bg-emerald-50" : "border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="mode"
-                    value={mode}
-                    checked={preferredMode === mode}
-                    onChange={() => updateField("preferredMode", mode)}
-                    className="accent-emerald-800"
-                  />
-                  {mode}
-                </label>
-              ))}
-            </fieldset>
-          )}
-
-          {step === 3 && (
-            <div>
-              <label htmlFor="onboarding-location" className="mb-2 block text-sm font-medium text-gray-700">Preferred city or region</label>
-              <input
-                id="onboarding-location"
-                type="text"
-                autoComplete="address-level2"
-                placeholder="City, Country"
-                value={location}
-                onChange={(e) => updateField("location", e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+          <div className="onboarding__body" key={step}>
+            {step === 0 && (
+              <SelectableChips
+                options={SKILL_OPTIONS}
+                selected={skills}
+                onToggle={toggleSkill}
+                label="Select your skills"
               />
-            </div>
-          )}
+            )}
 
-          <div className="mt-6 flex justify-between">
-            <button
-              type="button"
-              onClick={handleBack}
-              disabled={step === 0}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 disabled:opacity-0"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={isSaving}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-            >
-              {isSaving ? "Saving..." : step === STEPS.length - 1 ? "Finish" : "Next"}
-            </button>
+            {step === 1 && (
+              <SelectableChips
+                options={INTEREST_OPTIONS}
+                selected={interests}
+                onToggle={toggleInterest}
+                label="Select your interests and domains"
+              />
+            )}
+
+            {step === 2 && (
+              <fieldset className="onboarding__modes">
+                <legend className="sr-only">Preferred hackathon format</legend>
+                {MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  const selected = preferredMode === mode.value;
+                  return (
+                    <label
+                      className={`onboarding-mode ${selected ? "is-selected" : ""}`}
+                      key={mode.value}
+                    >
+                      <input
+                        type="radio"
+                        name="mode"
+                        value={mode.value}
+                        checked={selected}
+                        onChange={() => updateField("preferredMode", mode.value)}
+                      />
+                      <span className="onboarding-mode__top">
+                        <span className="onboarding-mode__icon" aria-hidden="true">
+                          <Icon />
+                        </span>
+                        <span className="onboarding-mode__radio" aria-hidden="true" />
+                      </span>
+                      <strong>{mode.label}</strong>
+                      <span className="onboarding-mode__copy">{mode.copy}</span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+            )}
+
+            {step === 3 && (
+              <Field
+                label="Preferred city or region"
+                htmlFor="onboarding-location"
+                hint="Nearby only. You can change this from your card at any time."
+                className="onboarding__location"
+              >
+                <Input
+                  id="onboarding-location"
+                  type="text"
+                  autoComplete="address-level2"
+                  placeholder="City, Country"
+                  value={location}
+                  onChange={(event) => updateField("location", event.target.value)}
+                />
+              </Field>
+            )}
           </div>
+
+          <div className="onboarding__actions">
+            {step > 0 ? (
+              <Button
+                variant="ghost"
+                onClick={handleBack}
+                icon={<ArrowLeft aria-hidden="true" />}
+              >
+                Back
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button
+              variant="primary"
+              onClick={handleNext}
+              loading={isSaving}
+              disabled={isSaving}
+              iconRight={<ArrowRight aria-hidden="true" />}
+            >
+              {step === STEPS.length - 1 ? "Finish and enter" : "Continue"}
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="onboarding__foot">
+        <div className="container onboarding__foot-inner">
+          <span>HackHub · The builder&apos;s field guide</span>
+          <span>Progress saved on this browser</span>
         </div>
-      </div>
+      </footer>
     </div>
   );
-} 
+}

@@ -576,9 +576,9 @@
 
 .public-profile__cover-quote {
   position: absolute;
-  bottom: 22px;
+  top: 64px;
   left: 28px;
-  max-width: 520px;
+  max-width: 620px;
   color: rgb(255 255 255 / 88%);
   font-family: var(--serif);
   font-size: clamp(1.5rem, 3vw, 2.5rem);
@@ -1113,8 +1113,8 @@
   }
 
   .public-profile__cover-quote {
+    top: 44px;
     right: 20px;
-    bottom: 16px;
     left: 20px;
     font-size: 1.45rem;
   }

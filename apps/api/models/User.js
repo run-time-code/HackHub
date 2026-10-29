@@ -208,6 +208,32 @@ const userSchema = new mongoose.Schema(
             default: false
         },
 
+        reminderPreferences: {
+            defaultDaysBefore: {
+                type: Number,
+                default: 1,
+                min: 0,
+                max: 365
+            },
+
+            channels: {
+                type: [String],
+                default: ["email"]
+            },
+
+            quietHours: {
+                start: {
+                    type: String,
+                    default: "22:00"
+                },
+
+                end: {
+                    type: String,
+                    default: "08:00"
+                }
+            }
+        },
+
         emailVerificationTokenHash: {
             type: String,
             default: null

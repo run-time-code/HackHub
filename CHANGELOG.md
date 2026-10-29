@@ -24,6 +24,17 @@ All notable changes to this project will be documented here.
 - Frontend "field guide" redesign: an `/auth` panel shell (login, register,
   forgot/reset password, verify email, social sign-in) and a lazy-loaded `/app`
   workspace (dashboard, discover, calendar, preferences, settings).
+- Week 3 API completion: `GET /calendar?month=YYYY-MM`,
+  `GET/POST /reminders`, `GET/PUT /reminders/preferences`, `/saved` CRUD and
+  the `/users/me/change-password`, `/users/me/export` aliases. Reminder
+  preferences are stored per user; saved rows carry status and notes.
+- WA3 routes for `/discover`, `/calendar` and `/settings` inside the app shell,
+  with Discover and Calendar added to the primary navigation and command
+  palette.
+- Demo fixtures and MSW handlers for calendar events, reminders, saved
+  hackathons, account settings and enriched hackathon cards.
+- QA evidence for the Week 3/Week 4 code gate in
+  `docs/design/QA_REPORT.md`, plus `apps/api/.env.production.example`.
 
 ### Changed
 - Restructured into a Turborepo + npm workspaces monorepo: `apps/web`,
@@ -37,6 +48,11 @@ All notable changes to this project will be documented here.
 ### Fixed
 - Restored mainline OAuth callback handling inside the redesigned login panel.
 - Pointed account settings at the real `/users/me` endpoints.
+- Reconciled the redesigned discovery/tracking clients with the API: they now
+  use `/saved` CRUD, send CSRF headers and tolerate the catalogue pagination
+  shape.
+- Routed `/discover`, `/calendar` and `/settings` to the WA3 pages instead of
+  redirecting them into the legacy `/app` workspace.
 
 ### Removed
 - Legacy `frontend/` tree and root `.env.example` (now per-app examples under

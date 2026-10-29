@@ -39,19 +39,48 @@
 |---|---|
 | **Unified Discovery** | Aggregated listings scraped/fetched from multiple sources, normalized and deduplicated |
 | **Smart Search & Filters** | By skills, interests, tech domain, mode, prize, deadline, organizer |
-| **Calendar & Reminders** | Monthly calendar view + email/in-app reminders for registration & submission deadlines |
-| **Save & Track** | Save, register, mark ongoing/completed in personal dashboard |
-| **Team Collaboration** | Profiles with skills, teammate finder, team creation, collaboration requests |
+| **Public Field Guide** | A story-led landing page, live network numbers, legal and help pages, shareable `/u/:id` builder cards |
+| **Builder Cards** | Profile editor with skills, links, hackathon history, availability and public/private visibility |
+| **Teammate Finder** | Opt-in discovery, skill/interest match scoring, filters, sorting and direct invitations |
+| **Team Hub** | Create and edit crews, browse open teams, view members, manage seats and leadership controls |
+| **Request Wire** | Incoming/outgoing join requests and invitations, accept/decline/cancel history |
+| **Notifications** | Bell inbox with unread counts, mark-one/mark-all, SSE stream with polling fallback |
+| **Dashboard** | One view for crews, open seats, pending handshakes, deadlines, profile checklist and suggested people |
+| **Consent-aware Analytics** | No analytics loads before opt-in; preferences can be changed from the cookie settings |
+| **Calendar & Reminders** | Month/week/agenda deadline views backed by `GET /calendar`; create reminders and save per-user reminder preferences |
+| **Save & Track** | Save, register, mark ongoing/completed and keep private notes from the dashboard (`/saved` CRUD) |
 | **Worth Score (0-100)** | Data-driven score: skill relevance, learning value, prize pool, organizer reputation, difficulty |
-| **Personal Dashboard** | Single view for saved, registered, ongoing, completed hackathons |
 
-> **Status:** authentication (email/password + Google/GitHub OAuth), onboarding, dashboard tracking, discovery, calendar and account settings ship in the web app. Calendar/reminder persistence, Worth Score and the scrapers are still planned; endpoints the frontend assumes but the API does not implement yet are flagged in [docs/API_SPEC.md](docs/API_SPEC.md).
+> **Status:** the WA3 frontend now ships the public field guide, builder cards, dashboard, finder, team hub, request wire, notifications, legal/help and consent-aware analytics. Authentication remains in place, and the previous `/app` workspace is still available during migration. Calendar/reminders, reminder preferences and the saved-hackathon dashboard list are implemented in the active API, and account settings use the `/users/me/*` routes. Remaining planned work: Worth Score, catalogue scrapers and optional ICS export. Live staging/production verification still requires the provider secrets listed in [docs/staging.md](docs/staging.md) and [docs/production-operations.md](docs/production-operations.md).
 
 ## Demo
-> Add your deployed link here: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`
+
+### Zero-service demo (recommended for UI review)
+
+The frontend includes a complete MSW demo: no MongoDB, API server or environment file required.
+
+```bash
+npm install
+npm run dev:demo --workspace @hackhub/web
+```
+
+Open the printed Vite URL (usually `http://localhost:5173`), sign in with any non-empty email/password, and the demo hydrates as Asha Raman. Fixtures reset on every reload. The demo banner in the app shell makes that explicit.
+
+The same switch is available without the npm script:
+
+```bash
+# apps/web/.env
+VITE_USE_MOCKS=true
+```
+
+See [docs/DEMO.md](docs/DEMO.md) for the guided tour, supported interactions, and demo build instructions.
+
+### Full stack
+
+Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo links are placeholders: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`.
 
 ## Tech Stack
-- **Frontend:** React 19, JavaScript, Tailwind CSS, Vite
+- **Frontend:** React 19, Vite, custom CSS design system (Tailwind CSS v4 for auth/legacy surfaces), Radix UI primitives, TanStack Query, Framer Motion
 - **Backend:** Node.js, Express.js, session cookies (JWT access/refresh) + CSRF, Passport (Google/GitHub OAuth)
 - **Database:** MongoDB (Mongoose)
 - **Data:** Python importer for the hackathon catalogue (`tools/data-importer`); scrapers planned
@@ -94,7 +123,7 @@ Copy the example env files for the apps you run:
 cp apps/web/.env.example apps/web/.env
 cp apps/api/.env.example apps/api/.env
 ```
-See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons.
+See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_USE_MOCKS`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons. To explore the UI without any services, skip this step and run the zero-service demo above.
 
 ### 4. Run the apps
 ```bash
@@ -123,10 +152,12 @@ HackHub/
 ├── apps/
 │   ├── web/                  # React 19 + Vite frontend — @hackhub/web
 │   │   └── src/
-│   │       ├── components/   # AppShell, Workspace, hackathon cards, auth forms
-│   │       ├── pages/        # Dashboard, Discover, Calendar, Settings, AuthPage, Onboarding…
+│   │       ├── components/   # AppShell, builder cards, team/request UI, shared primitives
+│   │       ├── pages/        # Landing, Dashboard, Teammates, Teams, Requests, Profile, legal/help…
+│   │       ├── mocks/        # MSW fixtures + handlers for the zero-service demo
 │   │       ├── context/      # Auth provider (+ shared hook)
-│   │       └── lib/          # API clients, hooks, validation, utils
+│   │       ├── styles/       # WA3 design tokens, layouts and components
+│   │       └── lib/          # API clients, hooks, validation, demo/discovery/request helpers
 │   ├── api/                  # Express API — @hackhub/api (deployed to Render)
 │   │   ├── src/              # production entrypoint: app factory, routes, services, models
 │   │   ├── routes/           # legacy-but-mounted auth, users, saved hackathons, dashboard, admin
@@ -170,9 +201,10 @@ Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
 | 3 | Calendar/reminders, testing, integration, deployment, docs |
 | 4 | Security hardening, monitoring, staging/production operations |
 
-Still planned: hackathon scrapers, Worth Score service, calendar/reminder
-persistence, and reconciling the provisional frontend endpoints listed in
-[docs/API_SPEC.md](docs/API_SPEC.md).
+Still planned: hackathon scrapers, the Worth Score service and optional ICS
+calendar export. The Week 3 API gaps (calendar, reminders, saved-hackathon
+CRUD and account-settings aliases) are implemented and covered by
+`apps/api/test/calendar-reminders-saved.test.js`.
 
 ## Team
 | Role | Responsibility |

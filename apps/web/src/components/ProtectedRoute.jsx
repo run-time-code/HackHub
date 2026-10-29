@@ -7,8 +7,9 @@ export default function ProtectedRoute({ children }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className="app-loading" role="status">
+        <span className="field-label">CHECKING YOUR SESSION</span>
+        <span className="field__hint">Opening the field guide…</span>
       </div>
     );
   }

@@ -264,16 +264,17 @@ async function listMine(userId, query = {}) {
   const limitNum = Math.min(Math.max(Number(query.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
   await expireStale();
 
-  // Leaders must see pending requests aimed at their teams even though they
-  // neither sent them nor were invited. Only pending rows are added so the
-  // default inbox does not turn into every historical request for a team.
+  // Leaders must see requests aimed at their teams even though they neither
+  // sent them nor were invited. Resolved rows stay visible as well so the
+  // shared History tab keeps the record of every answer; the client separates
+  // pending and resolved rows for its tabs.
   const ledTeams = await Team.find({ leader: userId }).select('_id').lean();
   const ledTeamIds = ledTeams.map((team) => team._id);
   const filter = {
     $or: [{ user: userId }, { initiatedBy: userId }],
   };
   if (ledTeamIds.length > 0) {
-    filter.$or.push({ team: { $in: ledTeamIds }, status: PENDING_STATUS });
+    filter.$or.push({ team: { $in: ledTeamIds } });
   }
   if (query.status) {
     if (!['pending', 'accepted', 'declined', 'cancelled', 'expired'].includes(query.status)) {

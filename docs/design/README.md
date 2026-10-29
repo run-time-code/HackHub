@@ -28,6 +28,7 @@ dashboard.
 | `UX_FLOWS.md` | Wireframes and state maps for every core flow |
 | `FIGMA_HANDOFF.md` | Frame index, component inventory, redlines, implementation map |
 | `design-board.html` | Self-contained visual reference (open in a browser) |
+| `QA_REPORT.md` | Automated, browser-smoke and release-readiness evidence for the WA3 surface |
 
 The source of truth for implementation is split between this folder (intent) and
 `apps/web/src/styles` (execution). Tokens are shared between the two.
@@ -85,3 +86,4 @@ Utility
       progress and a result message.
 - [x] Motion respects reduced-motion; focus states are visible.
 - [x] Copy reviewed for consistent voice and sentence case.
+- [x] Automated and browser-smoke checks recorded in `QA_REPORT.md`.

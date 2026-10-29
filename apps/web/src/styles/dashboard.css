@@ -493,6 +493,7 @@ a.dash-stat:hover {
 
 .dash-suggestion {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 10px;
   border: 1px solid var(--line);
@@ -667,7 +668,7 @@ a.dash-stat:hover {
 
 @media (max-width: 1120px) {
   .dash-hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dash-hero__aside {
@@ -676,7 +677,7 @@ a.dash-stat:hover {
   }
 
   .dash-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dash-column--side {
@@ -710,11 +711,11 @@ a.dash-stat:hover {
   }
 
   .dash-column--side {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dash-suggestions {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hide-sm {

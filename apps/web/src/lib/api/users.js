@@ -55,13 +55,13 @@ import { normalizeProfile } from "./contracts";
  * @property {string} createdAt
  */
 
-export async function getMyProfile() {
-  const payload = await api.get("/users/me");
+export async function getMyProfile({ signal } = {}) {
+  const payload = await api.get("/users/me", { signal });
   return normalizeProfile(payload?.user || payload);
 }
 
-export async function getPublicProfile(id) {
-  const payload = await api.get(`/users/public/${encodeURIComponent(id)}`);
+export async function getPublicProfile(id, { signal } = {}) {
+  const payload = await api.get(`/users/public/${encodeURIComponent(id)}`, { signal });
   return normalizeProfile(payload?.user || payload);
 }
 

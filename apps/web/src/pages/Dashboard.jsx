@@ -139,7 +139,7 @@ export default function Dashboard() {
           <h1 className="product-heading mt-2">My desk.</h1>
           <p className="mt-2 max-w-2xl text-slate-600">Keep track of the hackathons you have saved, joined, and finished.</p>
         </div>
-        <Link to="/app?section=discover" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">
+        <Link to="/discover" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">
           Find hackathons
         </Link>
       </section>
@@ -194,8 +194,8 @@ export default function Dashboard() {
                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
                   {records.length ? "Try another status tab or search term." : "Save an event you are interested in, then track your progress and deadlines here."}
                 </p>
-                {!records.length && <Link to="/app?section=discover" className="mt-5 inline-flex rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Browse the open calls</Link>}
-                {!records.length && <Link to="/app?section=preferences" className="mt-5 inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Finish your field notes</Link>}
+                {!records.length && <Link to="/discover" className="mt-5 inline-flex rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Browse the open calls</Link>}
+                {!records.length && <Link to="/onboarding" className="mt-5 inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Finish your field notes</Link>}
               </div>
             ) : (
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

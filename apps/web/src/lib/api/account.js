@@ -1,4 +1,4 @@
-import { apiRequest } from "./request";
+import { apiRequest } from "./http";
 
 export function changePassword(payload) {
   return apiRequest("/users/me/change-password", { method: "PUT", body: payload });

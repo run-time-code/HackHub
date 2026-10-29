@@ -1,4 +1,8 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+import { DEMO_MODE, demoApiBase } from "../demo";
+
+const BASE_URL = DEMO_MODE
+  ? demoApiBase()
+  : import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 // The backend protects every state-changing request with double-submit
 // CSRF: the browser must hold the httpOnly CSRF cookie (set by this call)

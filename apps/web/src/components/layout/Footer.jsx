@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Github, Mail } from "lucide-react";
+import { Code2, Mail } from "lucide-react";
 import Brand from "./Brand";
 import { useConsent } from "../../providers/ConsentProvider";
 
@@ -27,6 +27,7 @@ const COLUMNS = [
       { label: "Privacy", to: "/legal/privacy" },
       { label: "Terms", to: "/legal/terms" },
       { label: "Cookies", to: "/legal/cookies" },
+      { label: "Community", to: "/legal/community" },
     ],
   },
 ];
@@ -87,7 +88,7 @@ export default function Footer() {
               rel="noreferrer"
               aria-label="HackHub on GitHub"
             >
-              <Github />
+              <Code2 />
             </a>
             <a href="mailto:hello@hackhub.build" aria-label="Email HackHub">
               <Mail />

@@ -11,6 +11,21 @@ const savedHackathonSchema = new mongoose.Schema(
         hackathon: {
             type: String,
             required: true
+        },
+
+        // Dashboard tracking state. Kept on the saved row so the redesigned
+        // dashboard can read one record per hackathon without joining the
+        // legacy registration collection.
+        status: {
+            type: String,
+            enum: ["saved", "registered", "ongoing", "completed"],
+            default: "saved"
+        },
+
+        notes: {
+            type: String,
+            default: "",
+            maxlength: 2000
         }
     },
     {

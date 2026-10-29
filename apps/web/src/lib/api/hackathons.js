@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest } from "./http";
 
 function collectionFrom(data, keys) {
   if (Array.isArray(data)) return data;
@@ -19,7 +19,11 @@ export async function getHackathons(filters = {}) {
   const data = await apiRequest(`/hackathons${query ? `?${query}` : ""}`);
   return {
     items: collectionFrom(data, ["items", "results", "hackathons"]),
-    pagination: data?.pagination,
+    pagination:
+      data?.pagination ||
+      (data?.total !== undefined
+        ? { total: data.total, page: data.page, limit: data.limit }
+        : null),
   };
 }
 
