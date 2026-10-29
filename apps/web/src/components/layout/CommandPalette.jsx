@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
+  CalendarClock,
   Compass,
   Cookie,
   HelpCircle,
@@ -10,6 +11,7 @@ import {
   Mail,
   Moon,
   Search,
+  Settings,
   UserRound,
   Users,
   UsersRound,
@@ -19,10 +21,13 @@ import { useConsent } from "../../providers/ConsentProvider";
 
 const ROUTE_ITEMS = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, group: "Go to" },
+  { label: "Discover hackathons", to: "/discover", icon: Compass, group: "Go to" },
+  { label: "Deadline calendar", to: "/calendar", icon: CalendarClock, group: "Go to" },
   { label: "Find teammates", to: "/teammates", icon: Users, group: "Go to" },
   { label: "Teams", to: "/teams", icon: UsersRound, group: "Go to" },
   { label: "Requests", to: "/requests", icon: Inbox, group: "Go to" },
   { label: "Your profile", to: "/profile", icon: UserRound, group: "Go to" },
+  { label: "Account settings", to: "/settings", icon: Settings, group: "Go to" },
   { label: "Landing page", to: "/", icon: Compass, group: "Go to" },
   { label: "FAQ", to: "/faq", icon: HelpCircle, group: "Help" },
   { label: "Contact", to: "/contact", icon: Mail, group: "Help" },

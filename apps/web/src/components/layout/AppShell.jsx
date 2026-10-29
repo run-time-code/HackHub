@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
+  CalendarClock,
+  Compass,
   Inbox,
   LayoutDashboard,
   Menu,
@@ -18,9 +20,12 @@ import NotificationBell from "./NotificationBell";
 import UserMenu from "./UserMenu";
 import IconButton from "../ui/IconButton";
 import { useAuth } from "../../context/auth-context";
+import { DEMO_MODE } from "../../lib/demo";
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { label: "Discover", to: "/discover", icon: Compass, key: "discover" },
+  { label: "Calendar", to: "/calendar", icon: CalendarClock, key: "calendar" },
   { label: "Teammates", to: "/teammates", icon: Users, key: "teammates" },
   { label: "Teams", to: "/teams", icon: UsersRound, key: "teams" },
   { label: "Requests", to: "/requests", icon: Inbox, key: "requests" },
@@ -29,17 +34,23 @@ const NAV_ITEMS = [
 
 const PAGE_META = {
   dashboard: { label: "The desk", index: "01" },
-  teammates: { label: "Teammate finder", index: "02" },
-  teams: { label: "Team hub", index: "03" },
-  requests: { label: "The wire", index: "04" },
-  profile: { label: "Builder card", index: "05" },
-  "public-profile": { label: "Builder card", index: "05" },
+  discover: { label: "Open calls", index: "02" },
+  calendar: { label: "Deadline map", index: "03" },
+  teammates: { label: "Teammate finder", index: "04" },
+  teams: { label: "Team hub", index: "05" },
+  requests: { label: "The wire", index: "06" },
+  profile: { label: "Builder card", index: "07" },
+  settings: { label: "Account", index: "08" },
+  "public-profile": { label: "Builder card", index: "07" },
 };
 
 function metaForPath(pathname) {
+  if (pathname.startsWith("/discover")) return PAGE_META.discover;
+  if (pathname.startsWith("/calendar")) return PAGE_META.calendar;
   if (pathname.startsWith("/teammates")) return PAGE_META.teammates;
   if (pathname.startsWith("/teams")) return PAGE_META.teams;
   if (pathname.startsWith("/requests")) return PAGE_META.requests;
+  if (pathname.startsWith("/settings")) return PAGE_META.settings;
   if (pathname.startsWith("/profile")) return PAGE_META.profile;
   if (pathname.startsWith("/u/")) return PAGE_META["public-profile"];
   return PAGE_META.dashboard;
@@ -129,7 +140,9 @@ export default function AppShell() {
               Field guide / {meta.index} — {meta.label}
             </span>
             <div className="app-context-bar__right">
-              <span className="app-context-bar__status">Season 01 · Open</span>
+              <span className="app-context-bar__status">
+                {DEMO_MODE ? "Demo data · resets on reload" : "Season 01 · Open"}
+              </span>
               <span className="hide-sm">Signed in as {user?.name || "builder"}</span>
             </div>
           </div>

@@ -19,6 +19,7 @@ import {
   notificationStreamUrl,
 } from "../../lib/api/notifications";
 import { queryKeys } from "../../lib/queryClient";
+import { DEMO_MODE } from "../../lib/demo";
 import { useToast } from "../../providers/ToastProvider";
 
 const ICONS = {
@@ -57,7 +58,7 @@ export default function NotificationBell() {
   });
 
   useEffect(() => {
-    if (import.meta.env.VITE_USE_MOCKS === "true") return undefined;
+    if (DEMO_MODE) return undefined;
     let source;
     try {
       source = new EventSource(notificationStreamUrl(), { withCredentials: true });

@@ -31,16 +31,17 @@ hackathon catalogue; scheduled scrapers are still planned.
 
 - React 19 + Vite, Tailwind CSS v4, `react-router-dom`, `react-hook-form` + `zod`.
 - **Routing** (`src/App.jsx`): auth panels share `/auth?panel=login|register|forgot|reset|verify`;
-  the protected product lives under `/app?section=dashboard|discover|calendar|preferences|settings`.
-  Workspace sections are lazy-loaded inside `components/Workspace.jsx`; legacy
-  URLs (`/login`, `/dashboard`, …) redirect to the matching panel/section.
+  the WA3 product routes are `/dashboard`, `/discover`, `/calendar`,
+  `/teammates`, `/teams`, `/requests`, `/profile` and `/settings`, all inside
+  the protected app shell. The older `/app?section=…` workspace remains
+  available during migration; legacy auth URLs redirect to the matching panel.
 - **Session state**: `context/AuthContext.jsx` restores the session from
   httpOnly cookies on load, listens for the `auth:unauthorized` event, and
   exposes `login`/`logout`/`refreshSession` through `context/auth-context.js`.
-- **API clients**: `lib/api/request.js` (cookie + CSRF, refresh-once-and-replay,
-  unauthorized event) powers auth/session/account calls; `lib/api/client.js`
-  powers the catalogue and tracking modules (`hackathons.js`, `calendar.js`)
-  and unwraps the API's `{ success, data }` envelope.
+- **API clients**: `lib/api/http.js` is the shared client for WA3 (cookie +
+  CSRF, refresh-once-and-replay, unauthorized event, envelope unwrapping) and
+  powers teams, discovery, notifications, catalogue, calendar, reminders and
+  account calls. `lib/api/request.js` remains the auth/session client.
 - **UI states**: API-dependent screens render loading, error and genuine empty
   states — never mock data.
 - Sentry is optional via `VITE_SENTRY_DSN` (`src/main.jsx`).
@@ -52,8 +53,8 @@ hackathon catalogue; scheduled scrapers are still planned.
   and handles graceful shutdown. `apps/api/server.js` at the package root is a
   legacy duplicate and is not used by `npm start`, Docker or Render.
 - **Mounted routers** (single process, paths served under `/api`):
-  - `src/routes`: `/health`, `/teams`, `/team-requests`, `/users`, `/notifications`, `/hackathons`
-  - flat legacy routers: `/auth`, `/users`, `/saved-hackathons`, `/dashboard/summary`, `/admin/{hackathons,users,reports}`
+  - `src/routes`: `/health`, `/teams`, `/team-requests`, `/users`, `/notifications`, `/hackathons`, `/stats`, `/feedback`, `/calendar`, `/reminders`, `/saved`
+  - flat legacy routers: `/auth`, `/users`, `/saved-hackathons`, `/dashboard/summary`, `/admin/{hackathons,users,reports}`. The `/users/me/*` account aliases bridge the WA3 settings page to the legacy controller.
 - **Security**: helmet, credentialed CORS restricted to `FRONTEND_URL`/`CORS_ORIGIN`,
   request sanitization, rate limits (login, register, OAuth start, resets,
   team writes, join requests), audit logging, trust proxy for Render.
@@ -83,9 +84,10 @@ hackathon catalogue; scheduled scrapers are still planned.
 | Model | Key fields |
 |---|---|
 | `User` | name, email, password (hashed, `select: false`), googleId/githubId (sparse unique), role, banned + lockout fields, bio/college/location, skills, preferences, avatarUrl, availability, lookingForTeam, discoverable, emailVerified + verification/reset token hashes, deletedAt (soft delete), `tokenVersion` |
-| `Hackathon` | `hackathon_id` slug (unique), title, `registration_deadline` (string), is_active, is_hidden, is_featured |
-| `SavedHackathon` | user, hackathon slug, timestamps |
+| `Hackathon` | `hackathon_id` slug (unique), title, `registration_deadline` (string), optional `submission_deadline`, description/organizer/mode/location/url, prizes, skills/domain tags, event dates, is_active, is_hidden, is_featured |
+| `SavedHackathon` | user, hackathon slug, status `saved/registered/ongoing/completed`, private notes, timestamps |
 | `Registration` | user, hackathon slug, registered, notes |
+| `Reminder` | user, hackathon ObjectId, event type `registration/submission/event`, daysBefore, channel `email/in_app`, remindAt, active, timestamps; unique per user/hackathon/event/lead-time/channel |
 | `Team` | name, description, hackathon (ObjectId), leader, members `[{ user, role, joinedAt }]`, rolesNeeded, maxTeamSize (2–10), status `open/closed` |
 | `JoinRequest` | team, user, type `request/invite`, initiatedBy, role, message, status `pending → accepted/declined/cancelled/expired`, 7-day TTL |
 | `Notification` | user, type, title, message, data, read/readAt |
@@ -115,8 +117,6 @@ both (`id` and `slug`) so clients never guess.
 ## Planned / known gaps
 
 - Hackathon scrapers and richer catalogue facets.
-- Calendar/reminder persistence and the Worth Score service
-  ([WORTH_SCORE.md](WORTH_SCORE.md)).
-- Reconciling the frontend's provisional `/saved` calls with the implemented
-  `/saved-hackathons/*` + `/dashboard/summary` routes (see
-  [API_SPEC.md](API_SPEC.md)).
+- The Worth Score service ([WORTH_SCORE.md](WORTH_SCORE.md)).
+- Optional ICS calendar export.
+- Live staging/production provisioning and verification with provider secrets.

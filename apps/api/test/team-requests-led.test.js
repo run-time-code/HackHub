@@ -1,7 +1,7 @@
 'use strict';
 
-// Contract tests for GET /team-requests/mine: leaders must also see pending
-// join requests aimed at their own teams, with direction metadata.
+// Contract tests for GET /team-requests/mine: leaders must see join requests
+// aimed at their own teams, including the resolved rows that feed History.
 
 process.env.LOG_LEVEL = 'fatal';
 
@@ -107,7 +107,7 @@ describe('GET /team-requests/mine for team leaders', () => {
     assert.ok(!outsiderInbox.body.data.items.some((item) => item.id === requestId));
   });
 
-  it('does not keep resolved requests in the leader inbox', async () => {
+  it('keeps resolved requests in the leader history', async () => {
     const accepted = await api('PATCH', `/team-requests/${requestId}`, tokens.leader, {
       action: 'accept',
     });
@@ -115,6 +115,11 @@ describe('GET /team-requests/mine for team leaders', () => {
     assert.equal(accepted.body.data.status, 'accepted');
 
     const { body } = await api('GET', '/team-requests/mine', tokens.leader);
-    assert.ok(!body.data.items.some((item) => item.id === requestId));
+    const matches = body.data.items.filter((item) => item.id === requestId);
+    assert.equal(matches.length, 1, 'resolved request should remain in the archive');
+    assert.equal(matches[0].status, 'accepted');
+
+    const filtered = await api('GET', '/team-requests/mine?status=accepted', tokens.leader);
+    assert.ok(filtered.body.data.items.some((item) => item.id === requestId));
   });
 });

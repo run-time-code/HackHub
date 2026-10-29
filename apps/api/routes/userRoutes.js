@@ -72,6 +72,21 @@ router.put(
     changePassword
 );
 
+// WA3 account settings call the nested /me/* paths. Keep the flat routes
+// above for older clients.
+router.put(
+    "/me/change-password",
+    requireAuth,
+    doubleCsrfProtection,
+    changePassword
+);
+
+router.get(
+    "/me/export",
+    requireAuth,
+    exportMyData
+);
+
 router.post(
     "/revoke-sessions",
     requireAuth,

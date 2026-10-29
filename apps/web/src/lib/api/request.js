@@ -1,6 +1,9 @@
 import { getCsrfToken } from "./csrf";
+import { DEMO_MODE, demoApiBase } from "../demo";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const BASE_URL = DEMO_MODE
+  ? demoApiBase()
+  : import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 const MUTATING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 

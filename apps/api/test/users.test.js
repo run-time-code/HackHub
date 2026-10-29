@@ -143,6 +143,7 @@ describe('teammate discovery', () => {
         'name',
         'skillProficiency',
         'skills',
+        'updatedAt',
         'year',
       ]
     );

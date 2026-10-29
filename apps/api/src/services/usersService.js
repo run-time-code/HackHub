@@ -18,6 +18,7 @@ const DISCOVERY_FIELDS = [
   'availability',
   'lookingForTeam',
   'preferences',
+  'updatedAt',
 ].join(' ');
 
 function badRequest(message) {
@@ -53,6 +54,7 @@ function serialize(user, match) {
     matchScore: match.matchScore,
     matchedSkills: match.matchedSkills,
     matchedInterests: match.matchedInterests,
+    updatedAt: user.updatedAt || null,
   };
 }
 

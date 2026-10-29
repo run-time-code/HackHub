@@ -55,7 +55,7 @@ export default function LoginForm() {
       getCurrentUser()
         .then((data) => {
           login(data.user);
-          navigate("/app?section=dashboard", { replace: true });
+          navigate("/dashboard", { replace: true });
         })
         .catch(() => {
           navigate(location.pathname, {
@@ -73,10 +73,19 @@ export default function LoginForm() {
   async function onSubmit(values) {
     try {
       const result = await mutate(values);
-      login(result.user);
+      // Login returns a minimal session payload; hydrate the full own-profile
+      // so the shell, avatar and finder prefill are correct immediately.
+      let account = result.user;
+      try {
+        const current = await getCurrentUser();
+        account = current?.user || current || account;
+      } catch {
+        // The session is still usable; a later refresh will hydrate the rest.
+      }
+      login(account);
       const redirectTo = location.state?.from
         ? `${location.state.from.pathname}${location.state.from.search || ""}`
-        : "/app?section=dashboard";
+        : "/dashboard";
       navigate(redirectTo, { replace: true });
     } catch {
       // error already captured by useAuthMutation

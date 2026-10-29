@@ -18,6 +18,69 @@ const hackathonSchema = new mongoose.Schema(
             type: String
         },
 
+        // Optional enrichment. The importer and admin tools may fill these;
+        // the public API tolerates their absence.
+        submission_deadline: {
+            type: String
+        },
+
+        description: {
+            type: String,
+            trim: true
+        },
+
+        organizer: {
+            type: String,
+            trim: true
+        },
+
+        mode: {
+            type: String,
+            trim: true
+        },
+
+        location: {
+            type: String,
+            trim: true
+        },
+
+        url: {
+            type: String,
+            trim: true
+        },
+
+        sourceUrl: {
+            type: String,
+            trim: true
+        },
+
+        prize: {
+            type: mongoose.Schema.Types.Mixed
+        },
+
+        skills: {
+            type: [String],
+            default: []
+        },
+
+        domain: {
+            type: [String],
+            default: []
+        },
+
+        theme: {
+            type: String,
+            trim: true
+        },
+
+        event_start_date: {
+            type: String
+        },
+
+        event_end_date: {
+            type: String
+        },
+
         is_active: {
             type: Boolean,
             default: true
@@ -34,7 +97,8 @@ const hackathonSchema = new mongoose.Schema(
         }
     },
     {
-        collection: "Hackathons"
+        collection: "Hackathons",
+        timestamps: true
     }
 );
 

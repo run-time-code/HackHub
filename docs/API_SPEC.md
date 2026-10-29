@@ -30,7 +30,7 @@ Base URL: `/api`
 ## Hackathons (public catalogue for the team feature)
 | Method | Endpoint | Query | Description |
 |---|---|---|---|
-| GET | `/hackathons?q=&page=&limit=` | search + pagination | List visible hackathons |
+| GET | `/hackathons?q=&domain=&mode=&skill=&active=&page=&limit=` | search + filters + pagination | List visible hackathons. `q` searches title/organizer/description; domain matches `domain[]` or `theme`; skill matches `skills[]` |
 | GET | `/hackathons/:id` | ObjectId **or** slug | Detail. Use `id` for `/teams` |
 
 Identifier decision (F-05b): teams reference hackathons by ObjectId (`id`
@@ -40,12 +40,33 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 ## Dashboard / Save
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/saved-hackathons/save` | Save hackathon (`{ hackathon }` slug) |
-| POST | `/saved-hackathons/unsave` | Unsave |
-| POST | `/saved-hackathons/register` | Mark registered |
-| POST | `/saved-hackathons/notes` | Notes |
-| GET | `/saved-hackathons/status/:hackathon` | Status by slug |
+| GET | `/saved` | Dashboard list (`{ items }`); each row has `id`, nested `hackathon`, `status`, `notes`, timestamps |
+| POST | `/saved` | Save hackathon (`{ hackathonId }`; ObjectId or slug). Idempotent |
+| PATCH | `/saved/:id` | Update tracking (`{ status?, notes? }`). Status: `saved`, `registered`, `ongoing`, `completed` |
+| DELETE | `/saved/:id` | Remove a saved row (also accepts a slug) |
+| POST | `/saved-hackathons/save` | Legacy save by slug (`{ hackathon }`) |
+| POST | `/saved-hackathons/unsave` | Legacy unsave |
+| POST | `/saved-hackathons/register` | Legacy mark registered |
+| POST | `/saved-hackathons/notes` | Legacy notes |
+| GET | `/saved-hackathons/status/:hackathon` | Legacy status by slug |
 | GET | `/dashboard/summary` | Personal dashboard counts |
+
+## Calendar and reminders (authenticated)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/calendar?month=YYYY-MM` | Month events from visible hackathon deadlines. Items expose `id`, `type` (`registration`/`submission`/`event`), `date` (ISO), `hackathonId` and a nested `hackathon` summary |
+| GET | `/reminders` | Caller reminders (`{ items }`), sorted by `remindAt` |
+| POST | `/reminders` | Create `{ hackathonId, eventType?, daysBefore, channel? }`. `eventType` defaults to `registration`; channel is `email` or `in_app`; duplicates return `409 REMINDER_EXISTS` |
+| DELETE | `/reminders/:id` | Delete a caller reminder |
+| GET | `/reminders/preferences` | Saved defaults: `{ defaultDaysBefore, channels, quietHours: { start, end } }` (IST) |
+| PUT | `/reminders/preferences` | Update any subset of the preference object (CSRF) |
+
+## Account settings (authenticated, CSRF for mutations)
+| Method | Endpoint | Description |
+|---|---|---|
+| PUT | `/users/me/change-password` | Change password (`{ currentPassword, newPassword }`); revokes existing sessions |
+| DELETE | `/users/me` | Soft-delete the authenticated account and queue personal-data purge |
+| GET | `/users/me/export` | Personal-data export as JSON (`{ exportedAt, profile, ... }`) |
 
 ## Teams
 | Method | Endpoint | Description |
@@ -70,7 +91,7 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 | POST | `/teams/:id/requests` | Ask to join (`{ role?, message? }`) |
 | POST | `/teams/:id/invitations` | Leader invites a user (`{ userId, role?, message? }`) |
 | GET | `/teams/:id/requests?type=request\|invite` | Leader lists pending rows |
-| GET | `/team-requests/mine?status=pending` | My sent requests, received/sent invitations, and pending requests targeting teams I lead. Each `team` object includes `leader`. |
+| GET | `/team-requests/mine?status=pending` | My sent requests, received/sent invitations, and requests targeting teams I lead (including resolved rows for History). Each `team` object includes `leader`. |
 | PATCH | `/team-requests/:id` | Respond (`{ action: "accept" \| "decline" }`) |
 | DELETE | `/team-requests/:id` | Cancel a pending request/invitation |
 
@@ -124,35 +145,17 @@ Server-Sent Events (`/notifications/stream`) are exempt from the JSON envelope.
 
 ## Frontend integration notes
 
-The Vite app (`apps/web`) calls the endpoints below. Rows marked **Frontend
-assumption** have no backend implementation in this repository yet and need
-agreement from the API owners before deployment.
+The Vite app (`apps/web`) uses the `/saved` CRUD, `/calendar`, `/reminders` and
+`/users/me/*` account routes above. Calendar month/week/agenda views read the
+month endpoint; reminder mutations send the CSRF header through the shared
+`api/http.js` client. Contract coverage lives in
+`apps/api/test/calendar-reminders-saved.test.js` and the browser smoke checks in
+[design/QA_REPORT.md](design/QA_REPORT.md).
 
-### Calendar & reminders — frontend assumption
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/calendar?month=YYYY-MM` | Events for the month; the app tolerates `date`/`start`/`startsAt`/`startDate` and nested `hackathon` data |
-| POST | `/reminders` | Create reminder `{ hackathonId, eventType, daysBefore, channel }` |
-| GET | `/reminders` | List reminders |
-| GET | `/reminders/preferences` | **Frontend assumption**; saved default reminder settings |
-| PUT | `/reminders/preferences` | **Frontend assumption**; save `{ defaultDaysBefore, channels, quietHours: { start, end } }` (IST) |
-
-Month, week, and agenda views use the month-based calendar endpoint. Calendar
-export (ICS download/subscription) stays optional until the backend confirms it.
-
-### Account settings
-| Method | Endpoint | Description |
-|---|---|---|
-| PUT | `/users/me/change-password` | Change password (`{ currentPassword, newPassword }`) |
-| DELETE | `/users/me` | Delete the authenticated account |
-| GET | `/users/me/export` | Personal data export as JSON |
-
-### Saved hackathons / dashboard — needs reconciliation
-The redesigned dashboard and discovery screens currently use `POST /saved`
-(`{ hackathonId }`), `GET /saved`, `PATCH /saved/:id`, and `DELETE /saved/:id`.
-The implemented backend uses `/saved-hackathons/*` (`{ hackathon }` slug) plus
-`GET /dashboard/summary`. The frontend client must be reconciled with those
-routes before release.
+ICS download/subscription is not implemented; it remains an optional future
+addition to the calendar views.
 
 ## Planned (not implemented)
-Calendar/reminders, hackathon facets, Worth Score endpoints.
+- Worth Score service and endpoints.
+- Hackathon facet counts (server-side aggregation for discovery filters).
+- ICS calendar export/subscription.

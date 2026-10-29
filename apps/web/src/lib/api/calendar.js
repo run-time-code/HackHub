@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest } from "./http";
 
 function collectionFrom(data, keys) {
   if (Array.isArray(data)) return data;

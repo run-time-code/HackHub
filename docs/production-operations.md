@@ -60,8 +60,11 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point (`apps/api/src/server.js`) connects MongoDB and mounts the auth/profile/dashboard, saved-hackathon, team, teammate-discovery, join-request/invitation, notification, public hackathon catalogue and admin routes in one process. Remaining gaps before a full live release:
+The active `npm start` entry point (`apps/api/src/server.js`) connects MongoDB and mounts the auth/profile/dashboard, saved-hackathon CRUD, calendar/reminders, team, teammate-discovery, join-request/invitation, notification, public hackathon catalogue and admin routes in one process. The WA3 integration gap is closed: `/saved` CRUD, `/calendar`, `/reminders` and the account-settings aliases are implemented and contract-tested (see [design/QA_REPORT.md](design/QA_REPORT.md)).
 
-- The redesigned web screens call a few endpoints the API does not implement yet (calendar and reminder persistence) or under different names (`/saved` vs `/saved-hackathons/*`, `GET /dashboard/summary`); see [API_SPEC.md](API_SPEC.md). Reconcile the frontend client before release.
+Remaining work before a full live release:
+
+- Provision the staging and production environments with the secrets in [staging.md](staging.md) and the table above, then run `apps/api/scripts/smoke-staging.js`, the k6 scenarios, and the backup/restore drill against those environments. This repository contains the workflows and procedures, but cannot create the Render/Vercel/Atlas resources or supply their credentials.
 - The public catalogue serves whatever is in the `Hackathon` collection; populate it with `tools/data-importer` (scheduled scrapers are still planned). A successful health check alone does not verify hackathon discovery.
+- Worth Score is still a planned service and has no endpoints yet. It is not part of the Week 4 release gate.
 - `apps/backend-prototype/` is exploratory only and is not deployed; the active API has its own hackathon routes, so it can be ignored rather than integrated.

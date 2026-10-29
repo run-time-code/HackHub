@@ -1,9 +1,13 @@
 import { getCsrfToken } from "./csrf";
+import { DEMO_MODE, demoApiBase } from "../demo";
 
-export const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000/api";
+// Keep demo traffic same-origin so the service worker can answer it without
+// any CORS setup, and so a built demo can be hosted as a static site.
+export const BASE_URL = DEMO_MODE
+  ? demoApiBase()
+  : import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:5000/api";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const NO_REFRESH_PREFIXES = [

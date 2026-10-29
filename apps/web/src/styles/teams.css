@@ -927,6 +927,22 @@
   padding: 7px 11px;
 }
 
+.requests-page__quote {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.requests-page__quote > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.requests-page__quote .btn {
+  flex: 0 0 auto;
+}
+
 .request-list {
   display: flex;
   flex-direction: column;
@@ -1322,6 +1338,11 @@
     width: 100%;
     flex-direction: row;
     padding-top: 6px;
+  }
+
+  .requests-page__quote {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .request-card__actions .btn {

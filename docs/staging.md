@@ -102,7 +102,8 @@ Same variable names everywhere, only values change:
 | `MAX_JOIN_REQUESTS_PER_DAY` | `10`                   | `10`                                 | `10` |
 
 Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
-(staging shape, no real values).
+(staging shape), `apps/api/.env.production.example` (production shape). No real
+values belong in the repository.
 
 ## 7. Verify (every Week 2+ push to `develop`)
 
@@ -111,9 +112,9 @@ Templates: `apps/api/.env.example` (dev), `apps/api/.env.staging.example`
 2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix apps/api`.
 3. Demo flow on staging: sign up → verify email → log in (password or
    Google/GitHub) → onboarding → browse the catalogue and save events →
-   dashboard tracking → calendar/reminders → account settings. Calendar and
-   saved-endpoint calls are provisional until the API confirms them
-   (see [API_SPEC.md](API_SPEC.md)).
+   dashboard tracking → calendar/reminders → account settings. These endpoints
+   are implemented in the active API; the code-level evidence is in
+   [design/QA_REPORT.md](design/QA_REPORT.md).
 
 ## Troubleshooting
 
