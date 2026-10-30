@@ -23,6 +23,27 @@ mkdir -p "$backup_dir"
 archive="$backup_dir/hackhub-$(date -u +%Y%m%dT%H%M%SZ).archive.gz"
 source_db="$(mongosh "$MONGODB_URI" --quiet --eval 'db.getName()')"
 restore_db="$(mongosh "$RESTORE_MONGODB_URI" --quiet --eval 'db.getName()')"
+
+# mongorestore treats a database path in --uri as an implicit --db, and
+# --db + --nsFrom/--nsTo filters every collection out: the restore then
+# "succeeds" while writing 0 documents. --nsTo already renames the target,
+# so hand mongorestore a host-only URI.
+host_uri() {
+    local uri="$1"
+    local scheme="${uri%%://*}"
+    local rest="${uri#*://}"
+    local authority="${rest%%/*}"
+    if [[ "$rest" == "$authority" ]]; then
+        printf '%s' "$uri"
+        return
+    fi
+    local after="${rest#*/}"
+    if [[ "$after" == *"?"* ]]; then
+        printf '%s://%s/?%s' "$scheme" "$authority" "${after#*\?}"
+    else
+        printf '%s://%s' "$scheme" "$authority"
+    fi
+}
 if [[ "$source_db" == "$restore_db" ]]; then
   echo "Refusing restore: use a distinct restore database name." >&2
   exit 1
@@ -39,7 +60,7 @@ inventory() {
 before="$(inventory "$MONGODB_URI")"
 mongodump --uri="$MONGODB_URI" --archive="$archive" --gzip
 sha256sum "$archive"
-mongorestore --uri="$RESTORE_MONGODB_URI" --archive="$archive" --gzip --drop \
+mongorestore --uri="$(host_uri "$RESTORE_MONGODB_URI")" --archive="$archive" --gzip --drop \
   --nsFrom="${source_db}.*" --nsTo="${restore_db}.*"
 after="$(inventory "$RESTORE_MONGODB_URI")"
 
