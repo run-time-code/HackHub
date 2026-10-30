@@ -5,7 +5,7 @@ import Tooltip from "../ui/Tooltip";
 export default function ThemeToggle({ compact = false }) {
   const { theme, setTheme } = useTheme();
 
-  const option = ({ theme: next, Icon, label, pressed }) => (
+  const option = ({ Icon, label }) => (
     <Tooltip trigger={<Icon aria-hidden="true" />}>{label}</Tooltip>
   );
 
@@ -20,10 +20,8 @@ export default function ThemeToggle({ compact = false }) {
         aria-label={`Switch to ${next} theme`}
       >
         {option({
-          theme: next,
           Icon,
           label: `Switch to ${next} theme`,
-          pressed: theme === next,
         })}
       </button>
     );
@@ -38,10 +36,8 @@ export default function ThemeToggle({ compact = false }) {
         aria-pressed={theme === "light"}
       >
         {option({
-          theme: "light",
           Icon: Sun,
           label: "Light theme",
-          pressed: theme === "light",
         })}
       </button>
       <button
@@ -51,10 +47,8 @@ export default function ThemeToggle({ compact = false }) {
         aria-pressed={theme === "dark"}
       >
         {option({
-          theme: "dark",
           Icon: Moon,
           label: "Dark theme",
-          pressed: theme === "dark",
         })}
       </button>
     </div>

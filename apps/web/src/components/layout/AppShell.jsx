@@ -157,6 +157,7 @@ export default function AppShell() {
         </div>
       </main>
 
+      {/* WA3 design-elevation: shell entrance + route transitions active */}
       <footer className="app-footer">
         <div className="container app-footer__inner">
           <span className="app-footer__mark">HackHub · The builder&apos;s field guide</span>
