@@ -13,7 +13,7 @@ export default function TeamCard({ team, profiles = {}, currentUserId, className
   const isMember = crewIds.includes(currentUserId);
 
   return (
-    <article className={`team-card ${open ? "team-card--open" : "team-card--closed"} ${className}`}>
+    <article className={`team-card hover-lift tilt-3d ${open ? "team-card--open" : "team-card--closed"} ${className}`}>
       <span className="team-card__stripe" aria-hidden="true" />
       <div className="team-card__top">
         <span className="team-card__hackathon">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -18,6 +19,7 @@ import MobileMenu from "./MobileMenu";
 import CommandPalette from "./CommandPalette";
 import NotificationBell from "./NotificationBell";
 import UserMenu from "./UserMenu";
+import PageTransition from "./PageTransition";
 import IconButton from "../ui/IconButton";
 import { useAuth } from "../../context/auth-context";
 import { DEMO_MODE } from "../../lib/demo";
@@ -88,7 +90,7 @@ export default function AppShell() {
         Skip to content
       </a>
 
-      <header className="app-nav">
+      <header className={clsx("app-nav", "shell__part shell__part--nav")}>
         <div className="container app-nav__inner">
           <Brand to="/dashboard" className="app-nav__brand" />
 
@@ -133,9 +135,9 @@ export default function AppShell() {
         </div>
       </header>
 
-      <main className="app-main" id="main-content" tabIndex="-1">
+      <main className={clsx("app-main", "shell__part shell__part--content")} id="main-content" tabIndex="-1">
         <div className="container app-main__inner">
-          <div className="app-context-bar">
+          <div className={clsx("app-context-bar", "shell__part shell__part--context")}>
             <span>
               Field guide / {meta.index} — {meta.label}
             </span>
@@ -148,7 +150,9 @@ export default function AppShell() {
           </div>
 
           <div className="app-content">
-            <Outlet />
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </div>
         </div>
       </main>

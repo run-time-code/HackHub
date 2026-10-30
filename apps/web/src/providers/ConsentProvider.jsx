@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import { Cookie, LockKeyhole } from "lucide-react";
 import Dialog from "../components/ui/Dialog";
 import Switch from "../components/ui/Switch";
@@ -61,7 +62,7 @@ export function ConsentProvider({ children }) {
 
       {value.showBanner && (
         <div
-          className="cookie-banner"
+          className={clsx("cookie-banner", "banner-enter")}
           role="dialog"
           aria-modal="false"
           aria-labelledby="cookie-banner-title"
