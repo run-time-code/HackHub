@@ -41,7 +41,7 @@ export default function HackathonCard({
   }
 
   return (
-    <article className={`hackathon-entry flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${trackingRecord ? `entry-${getStatus(trackingRecord)}` : ""}`}>
+    <article className={`hackathon-entry flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover-lift tilt-3d ${trackingRecord ? `entry-${getStatus(trackingRecord)}` : ""}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="entry-organizer text-xs font-semibold uppercase tracking-wide text-emerald-800">

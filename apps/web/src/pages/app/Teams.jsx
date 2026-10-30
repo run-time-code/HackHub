@@ -262,7 +262,7 @@ export default function Teams() {
               }
             />
           ) : (
-            <div className="team-grid">
+            <div className="team-grid mount-stagger">
               {myTeams.map((team) => (
                 <TeamCard
                   key={team.id}
@@ -367,7 +367,7 @@ export default function Teams() {
             />
           ) : (
             <>
-              <div className="team-grid">
+              <div className="team-grid mount-stagger">
                 {visibleDiscoverTeams.map((team) => (
                   <TeamCard
                     key={team.id}

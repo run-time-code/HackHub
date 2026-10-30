@@ -1951,3 +1951,32 @@
     padding: var(--space-8) var(--space-5);
   }
 }
+
+/* --------------------------------------------------------------------------
+   Tooltip (Week 4 T1)
+   -------------------------------------------------------------------------- */
+
+.tooltip__arrow {
+  fill: var(--surface);
+}
+
+.tooltip__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-inverse);
+  color: var(--canvas);
+  font-family: var(--mono);
+  font-size: var(--text-micro);
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--line-strong);
+}
+
+[data-theme="dark"] .tooltip__arrow {
+  fill: var(--surface-inverse);
+}

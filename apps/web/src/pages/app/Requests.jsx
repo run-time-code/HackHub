@@ -293,7 +293,7 @@ export default function Requests() {
           actions={empty.action}
         />
       ) : (
-        <div className="request-list">
+        <div className="request-list mount-stagger">
           {visibleRequests.map((request) => (
             <RequestCard
               key={request.id}

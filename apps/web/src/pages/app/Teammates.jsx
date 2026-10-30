@@ -407,11 +407,11 @@ export default function Teammates() {
               }
             />
           ) : (
-            <div className="finder-grid">
+            <div className="finder-grid mount-stagger">
               {people.map((person) => {
                 const muted = availabilityTone(person.availability);
                 return (
-                  <article className="teammate-card" key={person.id}>
+                  <article className="teammate-card hover-lift tilt-3d" key={person.id}>
                     <div className="teammate-card__top">
                       <div className="teammate-card__identity">
                         <Avatar name={person.name} src={person.avatarUrl} size="lg" ring />

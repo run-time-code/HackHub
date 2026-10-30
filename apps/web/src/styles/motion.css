@@ -243,6 +243,122 @@
   background: var(--moss);
 }
 
+/* Marquee ticker (landing hero proof bar). */
+.marquee {
+  overflow: hidden;
+  position: relative;
+}
+.marquee__track {
+  display: flex;
+  gap: var(--space-6);
+  animation: hh-marquee 42s linear infinite;
+}
+.marquee:hover .marquee__track,
+.marquee:focus-within .marquee__track {
+  animation-play-state: paused;
+}
+.marquee__item {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: var(--text-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Shell entrance — nav, context bar and content step in one after another. */
+.shell__part {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: hh-shell-up var(--dur-base) var(--ease-out) forwards;
+}
+.shell__part--nav {
+  animation-delay: 40ms;
+}
+.shell__part--context {
+  animation-delay: 100ms;
+}
+.shell__part--content {
+  animation-delay: 160ms;
+}
+
+/* Page transition — used by Framer Motion route wrapper. */
+.page-slot [data-exit] {
+  animation: hh-page-fade-out var(--dur-fast) var(--ease-out) forwards;
+}
+.page-slot [data-enter] {
+  animation: hh-page-fade-in var(--dur-base) var(--ease-out) both;
+}
+
+/* Soft ambient glow used by hero orbs. */
+.orb-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.45;
+  animation: hh-glow-pulse 10s var(--ease-in-out) alternate infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-glow--slow {
+  animation-duration: 16s;
+  animation-delay: 2s;
+}
+
+/* List mount stagger — teams, teammates, requests. */
+.mount-stagger > * {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: hh-mount-in var(--dur-base) var(--ease-out) forwards;
+}
+
+/* Subtle entry fade used by modals and drawers. */
+.fade-in {
+  animation: hh-fade-in var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes hh-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes hh-shell-up {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hh-page-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hh-page-fade-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes hh-glow-pulse {
+  from { transform: translate(0, 0) scale(1); opacity: 0.45; }
+  to { transform: translate(24px, -16px) scale(1.15); opacity: 0.3; }
+}
+
+@keyframes hh-mount-in {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hh-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Cookie banner entrance. */
+.banner-enter {
+  animation: hh-banner-up var(--dur-base) var(--ease-out) both;
+}
+
+@keyframes hh-banner-up {
+  from { opacity: 0; transform: translateY(140px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal {
     opacity: 1;
@@ -268,5 +384,26 @@
 
   .confetti-burst {
     display: none;
+  }
+
+  .marquee__track {
+    animation: none;
+  }
+
+  .shell__part {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .page-slot [data-exit],
+  .page-slot [data-enter],
+  .orb-glow,
+  .mount-stagger > *,
+  .fade-in,
+  .banner-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

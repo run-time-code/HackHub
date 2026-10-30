@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import PublicNav from "./PublicNav";
 import Footer from "./Footer";
+import PageTransition from "./PageTransition";
 
 export default function PublicLayout() {
   return (
@@ -10,7 +11,9 @@ export default function PublicLayout() {
       </a>
       <PublicNav />
       <main id="main-content" tabIndex="-1">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <Footer />
     </div>
