@@ -18,12 +18,25 @@ if (config.sentryDsn) {
 }
 
 let server;
+let reminderJob;
 
 // The legacy auth/profile models and the new src models share this
 // connection (models register themselves on require).
 async function start() {
   await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 5000 });
   logger.info('MongoDB connected');
+  reminderJob = cron.schedule(
+    '* * * * *',
+    async () => {
+      try {
+        await processDueReminders();
+      } catch (error) {
+        logger.error({ err: error }, '[reminder-dispatch] failed');
+      }
+    },
+    { timezone: TIME_ZONE }
+  );
+  await processDueReminders();
   const app = createApp();
   server = app.listen(config.port, () => {
     logger.info({ port: config.port, env: config.env }, 'hackhub-api listening');
@@ -55,20 +68,9 @@ cron.schedule(
   { timezone: 'Asia/Kolkata' }
 );
 
-cron.schedule(
-  '* * * * *',
-  async () => {
-    try {
-      await processDueReminders();
-    } catch (error) {
-      logger.error({ err: error }, '[reminder-dispatch] failed');
-    }
-  },
-  { timezone: TIME_ZONE }
-);
-
 function shutdown(signal) {
   logger.info({ signal }, 'shutting down');
+  if (reminderJob) reminderJob.stop();
   if (!server) {
     mongoose.disconnect().finally(() => process.exit());
     return;

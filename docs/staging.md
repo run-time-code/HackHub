@@ -112,9 +112,9 @@ values belong in the repository.
 2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix apps/api`.
 3. Demo flow on staging: sign up → verify email → log in (password or
    Google/GitHub) → onboarding → browse the catalogue and save events →
-   dashboard tracking → calendar/reminders → account settings. These endpoints
-   are implemented in the active API; the code-level evidence is in
-   [design/QA_REPORT.md](design/QA_REPORT.md).
+   dashboard tracking → calendar/reminders → account settings. Confirm
+   reminder delivery with configured Resend credentials and verify the reminder
+   appears in the in-app notifications feed when `in_app` is selected.
 
 ## Troubleshooting
 

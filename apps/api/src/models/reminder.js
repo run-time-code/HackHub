@@ -14,6 +14,7 @@ const reminderSchema = new Schema(
     eventType: { type: String, enum: EVENT_TYPES, default: 'registration' },
     daysBefore: { type: Number, required: true, min: 0, max: 365 },
     channel: { type: String, enum: CHANNELS, default: 'email' },
+    eventAt: { type: Date, default: null },
     remindAt: { type: Date, required: true },
     active: { type: Boolean, default: true },
     deliveredAt: { type: Date, default: null },

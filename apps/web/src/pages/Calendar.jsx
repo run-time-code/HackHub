@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { createReminder, getCalendarEvents, getReminders } from "../lib/api/calendar";
+import {
+  createReminder,
+  getCalendarEvents,
+  getReminders,
+  getReminderPreferences,
+} from "../lib/api/calendar";
 import { getEventIdentity, getHackathonId, getHackathon, getTitle } from "../lib/utils/hackathon";
 import ReminderPreferencesForm from "../components/ReminderPreferencesForm";
 import { downloadCalendarIcs } from "../lib/ics";
@@ -135,6 +140,32 @@ export default function Calendar() {
   const [reminderMessage, setReminderMessage] = useState("");
   const [isCreatingReminder, setIsCreatingReminder] = useState(false);
 
+  useEffect(() => {
+    let isCurrent = true;
+    async function loadDefaults() {
+      try {
+        const data = await getReminderPreferences();
+        const preferences = data?.preferences || data;
+        const daysBefore = Number(preferences?.defaultDaysBefore);
+        const preferredChannel = preferences?.channels?.[0];
+        if (isCurrent && Number.isInteger(daysBefore)) {
+          setReminderState((current) => ({
+            ...current,
+            leadTime: [1, 3, 7].includes(daysBefore) ? String(daysBefore) : "custom",
+            customDays: [1, 3, 7].includes(daysBefore) ? "" : String(daysBefore),
+            channel: ["email", "in_app"].includes(preferredChannel) ? preferredChannel : current.channel,
+          }));
+        }
+      } catch (requestError) {
+        if (isCurrent) {
+          setReminderMessage(`Saved reminder defaults could not be loaded: ${requestError.message}`);
+        }
+      }
+    }
+    loadDefaults();
+    return () => { isCurrent = false; };
+  }, []);
+
   const rangeDates = useMemo(() => {
     if (view === "week") return getWeekDates(focusDate);
     if (view === "agenda") {
@@ -238,6 +269,7 @@ export default function Calendar() {
       await createReminder({
         hackathonId,
         eventType: getEventType(selectedEvent),
+        eventDate: eventDateValue(selectedEvent),
         daysBefore,
         channel: reminderState.channel,
       });

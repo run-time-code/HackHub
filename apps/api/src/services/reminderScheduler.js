@@ -4,6 +4,15 @@ const logger = require('../utils/logger');
 const { Reminder } = require('../models/reminder');
 const User = require('../../models/User');
 const { createNotification } = require('./notificationsService');
+const {
+  startRun,
+  finishRun,
+  recordJobProcessed,
+  recordJobSent,
+  recordJobFailed,
+  recordJobDeferred,
+  recordSchedulerError,
+} = require('../utils/reminderMetrics');
 
 const LOCK_MS = 5 * 60 * 1000;
 const TIME_ZONE = 'Asia/Kolkata';
@@ -86,6 +95,7 @@ async function processDueReminder(options = {}) {
   const now = options.now || new Date();
   const reminder = await claimDueReminder(now);
   if (!reminder) return null;
+  recordJobProcessed();
 
   try {
     const user = await User.findById(reminder.user).select('email reminderPreferences').lean();
@@ -101,6 +111,7 @@ async function processDueReminder(options = {}) {
     }
 
     if (isInQuietHours(now, preferences.quietHours)) {
+      recordJobDeferred();
       await Reminder.updateOne(
         { _id: reminder._id, deliveredAt: null },
         {
@@ -126,6 +137,12 @@ async function processDueReminder(options = {}) {
           eventType: reminder.eventType,
         },
         email: reminder.channel === 'email',
+        reminderEmail: {
+          hackathonTitle: reminder.hackathon?.title || 'Hackathon',
+          eventType: reminder.eventType,
+          eventAt: reminder.eventAt
+            || new Date(reminder.remindAt.getTime() + reminder.daysBefore * 24 * 60 * 60 * 1000),
+        },
         reminder: reminder._id,
       });
     } catch (error) {
@@ -136,8 +153,10 @@ async function processDueReminder(options = {}) {
       { _id: reminder._id, deliveredAt: null },
       { $set: { deliveredAt: now, processingUntil: null }, $unset: { lastError: 1 } }
     );
+    recordJobSent();
     return reminder._id;
   } catch (error) {
+    recordJobFailed();
     await Reminder.updateOne(
       { _id: reminder._id },
       {
@@ -155,26 +174,36 @@ async function processDueReminder(options = {}) {
 async function processDueReminders(options = {}) {
   const limit = options.limit || 50;
   const now = options.now || new Date();
+  const startedAt = startRun();
+  let succeeded = false;
   let delivered = 0;
-  for (let index = 0; index < limit; index += 1) {
-    const result = await processDueReminder({ ...options, now });
-    if (result) {
-      delivered += 1;
-      continue;
-    }
+  try {
+    for (let index = 0; index < limit; index += 1) {
+      const result = await processDueReminder({ ...options, now });
+      if (result) {
+        delivered += 1;
+        continue;
+      }
 
-    const remaining = await Reminder.exists({
-      active: true,
-      deliveredAt: null,
-      remindAt: { $lte: now },
-      $or: [
-        { processingUntil: null },
-        { processingUntil: { $lte: now } },
-      ],
-    });
-    if (!remaining) break;
+      const remaining = await Reminder.exists({
+        active: true,
+        deliveredAt: null,
+        remindAt: { $lte: now },
+        $or: [
+          { processingUntil: null },
+          { processingUntil: { $lte: now } },
+        ],
+      });
+      if (!remaining) break;
+    }
+    succeeded = true;
+    return delivered;
+  } catch (error) {
+    recordSchedulerError();
+    throw error;
+  } finally {
+    finishRun(startedAt, succeeded);
   }
-  return delivered;
 }
 
 module.exports = {
