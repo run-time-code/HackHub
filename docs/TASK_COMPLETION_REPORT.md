@@ -142,7 +142,7 @@ done by someone else — Lalitha authored none of it.**
 | 4.3.1 Google & GitHub login (W3, **Bonus**) | 5 | Berwin | **Berwin** (+ **Senthil** wired it into prod entrypoint) | ✅ | `aabd18c feat: add Google and GitHub OAuth login`, `9b98368 fix(auth): wire social login into production entrypoint` |
 | 4.3.2 Security hardening (W3) | 8 | Berwin | **Berwin** (+ **Senthil**) | ✅ | `55bb025 feat: harden backend security…`, helmet, strict CORS, CSRF double-submit, rate limiters, sanitize middleware, audit log |
 | 4.3.3 Account management (W3) | 3 | Berwin | **Berwin** | ✅ | change password, logout-all, soft delete + nightly `purgeDeletedAccounts` cron, `/users/me/export` |
-| 4.4.1 Security audit & fixes (W4) | 8 | Berwin | **Berwin** (partial) + **Deva** (dependency fixes) | 🟨 | Gitleaks + hardening commits, `84e7f4f fix: update Vitest dependencies to resolve vulnerabilities`. **No OWASP Top-10 checklist, no OWASP ZAP scan report in the repo** |
+| 4.4.1 Security audit & fixes (W4) | 8 | Berwin | **Berwin** (partial) + **Deva** (dependency fixes) + **Senthil** (OWASP review) | 🟨 | Gitleaks + hardening commits, `84e7f4f fix: update Vitest dependencies to resolve vulnerabilities`. OWASP Top 10 checklist added as `docs/OWASP_SECURITY_REPORT.md` (manual review + `npm audit`: 12 moderate, dev-tooling chain). **OWASP ZAP scan report still missing** |
 | 4.4.2 Secrets & settings management (W4) | 3 | Berwin | **Berwin** | ✅ | `a6bdffe ci: add Gitleaks secret scanning` (`.github/workflows/ci.yml`), per-app `.env.example`, `apps/api/.env.production.example` |
 | 4.4.3 Admin APIs (W4, **Bonus**) | 3 | Berwin | **Berwin** | ✅ | `59d74a6 feat: add admin management APIs`, `routes/admin{Hackathon,User,Report}Routes.js` |
 
@@ -348,7 +348,7 @@ they came from Senthil, Divyashree and Berwin.
 2. **Production reminder email configuration** (`RESEND_API_KEY`, `EMAIL_FROM`) and verify scheduler behavior under the deployed process topology.
 3. **Cloudinary avatar-storage credentials** for persistent uploads/removal; the current local environment has no configured Cloudinary credentials.
 4. **Hire in the three empty seats or reassign their EP** — Lalitha (61), Gokul (61), Selva (62) = **184 EP ≈ 33% of the plan** has no author.
-5. **Testing ownership for Deva** — no authored tests, no e2e runner, no ZAP/Lighthouse gates.
+5. **Testing ownership for Deva** — no authored tests, no e2e runner, no ZAP/Lighthouse gates. OWASP Top 10 manual review now exists (`docs/OWASP_SECURITY_REPORT.md`), but ZAP scan still outstanding.
 6. **Broader accessibility/browser checks** — full-site axe/assistive-tech review, Lighthouse, and Firefox/Edge/Safari.
 7. **Decide the `backend/` prototype's fate** — either merge Nandhini's reminder/cache/ingestion work into
    `apps/api` or delete it; today it is dead code that makes the report look better than reality.
@@ -370,6 +370,7 @@ The status tables above were first generated before the follow-up implementation
 - Added authenticated `/hackathons/recommendations` ranking with a visible score breakdown. The score is a transparent heuristic over profile fit, upcoming dates, disclosed prizes, and listing completeness; it is not a prediction of outcomes.
 - Added a profile avatar removal endpoint, Cloudinary asset identifiers/cleanup, and explicit missing-provider errors. Avatar upload/removal requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`; these are absent from the current local environment.
 - Reminder dispatch, `.ics` export, responsive checks and the axe checks are documented in `docs/RUBASHREE_TASK_COMPLETION.md`.
+- OWASP Top 10 manual review added as `docs/OWASP_SECURITY_REPORT.md`, with an `npm audit` dependency baseline saved to `docs/npm-audit-raw.txt`. No ZAP/DAST scan has been run yet.
 
 ### Official platform source gate
 
