@@ -1,3 +1,4 @@
+
 'use strict';
 
 // Regression tests for the QA fix round (owner: Senthil Raja R):
@@ -26,75 +27,160 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
   let memberToken;
   let memberId;
   let outsiderToken;
-
-  function sign(userId) {
-    return jwt.sign({ id: userId, email: `${userId}@test.com`, role: 'student' }, config.jwtSecret);
-  }
-
-  async function api(method, path, token, body) {
-    const headers = { 'content-type': 'application/json' };
-    if (token) headers.authorization = `Bearer ${token}`;
-    const res = await fetch(`${base}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    return { res, body: await res.json() };
-  }
+  let csrfToken;
+  let csrfCookie;
 
   let hackathon;
   let hidden;
   let recommendedHackathon;
 
+  function sign(userId) {
+    return jwt.sign(
+      { id: userId, email: `${userId}@test.com`, role: 'student' },
+      config.jwtSecret
+    );
+  }
+
+  async function bootstrapCsrf() {
+    const res = await fetch(`${base}/auth/csrf-token`);
+
+    assert.equal(
+      res.status,
+      200,
+      'CSRF bootstrap endpoint should return HTTP 200'
+    );
+
+    const payload = await res.json();
+
+    assert.ok(payload.csrfToken, 'CSRF token should be returned');
+
+    const setCookie = res.headers.get('set-cookie') || '';
+    const cookie = setCookie.split(';')[0];
+
+    assert.ok(cookie, 'CSRF cookie should be set');
+
+    return {
+      token: payload.csrfToken,
+      cookie,
+    };
+  }
+
+  async function api(method, path, token, body) {
+    const headers = {
+      'content-type': 'application/json',
+      'x-csrf-token': csrfToken,
+      cookie: csrfCookie,
+    };
+
+    if (token) {
+      headers.authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${base}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+    const responseText = await res.text();
+
+    let responseBody;
+
+    try {
+      responseBody = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      responseBody = { raw: responseText };
+    }
+
+    return {
+      res,
+      body: responseBody,
+    };
+  }
+
   before(async () => {
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
+
     [hackathon, hidden] = await Hackathon.create([
-      { hackathon_id: 'pixel-hack-2026', title: 'Pixel Hack 2026' },
-      { hackathon_id: 'hidden-hack', title: 'Hidden Hack', is_hidden: true },
+      {
+        hackathon_id: 'pixel-hack-2026',
+        title: 'Pixel Hack 2026',
+      },
+      {
+        hackathon_id: 'hidden-hack',
+        title: 'Hidden Hack',
+        is_hidden: true,
+      },
     ]);
-    [recommendedHackathon] = await Hackathon.create([{
-      hackathon_id: 'ai-builder-challenge',
-      title: 'AI Builder Challenge',
-      description: 'Build tools for responsible AI.',
-      organizer: 'HackHub Labs',
-      url: 'https://example.com/ai-builder',
-      mode: 'online',
-      location: 'Online',
-      domains: ['AI'],
-      skills: ['React'],
-      prize_pool: '$5,000',
-      registration_deadline: new Date('2030-05-01T00:00:00.000Z'),
-      source: 'official',
-      external_id: 'official-1',
-    }]);
+
+    [recommendedHackathon] = await Hackathon.create([
+      {
+        hackathon_id: 'ai-builder-challenge',
+        title: 'AI Builder Challenge',
+        description: 'Build tools for responsible AI.',
+        organizer: 'HackHub Labs',
+        url: 'https://example.com/ai-builder',
+        mode: 'online',
+        location: 'Online',
+        domains: ['AI'],
+        skills: ['React'],
+        prize_pool: '$5,000',
+        registration_deadline: new Date('2030-05-01T00:00:00.000Z'),
+        source: 'official',
+        external_id: 'official-1',
+      },
+    ]);
+
     const leaderId = new mongoose.Types.ObjectId().toHexString();
     memberId = new mongoose.Types.ObjectId().toHexString();
     const outsiderId = new mongoose.Types.ObjectId().toHexString();
-    await User.insertMany([leaderId, memberId, outsiderId].map((id, index) => ({
-      _id: id,
-      name: `Actor ${index}`,
-      email: `actor${index}@test.com`,
-    })));
+
+    await User.insertMany(
+      [leaderId, memberId, outsiderId].map((id, index) => ({
+        _id: id,
+        name: `Actor ${index}`,
+        email: `actor${index}@test.com`,
+      }))
+    );
+
     leaderToken = sign(leaderId);
     memberToken = sign(memberId);
     outsiderToken = sign(outsiderId);
-    await new Promise((resolve) => {
+
+    await new Promise((resolve, reject) => {
       server = createApp().listen(0, resolve);
+      server.once('error', reject);
     });
+
     base = `http://localhost:${server.address().port}/api`;
+
+    const csrf = await bootstrapCsrf();
+    csrfToken = csrf.token;
+    csrfCookie = csrf.cookie;
   });
 
   after(async () => {
-    await new Promise((resolve) => server.close(resolve));
-    await mongoose.disconnect();
-    await mongo.stop();
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+
+    if (mongo) {
+      await mongo.stop();
+    }
   });
 
   it('GET /hackathons lists visible rows with search + pagination', async () => {
     const res = await fetch(`${base}/hackathons?q=pixel&page=1&limit=10`);
+
     assert.equal(res.status, 200);
+
     const body = await res.json();
+
     assert.equal(body.success, true);
     assert.equal(body.data.total, 1);
     assert.equal(body.data.items[0].slug, 'pixel-hack-2026');
@@ -103,16 +189,20 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
 
   it('GET /hackathons/:id accepts ObjectId or slug, hides hidden rows', async () => {
     const byId = await fetch(`${base}/hackathons/${hackathon._id}`);
+
     assert.equal(byId.status, 200);
     assert.equal((await byId.json()).data.slug, 'pixel-hack-2026');
 
     const bySlug = await fetch(`${base}/hackathons/pixel-hack-2026`);
+
     assert.equal(bySlug.status, 200);
 
     const missing = await fetch(`${base}/hackathons/nope`);
+
     assert.equal(missing.status, 404);
 
     const hiddenRow = await fetch(`${base}/hackathons/${hidden._id}`);
+
     assert.equal(hiddenRow.status, 404);
   });
 
@@ -120,68 +210,127 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
     const filtered = await fetch(
       `${base}/hackathons?domain=AI&skill=React&source=official&location=Online&hasPrize=true&upcoming=true&sort=deadline`
     );
+
     assert.equal(filtered.status, 200);
+
     const filteredBody = await filtered.json();
+
     assert.equal(filteredBody.data.total, 1);
     assert.equal(filteredBody.data.items[0].slug, 'ai-builder-challenge');
 
     const facets = await fetch(`${base}/hackathons/facets`);
+
     assert.equal(facets.status, 200);
+
     const facetBody = await facets.json();
-    assert.ok(facetBody.data.domains.some((facet) => facet.value === 'AI' && facet.count === 1));
-    assert.ok(facetBody.data.sources.some((facet) => facet.value === 'official'));
+
+    assert.ok(
+      facetBody.data.domains.some(
+        (facet) => facet.value === 'AI' && facet.count === 1
+      )
+    );
+
+    assert.ok(
+      facetBody.data.sources.some(
+        (facet) => facet.value === 'official'
+      )
+    );
 
     const invalidSort = await fetch(`${base}/hackathons?sort=untrusted`);
+
     assert.equal(invalidSort.status, 400);
   });
 
   it('returns authenticated recommendations with explainable user-specific scores', async () => {
     const member = await User.findById(memberId);
+
     member.skills = ['React'];
-    member.preferences = { interests: ['AI'], preferredMode: 'online' };
+    member.preferences = {
+      interests: ['AI'],
+      preferredMode: 'online',
+    };
+
     await member.save();
 
-    const { res, body } = await api('GET', '/hackathons/recommendations', memberToken);
+    const { res, body } = await api(
+      'GET',
+      '/hackathons/recommendations',
+      memberToken
+    );
+
     assert.equal(res.status, 200);
     assert.equal(body.data.items[0].id, String(recommendedHackathon._id));
     assert.equal(body.data.items[0].worthScore, 100);
+
     assert.deepEqual(body.data.items[0].recommendationReasons, [
       'Matches your interest in ai',
       'Uses your react skill',
       'Matches your online format preference',
     ]);
-    assert.match(body.data.items[0].scoreBreakdown.methodology, /heuristic/);
 
-    const unauthorized = await fetch(`${base}/hackathons/recommendations`);
+    assert.match(
+      body.data.items[0].scoreBreakdown.methodology,
+      /heuristic/
+    );
+
+    const unauthorized = await fetch(
+      `${base}/hackathons/recommendations`
+    );
+
     assert.equal(unauthorized.status, 401);
   });
 
   it('POST /teams rejects unknown hackathons instead of orphaning teams', async () => {
     const fake = new mongoose.Types.ObjectId().toHexString();
-    const { res, body } = await api('POST', '/teams', leaderToken, {
-      name: 'Orphan Team',
-      hackathonId: fake,
-    });
+
+    const { res, body } = await api(
+      'POST',
+      '/teams',
+      leaderToken,
+      {
+        name: 'Orphan Team',
+        hackathonId: fake,
+      }
+    );
+
     assert.equal(res.status, 400);
     assert.match(body.error.message, /existing hackathon/);
   });
 
   it('member leave/remove + reopen, permissions, friendly validation', async () => {
-    const created = await api('POST', '/teams', leaderToken, {
-      name: 'QA Crew',
-      hackathonId: String(hackathon._id),
-      maxTeamSize: 2,
-    });
+    const created = await api(
+      'POST',
+      '/teams',
+      leaderToken,
+      {
+        name: 'QA Crew',
+        hackathonId: String(hackathon._id),
+        maxTeamSize: 2,
+      }
+    );
+
     assert.equal(created.res.status, 201);
+
     const teamId = created.body.data.id;
 
     // Validation messages are stable, not Mongoose internals.
-    const bad = await api('PATCH', `/teams/${teamId}`, leaderToken, { name: 'x'.repeat(200) });
+    const bad = await api(
+      'PATCH',
+      `/teams/${teamId}`,
+      leaderToken,
+      { name: 'x'.repeat(200) }
+    );
+
     assert.equal(bad.res.status, 400);
     assert.doesNotMatch(bad.body.error.message, /Path `name`/);
 
     // Non-leader cannot remove others.
-    const denied = await api('DELETE', `/teams/${teamId}/members/${memberId}`, outsiderToken);
+    const denied = await api(
+      'DELETE',
+      `/teams/${teamId}/members/${memberId}`,
+      outsiderToken
+    );
+
     assert.equal(denied.res.status, 403);
 
     // Unknown member -> 404 MEMBER_NOT_FOUND.
@@ -190,21 +339,35 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
       `/teams/${teamId}/members/${new mongoose.Types.ObjectId()}`,
       leaderToken
     );
+
     assert.equal(unknown.res.status, 404);
     assert.equal(unknown.body.error.code, 'MEMBER_NOT_FOUND');
 
     // Leader cannot leave without transferring.
-    const leaderLeave = await api('DELETE', `/teams/${teamId}/members/${created.body.data.leader}`, leaderToken);
+    const leaderLeave = await api(
+      'DELETE',
+      `/teams/${teamId}/members/${created.body.data.leader}`,
+      leaderToken
+    );
+
     assert.equal(leaderLeave.res.status, 400);
 
-    // Close the team, add flow via direct accept is covered elsewhere; here
-    // exercise reopen: manually close then remove a member.
+    // Close the team, add a member, and exercise the reopen flow.
     const { Team } = require('../src/models/team');
     const { JoinRequest } = require('../src/models/joinRequest');
+
     const team = await Team.findById(teamId);
-    team.members.push({ user: memberId, role: 'member', joinedAt: new Date() });
+
+    team.members.push({
+      user: memberId,
+      role: 'member',
+      joinedAt: new Date(),
+    });
+
     team.status = 'closed';
+
     await team.save();
+
     await JoinRequest.create({
       team: team._id,
       user: memberId,
@@ -213,7 +376,12 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
       status: 'accepted',
     });
 
-    const left = await api('DELETE', `/teams/${teamId}/members/${memberId}`, memberToken);
+    const left = await api(
+      'DELETE',
+      `/teams/${teamId}/members/${memberId}`,
+      memberToken
+    );
+
     assert.equal(left.res.status, 200);
     assert.equal(left.body.data.status, 'open');
   });
