@@ -2,6 +2,8 @@
 
 const { Router } = require('express');
 
+const { doubleCsrfProtection } = require('../../middleware/csrfMiddleware');
+
 const controller = require('../controllers/joinRequestsController');
 const requireAuth = require('../middleware/requireAuth');
 const { teamWriteLimiter } = require('../../middleware/rateLimitMiddleware');
@@ -12,8 +14,8 @@ const router = Router();
 // I received/sent.
 router.get('/mine', requireAuth, controller.listMine);
 // PATCH /team-requests/:id { action: "accept" | "decline" }
-router.patch('/:id', requireAuth, teamWriteLimiter, controller.respond);
+router.patch('/:id', requireAuth, teamWriteLimiter, doubleCsrfProtection, controller.respond);
 // DELETE /team-requests/:id — cancel a pending request/invitation.
-router.delete('/:id', requireAuth, teamWriteLimiter, controller.cancel);
+router.delete('/:id', requireAuth, teamWriteLimiter, doubleCsrfProtection, controller.cancel);
 
 module.exports = router;

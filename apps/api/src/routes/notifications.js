@@ -2,6 +2,8 @@
 
 const { Router } = require('express');
 
+const { doubleCsrfProtection } = require('../../middleware/csrfMiddleware');
+
 const controller = require('../controllers/notificationsController');
 const requireAuth = require('../middleware/requireAuth');
 
@@ -12,7 +14,7 @@ router.get('/', requireAuth, controller.list);
 // (`withCredentials: true` on cross-origin clients).
 router.get('/stream', requireAuth, controller.stream);
 // Registered before /:id/read so "read-all" is not parsed as an id.
-router.patch('/read-all', requireAuth, controller.markAllRead);
-router.patch('/:id/read', requireAuth, controller.markRead);
+router.patch('/read-all', requireAuth, doubleCsrfProtection, controller.markAllRead);
+router.patch('/:id/read', requireAuth, doubleCsrfProtection, controller.markRead);
 
 module.exports = router;
