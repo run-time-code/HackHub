@@ -18,37 +18,34 @@
   line-height: 1;
 }
 
-.brand__mark {
-  position: relative;
-  display: grid;
+.logo-mark {
+  display: block;
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  place-items: center;
-  border-radius: 3px;
-  background: var(--ink);
-  color: var(--canvas);
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
+  overflow: visible;
 }
 
-.brand__mark::after {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--canvas);
-  border-radius: 50%;
-  background: var(--signal);
-  content: "";
+.logo-mark__tile {
+  fill: var(--ink);
 }
 
-[data-theme="dark"] .brand__mark {
-  background: var(--canvas);
-  color: var(--ink);
+.logo-mark__letter {
+  fill: var(--canvas);
+}
+
+.logo-mark__hub {
+  fill: var(--logo-signal);
+}
+
+[data-theme="dark"] .logo-mark__tile {
+  fill: var(--surface-2);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+
+[data-theme="dark"] .logo-mark__letter {
+  fill: var(--ink);
 }
 
 .brand__word {
@@ -1057,10 +1054,9 @@
     display: none;
   }
 
-  .app-nav__brand .brand__mark {
+  .app-nav__brand .logo-mark {
     width: 30px;
     height: 30px;
-    font-size: 1rem;
   }
 
   .app-nav__utilities .theme-toggle {
