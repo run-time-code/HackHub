@@ -6,6 +6,7 @@
 
 process.env.LOG_LEVEL = 'fatal';
 process.env.JWT_SECRET = 'test-secret';
+process.env.ACCESS_TOKEN_SECRET = 'test-access-secret';
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -68,6 +69,34 @@ describe('auth routes mounted on the src entrypoint', () => {
 
     const body = await res.json();
     assert.equal(body.user.email, 'session@example.com');
+  });
+
+  it('GET /users/me accepts a token signed with ACCESS_TOKEN_SECRET', async () => {
+    const user = await User.create({
+      name: 'Access Secret User',
+      email: 'access-secret@example.com',
+      emailVerified: true,
+    });
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        tokenVersion: user.tokenVersion ?? 0,
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: '5m' }
+    );
+
+    const res = await fetch(`${base}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    assert.equal(res.status, 200);
+
+    const body = await res.json();
+    assert.equal(body.user.email, 'access-secret@example.com');
   });
 
   it('GET /auth/me rejects requests without a token', async () => {
