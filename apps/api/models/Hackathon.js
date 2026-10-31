@@ -28,6 +28,10 @@ const hackathonSchema = new mongoose.Schema(
             type: Date,
             default: null
         },
+        event_start_date: {
+            type: Date,
+            default: null
+        },
 
         event_end: {
             type: Date,
@@ -63,6 +67,10 @@ const hackathonSchema = new mongoose.Schema(
         },
 
         domains: {
+            type: [String],
+            default: []
+        },
+        domain: {
             type: [String],
             default: []
         },

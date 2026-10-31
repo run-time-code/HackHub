@@ -20,7 +20,7 @@
   --color-slate-200: #e5e2d9;
   --color-slate-300: #d1cdc1;
   --color-slate-400: #a9a69b;
-  --color-slate-500: #77766d;
+  --color-slate-500: #60675c;
   --color-slate-600: #5c5d54;
   --color-slate-700: #45473f;
   --color-slate-800: #30332d;
@@ -64,7 +64,7 @@ textarea:focus-visible {
 }
 
 .field-label {
-  color: var(--orange);
+  color: var(--signal-ink);
   font-family: var(--mono);
   font-size: 0.68rem;
   font-weight: 700;
@@ -229,6 +229,105 @@ textarea:focus-visible {
   border-color: var(--orange);
 }
 
+[data-theme="dark"] .calendar-page,
+[data-theme="dark"] .settings-page {
+  --color-slate-50: var(--surface-2);
+  --color-slate-100: var(--surface-2);
+  --color-slate-200: var(--line);
+  --color-slate-300: var(--line-strong);
+  --color-slate-400: #9ca596;
+  --color-slate-500: #aeb6a9;
+  --color-slate-600: #c3cabf;
+  --color-slate-700: #d4d2c5;
+  --color-slate-800: #e2e0d4;
+  --color-slate-900: #161a15;
+  --color-slate-950: var(--ink);
+  --color-emerald-800: var(--moss);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .auth-page {
+  --color-slate-50: var(--surface);
+  --color-slate-100: var(--surface-2);
+  --color-slate-200: var(--line);
+  --color-slate-300: var(--line-strong);
+  --color-slate-400: #9ca596;
+  --color-slate-500: #aeb6a9;
+  --color-slate-600: #c3cabf;
+  --color-slate-700: #d4d2c5;
+  --color-slate-800: #e2e0d4;
+  --color-slate-900: #161a15;
+  --color-slate-950: var(--ink);
+  background-color: var(--canvas);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .auth-frame {
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: 8px 8px 0 var(--shadow-solid);
+}
+
+[data-theme="dark"] .auth-story {
+  border-right-color: var(--line);
+  background: var(--surface-2);
+}
+
+[data-theme="dark"] .auth-deck,
+[data-theme="dark"] .auth-card form > div label {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .auth-card input:not([type="radio"]):not([type="checkbox"]) {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .auth-page .text-gray-500,
+[data-theme="dark"] .auth-page .text-gray-600 {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .auth-page .text-amber-800 {
+  color: var(--signal-ink);
+}
+
+[data-theme="dark"] .auth-page .bg-slate-700:hover {
+  background-color: #30332d;
+}
+
+[data-theme="dark"] .auth-card form button[type="submit"] {
+  background-color: #161a15;
+}
+
+[data-theme="dark"] .social-auth-button {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .brand-mark {
+  color: var(--canvas);
+}
+
+[data-theme="dark"] .calendar-page .bg-white,
+[data-theme="dark"] .settings-page .bg-white {
+  background-color: var(--surface);
+}
+
+[data-theme="dark"] .calendar-page .bg-emerald-800.text-white {
+  color: var(--canvas);
+}
+
+[data-theme="dark"] .settings-page .bg-slate-900 {
+  background-color: #161a15;
+}
+
+[data-theme="dark"] .settings-page .text-rose-800 {
+  color: var(--danger);
+}
+
 .auth-panel-title {
   margin-top: 0.4rem;
   color: var(--ink);
@@ -243,7 +342,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  color: #787c71;
+  color: var(--muted);
   font-family: var(--mono);
   font-size: 0.58rem;
   font-weight: 600;

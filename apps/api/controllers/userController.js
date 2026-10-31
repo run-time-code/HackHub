@@ -11,6 +11,11 @@ const {
 const Registration = require("../models/Registration");
 const Hackathon = require("../models/Hackathon");
 
+function cloudinaryConfigured() {
+    const config = cloudinary.config();
+    return Boolean(config.cloud_name && config.api_key && config.api_secret);
+}
+
 const DEFAULT_LINKS = Object.freeze({
     github: "",
     linkedin: "",
@@ -415,14 +420,20 @@ const uploadAvatar = async (req, res) => {
             });
         }
 
-        const user = await User.findById(req.user.id);
+        if (!cloudinaryConfigured()) {
+            return res.status(503).json({
+                message: "Avatar storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+            });
+        }
+
+        const user = await User.findById(req.user.id).select("+avatarPublicId");
 
         if (!user) {
             return res.status(404).json({
                 message: "User not found"
             });
         }
-        console.log(`Uploading avatar for user: ${user.email}`);
+        const previousPublicId = user.avatarPublicId;
 
         const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
@@ -443,11 +454,24 @@ const uploadAvatar = async (req, res) => {
             stream.end(req.file.buffer);
         });
 
+        if (!result?.secure_url || !result?.public_id) {
+            return res.status(502).json({
+                message: "Avatar storage returned an incomplete upload result. Please try again."
+            });
+        }
+
         user.avatarUrl = result.secure_url;
+        user.avatarPublicId = result.public_id;
 
         await user.save();
 
-        console.log(`Avatar updated for user: ${user.email}`);
+        if (previousPublicId && previousPublicId !== result.public_id) {
+            try {
+                await cloudinary.uploader.destroy(previousPublicId, { resource_type: "image" });
+            } catch (cleanupError) {
+                console.warn("Previous avatar cleanup failed:", cleanupError.message);
+            }
+        }
 
         return res.status(200).json({
             message: "Avatar uploaded successfully",
@@ -461,6 +485,39 @@ const uploadAvatar = async (req, res) => {
         message: "Avatar upload failed"
     });
 }
+};
+
+const removeAvatar = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("+avatarPublicId");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.avatarPublicId) {
+            if (!cloudinaryConfigured()) {
+                return res.status(503).json({
+                    message: "Avatar storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+                });
+            }
+            const result = await cloudinary.uploader.destroy(user.avatarPublicId, {
+                resource_type: "image"
+            });
+            if (!["ok", "not found"].includes(result?.result)) {
+                return res.status(502).json({
+                    message: "Avatar storage could not remove the image. Please try again."
+                });
+            }
+        }
+
+        user.avatarUrl = "";
+        user.avatarPublicId = "";
+        await user.save();
+        return res.status(200).json({ message: "Avatar removed", avatarUrl: "" });
+    } catch (error) {
+        console.error("Avatar removal error:", error.message);
+        return res.status(502).json({ message: "Avatar could not be removed. Please try again." });
+    }
 };
 
 
@@ -720,6 +777,7 @@ module.exports = {
     getPublicProfile,
     updateMySkills,
     uploadAvatar,
+    removeAvatar,
     changePassword,
     revokeAllSessions,
     deleteMyAccount,

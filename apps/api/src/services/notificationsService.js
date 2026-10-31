@@ -56,14 +56,17 @@ async function createNotification({
   message = '',
   data = {},
   email = true,
+  reminder = null,
 }) {
-  const notification = await Notification.create({
+  const notificationData = {
     user: userId,
     type,
     title,
     message,
     data,
-  });
+  };
+  if (reminder) notificationData.reminder = reminder;
+  const notification = await Notification.create(notificationData);
   const payload = serialize(notification);
   publishNotification(userId, payload);
   if (email) {

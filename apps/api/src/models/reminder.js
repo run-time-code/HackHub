@@ -16,6 +16,9 @@ const reminderSchema = new Schema(
     channel: { type: String, enum: CHANNELS, default: 'email' },
     remindAt: { type: Date, required: true },
     active: { type: Boolean, default: true },
+    deliveredAt: { type: Date, default: null },
+    processingUntil: { type: Date, default: null },
+    lastError: { type: String, default: '', maxlength: 500 },
   },
   { timestamps: true }
 );
@@ -27,6 +30,7 @@ reminderSchema.index(
   { unique: true }
 );
 reminderSchema.index({ user: 1, remindAt: 1 });
+reminderSchema.index({ remindAt: 1, deliveredAt: 1, active: 1 });
 
 reminderSchema.set('toJSON', { virtuals: true });
 

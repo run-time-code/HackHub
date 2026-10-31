@@ -87,7 +87,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-viewport" aria-live="polite" aria-label="Notifications">
+      <div className="toast-viewport" role="region" aria-live="polite" aria-label="Notifications">
         {toasts.map((entry) => {
           const Icon = ICONS[entry.variant] || CheckCircle2;
           return (

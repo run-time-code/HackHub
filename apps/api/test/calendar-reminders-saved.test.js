@@ -19,6 +19,13 @@ const createApp = require('../src/app');
 const User = require('../models/User');
 const Hackathon = require('../models/Hackathon');
 const SavedHackathon = require('../models/SavedHackathon');
+const { Reminder } = require('../src/models/reminder');
+const { Notification } = require('../src/models/notification');
+const {
+  isInQuietHours,
+  processDueReminder,
+  processDueReminders,
+} = require('../src/services/reminderScheduler');
 
 describe('calendar, reminders, saved hackathons and account settings', () => {
   let server;
@@ -176,6 +183,17 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     const reloaded = await api('GET', '/reminders/preferences', undefined, { csrf: false });
     assert.deepEqual(reloaded.body.data, saved.body.data);
 
+    const otherUser = await User.create({ name: 'Other Owner', email: 'other-owner@test.com' });
+    const otherDefaults = await api('GET', '/reminders/preferences', undefined, {
+      token: sign(otherUser._id),
+      csrf: false,
+    });
+    assert.deepEqual(otherDefaults.body.data, {
+      defaultDaysBefore: 1,
+      channels: ['email'],
+      quietHours: { start: '22:00', end: '08:00' },
+    });
+
     const badChannel = await api('PUT', '/reminders/preferences', { channels: ['pigeon'] });
     assert.equal(badChannel.res.status, 400);
     const badTime = await api('PUT', '/reminders/preferences', {
@@ -225,6 +243,81 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
       daysBefore: 1,
     });
     assert.equal(unknown.res.status, 404);
+  });
+
+  it('dispatches a due reminder once and records delivery', async () => {
+    const reminder = await Reminder.findOne({ user: user._id, active: true });
+    await Reminder.updateOne(
+      { _id: reminder._id },
+      {
+        $set: {
+          channel: 'in_app',
+          remindAt: new Date('2029-01-01T00:00:00.000Z'),
+          processingUntil: null,
+        },
+      }
+    );
+
+    const deliveredId = await processDueReminder({ now: new Date('2031-01-01T08:00:00.000Z') });
+    assert.equal(String(deliveredId), String(reminder._id));
+    assert.equal(await Notification.countDocuments({ reminder: reminder._id }), 1);
+    assert.ok((await Reminder.findById(reminder._id)).deliveredAt);
+
+    assert.equal(
+      await processDueReminder({ now: new Date('2031-01-01T08:01:00.000Z') }),
+      null
+    );
+    assert.equal(await Notification.countDocuments({ reminder: reminder._id }), 1);
+  });
+
+  it('uses IST quiet hours and continues after an individual reminder fails', async () => {
+    assert.equal(
+      isInQuietHours(new Date('2031-01-01T18:00:00.000Z'), {
+        start: '22:00',
+        end: '08:00',
+      }),
+      true
+    );
+    assert.equal(
+      isInQuietHours(new Date('2031-01-01T02:30:00.000Z'), {
+        start: '22:00',
+        end: '08:00',
+      }),
+      false
+    );
+
+    const invalidUserId = new mongoose.Types.ObjectId();
+    const failedReminder = await Reminder.create({
+      user: invalidUserId,
+      hackathon: hackathon._id,
+      eventType: 'submission',
+      daysBefore: 4,
+      channel: 'in_app',
+      remindAt: new Date('2029-01-01T00:00:00.000Z'),
+    });
+    const deliverableReminder = await Reminder.create({
+      user: user._id,
+      hackathon: hackathon._id,
+      eventType: 'event',
+      daysBefore: 5,
+      channel: 'in_app',
+      remindAt: new Date('2030-01-01T00:00:00.000Z'),
+    });
+
+    const delivered = await processDueReminders({
+      now: new Date('2031-01-01T08:00:00.000Z'),
+      limit: 5,
+    });
+
+    assert.equal(delivered, 1);
+    assert.ok((await Reminder.findById(failedReminder._id)).lastError);
+    assert.ok((await Reminder.findById(failedReminder._id)).processingUntil);
+    assert.ok((await Reminder.findById(deliverableReminder._id)).deliveredAt);
+    assert.equal(await Notification.countDocuments({ reminder: deliverableReminder._id }), 1);
+    await Reminder.deleteMany({
+      _id: { $in: [failedReminder._id, deliverableReminder._id] },
+    });
+    await Notification.deleteOne({ reminder: deliverableReminder._id });
   });
 
   it('DELETE /reminders/:id removes the caller reminder only', async () => {

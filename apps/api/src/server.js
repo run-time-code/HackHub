@@ -7,6 +7,7 @@ const config = require('./config');
 const logger = require('./utils/logger');
 const createApp = require('./app');
 const { purgeDeletedAccounts } = require('../utils/accountPurge');
+const { processDueReminders, TIME_ZONE } = require('./services/reminderScheduler');
 
 if (config.sentryDsn) {
   Sentry.init({
@@ -52,6 +53,18 @@ cron.schedule(
     }
   },
   { timezone: 'Asia/Kolkata' }
+);
+
+cron.schedule(
+  '* * * * *',
+  async () => {
+    try {
+      await processDueReminders();
+    } catch (error) {
+      logger.error({ err: error }, '[reminder-dispatch] failed');
+    }
+  },
+  { timezone: TIME_ZONE }
 );
 
 function shutdown(signal) {

@@ -66,6 +66,67 @@ function hackathonCard(hackathon) {
     ...hackathon,
     eventStartDate: hackathon.startsAt || null,
     isActive: hackathon.isActive !== false,
+    source: hackathon.source || "demo",
+  };
+}
+
+function recommendationCard(hackathon) {
+  const profile = currentUser();
+  const domains = [...(hackathon.domains || []), hackathon.theme].filter(Boolean);
+  const factors = [];
+  const matches = (wanted, offered) => wanted.filter((value) =>
+    offered.some((candidate) => String(candidate).toLowerCase() === value.toLowerCase())
+  );
+  const interests = profile.preferences?.interests || [];
+  const skills = profile.skills || [];
+  const matchedInterests = matches(interests, domains);
+  const matchedSkills = matches(skills, hackathon.skills || []);
+  if (interests.length) factors.push({
+    key: "interests",
+    label: "Interest match",
+    earned: Math.round(20 * matchedInterests.length / interests.length),
+    possible: 20,
+  });
+  if (skills.length) factors.push({
+    key: "skills",
+    label: "Skill match",
+    earned: Math.round(20 * matchedSkills.length / skills.length),
+    possible: 20,
+  });
+  if (profile.preferences?.preferredMode) factors.push({
+    key: "mode",
+    label: "Format preference",
+    earned: String(hackathon.mode).toLowerCase() === String(profile.preferences.preferredMode).toLowerCase() ? 10 : 0,
+    possible: 10,
+  });
+  const dates = [hackathon.registrationDeadline, hackathon.submissionDeadline, hackathon.startsAt].filter(Boolean);
+  if (dates.length) factors.push({
+    key: "dates",
+    label: "Upcoming dates",
+    earned: dates.some((date) => new Date(date) >= new Date()) ? 20 : 0,
+    possible: 20,
+  });
+  if (hackathon.prizePool) factors.push({ key: "prize", label: "Prize information", earned: 10, possible: 10 });
+  const complete = [hackathon.description, hackathon.organizer, hackathon.url, domains.length || (hackathon.skills || []).length].filter(Boolean).length;
+  factors.push({ key: "details", label: "Listing details", earned: complete * 5, possible: 20 });
+  const earned = factors.reduce((sum, factor) => sum + factor.earned, 0);
+  const possible = factors.reduce((sum, factor) => sum + factor.possible, 0);
+  return {
+    ...hackathonCard(hackathon),
+    worthScore: possible ? Math.round(earned / possible * 100) : 0,
+    scoreBreakdown: {
+      earned,
+      possible,
+      factors,
+      methodology: "Profile fit, upcoming dates, disclosed prize, and listing completeness. A heuristic, not a prediction of event outcomes.",
+    },
+    recommendationReasons: [
+      ...matchedInterests.map((value) => `Matches your interest in ${value}`),
+      ...matchedSkills.map((value) => `Uses your ${value} skill`),
+      String(hackathon.mode).toLowerCase() === String(profile.preferences?.preferredMode || "").toLowerCase()
+        ? `Matches your ${String(hackathon.mode).toLowerCase()} format preference`
+        : "",
+    ].filter(Boolean),
   };
 }
 
@@ -644,15 +705,62 @@ const sessionHandlers = [
 // ---------------------------------------------------------------------------
 
 const metadataHandlers = [
+  http.get(endpoint("/hackathons/facets"), async () => {
+    await settle(30);
+    const values = (field) => {
+      const counts = new Map();
+      for (const item of hackathons()) {
+        const terms = Array.isArray(item[field]) ? item[field] : [item[field]];
+        for (const term of terms.filter(Boolean)) counts.set(term, (counts.get(term) || 0) + 1);
+      }
+      return [...counts].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value));
+    };
+    return ok({
+      domains: values("domains"),
+      skills: values("skills"),
+      modes: values("mode"),
+      sources: [{ value: "demo", count: hackathons().length }],
+    });
+  }),
+
+  http.get(endpoint("/hackathons/recommendations"), async ({ request }) => {
+    await settle(60);
+    const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit")) || 12, 1), 50);
+    const items = hackathons().filter((item) => item.isActive !== false).map(recommendationCard)
+      .sort((a, b) => b.worthScore - a.worthScore || a.title.localeCompare(b.title))
+      .slice(0, limit);
+    return ok({ items, total: items.length, candidateCount: items.length });
+  }),
+
   http.get(endpoint("/hackathons"), async ({ request }) => {
     await settle(80);
     const params = new URL(request.url).searchParams;
     const page = Math.max(Number(params.get("page")) || 1, 1);
     const limit = Math.min(Math.max(Number(params.get("limit")) || 20, 1), 50);
-    const active = params.get("active");
-    const list = hackathons().filter((hackathon) =>
-      active === null ? true : hackathon.isActive === (active === "true")
+    const text = (value) => String(value || "").toLowerCase();
+    let list = hackathons().map(hackathonCard).filter((hackathon) => {
+      const active = params.get("active");
+      const hasPrize = params.get("hasPrize");
+      const upcoming = params.get("upcoming");
+      const q = text(params.get("q"));
+      return (active === null || hackathon.isActive === (active === "true")) &&
+        (!q || [hackathon.title, hackathon.organizer, hackathon.description].some((value) => text(value).includes(q))) &&
+        (!params.get("domain") || (hackathon.domains || []).some((value) => text(value).includes(text(params.get("domain"))))) &&
+        (!params.get("skill") || (hackathon.skills || []).some((value) => text(value).includes(text(params.get("skill"))))) &&
+        (!params.get("mode") || text(hackathon.mode) === text(params.get("mode"))) &&
+        (!params.get("location") || text(hackathon.location).includes(text(params.get("location")))) &&
+        (!params.get("source") || text(hackathon.source) === text(params.get("source"))) &&
+        (hasPrize !== "true" || Boolean(hackathon.prizePool)) &&
+        (upcoming !== "true" || [hackathon.registrationDeadline, hackathon.submissionDeadline, hackathon.startsAt]
+          .some((value) => value && new Date(value) >= new Date()));
+    });
+    const sort = params.get("sort") || "title";
+    if (sort === "newest") list = list.reverse();
+    else if (sort === "deadline") list.sort((a, b) =>
+      new Date(a.registrationDeadline || a.submissionDeadline || a.startsAt || "9999-12-31") -
+      new Date(b.registrationDeadline || b.submissionDeadline || b.startsAt || "9999-12-31")
     );
+    else list.sort((a, b) => a.title.localeCompare(b.title));
     return ok({
       items: list.slice((page - 1) * limit, page * limit),
       total: list.length,

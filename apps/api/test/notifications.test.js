@@ -114,6 +114,25 @@ describe('notifications', () => {
     assert.equal(unread.body.data.total, 2);
   });
 
+  it('creates multiple notifications without a reminder reference', async () => {
+    const user = await User.create({ name: 'No reminder', email: 'no-reminder@test.com' });
+    await notificationsService.createNotification({
+      userId: user._id,
+      type: 'team_full',
+      title: 'First notification',
+      email: false,
+    });
+    await notificationsService.createNotification({
+      userId: user._id,
+      type: 'request_accepted',
+      title: 'Second notification',
+      email: false,
+    });
+
+    const result = await notificationsService.listNotifications(user._id);
+    assert.equal(result.total, 2);
+  });
+
   it('marks one notification read without leaking other users', async () => {
     const list = await api('GET', '/notifications', { token });
     const id = list.body.data.items[0].id;

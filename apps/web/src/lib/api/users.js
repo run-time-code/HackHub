@@ -87,6 +87,11 @@ export async function uploadAvatar(file) {
   return payload?.avatarUrl || "";
 }
 
+export async function removeAvatar() {
+  const payload = await api.delete("/users/avatar");
+  return payload?.avatarUrl || "";
+}
+
 export async function saveOnboarding(values) {
   return api.put("/users/me/onboarding", values);
 }
