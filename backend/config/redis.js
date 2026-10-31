@@ -14,7 +14,17 @@ redisClient.on("connect", () => {
 
 const connectRedis = async () => {
     if (!redisClient.isOpen) {
-        await redisClient.connect();
+        try {
+            await Promise.race([
+                redisClient.connect(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Redis connection timeout after 5s")), 5000)
+                )
+            ]);
+            console.log("Redis connected successfully");
+        } catch (error) {
+            console.warn("Redis unavailable (caching disabled):", error.message);
+        }
     }
 };
 

@@ -27,9 +27,25 @@ const sanitizeObject = (value, allowDottedKeys = false) => {
     return value;
 };
 
+const sanitizeValue = (value) => {
+    // Sanitize the request body, query and params so user-supplied keys
+    // like $where / $gt or dotted keys cannot inject operators or paths.
+    return sanitizeObject(value);
+};
+
 const sanitizeMiddleware = (req, res, next) => {
     if (req.body && typeof req.body === "object") {
         req.body = sanitizeObject(req.body);
+    }
+
+    // Query and path parameters are user input too — sanitize them so a
+    // request such as /users?role[$ne]=admin cannot inject operators.
+    if (req.query && typeof req.query === "object") {
+        req.query = sanitizeValue(req.query);
+    }
+
+    if (req.params && typeof req.params === "object") {
+        req.params = sanitizeValue(req.params);
     }
 
     next();

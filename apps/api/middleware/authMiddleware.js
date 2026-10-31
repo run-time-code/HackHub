@@ -2,6 +2,9 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const logger = require("../src/utils/logger");
 
+// Structured logger (avoids console.* which bypasses pino-http).
+const logger = require("../../src/utils/logger");
+
 // Accept the httpOnly accessToken cookie as well as an Authorization:
 // Bearer header so API clients and tests can authenticate too.
 const extractToken = (req) => {
@@ -14,15 +17,10 @@ const extractToken = (req) => {
     return req.cookies?.accessToken;
 };
 
-// Verify against every configured secret so tokens from either issuer keep
-// working until auth is unified (mirrors src/middleware/requireAuth).
-const secrets = () =>
-    [
-        process.env.ACCESS_TOKEN_SECRET,
-        process.env.JWT_SECRET
-    ].filter(
-        (secret) => typeof secret === "string" && secret.length > 0
-    );
+// Single canonical issuer secret. The legacy ACCESS_TOKEN_SECRET is
+// deprecated: keeping both in the verification loop would let a token
+// minted with one validate against a different secret.
+const secrets = () => [process.env.JWT_SECRET];
 
 const requireAuth = async (req, res, next) => {
     const token = extractToken(req);
@@ -90,6 +88,7 @@ if (user.banned === true) {
             });
         }
 
+        
         logger.error({ err: error }, "Authentication error");
 
         return res.status(500).json({

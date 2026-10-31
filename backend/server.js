@@ -18,6 +18,12 @@ app.use(express.json());
 
 const startServer = async () => {
     try {
+        // Validate JWT_ACCESS_SECRET before starting
+        const jwtSecret = process.env.JWT_ACCESS_SECRET;
+        if (!jwtSecret || Buffer.byteLength(jwtSecret, "utf8") < 32) {
+            throw new Error("JWT_ACCESS_SECRET must be set to a secret containing at least 32 bytes");
+        }
+
         await connectDB();
         await connectRedis();
 
