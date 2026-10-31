@@ -17,6 +17,10 @@ const notificationSchema = new Schema(
     title: { type: String, required: true, trim: true, maxlength: 120 },
     message: { type: String, default: '', trim: true, maxlength: 500 },
     data: { type: Schema.Types.Mixed, default: {} },
+    reminder: {
+      type: Schema.Types.ObjectId,
+      ref: 'Reminder',
+    },
     read: { type: Boolean, default: false, index: true },
     readAt: { type: Date, default: null },
   },
@@ -25,6 +29,10 @@ const notificationSchema = new Schema(
 
 notificationSchema.index({ user: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index(
+  { reminder: 1 },
+  { unique: true, sparse: true }
+);
 
 notificationSchema.set('toJSON', { virtuals: true });
 

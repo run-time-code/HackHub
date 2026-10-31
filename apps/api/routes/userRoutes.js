@@ -7,6 +7,7 @@ const {
     getPublicProfile,
     updateMySkills,
     uploadAvatar,
+    removeAvatar,
     changePassword,
     revokeAllSessions,
     deleteMyAccount,
@@ -63,6 +64,13 @@ router.put(
         });
     },
     uploadAvatar
+);
+
+router.delete(
+    "/avatar",
+    requireAuth,
+    doubleCsrfProtection,
+    removeAvatar
 );
 
 router.put(

@@ -44,6 +44,7 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
 
   let hackathon;
   let hidden;
+  let recommendedHackathon;
 
   before(async () => {
     mongo = await MongoMemoryServer.create();
@@ -52,6 +53,21 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
       { hackathon_id: 'pixel-hack-2026', title: 'Pixel Hack 2026' },
       { hackathon_id: 'hidden-hack', title: 'Hidden Hack', is_hidden: true },
     ]);
+    [recommendedHackathon] = await Hackathon.create([{
+      hackathon_id: 'ai-builder-challenge',
+      title: 'AI Builder Challenge',
+      description: 'Build tools for responsible AI.',
+      organizer: 'HackHub Labs',
+      url: 'https://example.com/ai-builder',
+      mode: 'online',
+      location: 'Online',
+      domains: ['AI'],
+      skills: ['React'],
+      prize_pool: '$5,000',
+      registration_deadline: new Date('2030-05-01T00:00:00.000Z'),
+      source: 'official',
+      external_id: 'official-1',
+    }]);
     const leaderId = new mongoose.Types.ObjectId().toHexString();
     memberId = new mongoose.Types.ObjectId().toHexString();
     const outsiderId = new mongoose.Types.ObjectId().toHexString();
@@ -98,6 +114,46 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
 
     const hiddenRow = await fetch(`${base}/hackathons/${hidden._id}`);
     assert.equal(hiddenRow.status, 404);
+  });
+
+  it('filters catalogue fields, sorts deadlines and returns counted facets', async () => {
+    const filtered = await fetch(
+      `${base}/hackathons?domain=AI&skill=React&source=official&location=Online&hasPrize=true&upcoming=true&sort=deadline`
+    );
+    assert.equal(filtered.status, 200);
+    const filteredBody = await filtered.json();
+    assert.equal(filteredBody.data.total, 1);
+    assert.equal(filteredBody.data.items[0].slug, 'ai-builder-challenge');
+
+    const facets = await fetch(`${base}/hackathons/facets`);
+    assert.equal(facets.status, 200);
+    const facetBody = await facets.json();
+    assert.ok(facetBody.data.domains.some((facet) => facet.value === 'AI' && facet.count === 1));
+    assert.ok(facetBody.data.sources.some((facet) => facet.value === 'official'));
+
+    const invalidSort = await fetch(`${base}/hackathons?sort=untrusted`);
+    assert.equal(invalidSort.status, 400);
+  });
+
+  it('returns authenticated recommendations with explainable user-specific scores', async () => {
+    const member = await User.findById(memberId);
+    member.skills = ['React'];
+    member.preferences = { interests: ['AI'], preferredMode: 'online' };
+    await member.save();
+
+    const { res, body } = await api('GET', '/hackathons/recommendations', memberToken);
+    assert.equal(res.status, 200);
+    assert.equal(body.data.items[0].id, String(recommendedHackathon._id));
+    assert.equal(body.data.items[0].worthScore, 100);
+    assert.deepEqual(body.data.items[0].recommendationReasons, [
+      'Matches your interest in ai',
+      'Uses your react skill',
+      'Matches your online format preference',
+    ]);
+    assert.match(body.data.items[0].scoreBreakdown.methodology, /heuristic/);
+
+    const unauthorized = await fetch(`${base}/hackathons/recommendations`);
+    assert.equal(unauthorized.status, 401);
   });
 
   it('POST /teams rejects unknown hackathons instead of orphaning teams', async () => {

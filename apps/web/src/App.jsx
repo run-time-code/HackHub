@@ -13,6 +13,7 @@ const AuthPage = lazy(() => import("./pages/AuthPage"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/app/Dashboard"));
 const Discover = lazy(() => import("./pages/Discover"));
+const HackathonDetail = lazy(() => import("./pages/HackathonDetail"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Teammates = lazy(() => import("./pages/app/Teammates"));
@@ -122,6 +123,7 @@ export default function App() {
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/discover/:id" element={<HackathonDetail />} />
               <Route path="/discover" element={<Discover />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/teammates" element={<Teammates />} />

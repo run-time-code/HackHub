@@ -71,13 +71,13 @@ done by someone else — Lalitha authored none of it.**
 |---|---|---|---|---|---|
 | 1.1.1 Project setup + Tailwind theme (W1) | 3 | Lalitha | **Rubashree** (initial frontend scaffold, 2026-09-14) + **Divyashree** (design tokens) | 🟨 | `apps/web/` Vite+React (not Next.js), `apps/web/src/styles/tokens.css`, Tailwind v4 limited to auth/legacy surfaces |
 | 1.1.2 Reusable component kit (W1) | 5 | Lalitha | **Divyashree** | 🟨 | `apps/web/src/components/ui/{Button,Badge,Dialog,Field,Switch,Avatar,EmptyState,MatchRing}.jsx` — no Storybook and no `/design` demo page |
-| 1.1.3 Hackathon listing + detail pages (W1) | 8 | Lalitha | **Rubashree** | 🟨 | Listing: `pages/Discover.jsx`, `components/HackathonCard.jsx`. **No hackathon detail route exists** (`App.jsx` has `/discover` only) |
-| 1.2.1 Search bar + filter panel (W2) | 8 | Lalitha | **Rubashree** (UI) + **Senthil** / **Divyashree** (API) | 🟨 | Only `q` / `domain` / `mode` filters in `Discover.jsx`; API does regex match in `apps/api/src/services/hackathonsService.js`. **No facet counts, no other filters, no mobile drawer** |
-| 1.2.2 Shareable links, sorting, pagination (W2) | 5 | Lalitha | **Rubashree** | 🟨 | Page-based pagination exists; **filters are not in the URL**, no sort control, no infinite scroll / scroll restore |
+| 1.1.3 Hackathon listing + detail pages (W1) | 8 | Lalitha | **Rubashree** | ✅ | Listing: `pages/Discover.jsx`, `components/HackathonCard.jsx`; detail route added at `/discover/:id` (working-tree follow-up, §15) |
+| 1.2.1 Search bar + filter panel (W2) | 8 | Lalitha | **Rubashree** (UI) + **Senthil** / **Divyashree** (API) | 🟨 | Search, domain/skill/mode/location/source/upcoming/prize filters and counted facets now exist (working-tree follow-up, §15); no dedicated mobile filter drawer |
+| 1.2.2 Shareable links, sorting, pagination (W2) | 5 | Lalitha | **Rubashree** | 🟨 | Filters, sort, and page are URL-synced; page-based pagination exists. Infinite scroll and scroll restoration remain absent |
 | 1.2.3 Save/bookmark button on cards (W2) | 3 | Lalitha | **Rubashree** + **Berwin** (`/saved` APIs) + **Divyashree** (`/saved` CRUD) | ✅ | `Discover.jsx` `handleSave()`, dashboard tracking, `apps/api/src/routes/saved.js` |
-| 1.3.1 Worth Score display (W3) | 8 | Lalitha | — | ⬜ | Only a `worthScore` placeholder field in `HackathonCard.jsx`; **no score API, no breakdown chart, no tooltip** |
-| 1.3.2 "Recommended for you" + home sections (W3) | 5 | Lalitha | — | ⬜ | `rg recommend apps/` → no matches |
-| 1.3.3 Compare hackathons (W3, **Bonus**) | 3 | Lalitha | — | ⭕ | not built |
+| 1.3.1 Worth Score display (W3) | 8 | Lalitha | — | ✅ | Authenticated API returns a documented heuristic score and factor breakdown; cards expose the factors (working-tree follow-up, §15) |
+| 1.3.2 "Recommended for you" + home sections (W3) | 5 | Lalitha | — | ✅ | Discover displays active listings ranked using saved profile interests/skills and explains matching factors (working-tree follow-up, §15) |
+| 1.3.3 Compare hackathons (W3, **Bonus**) | 3 | Lalitha | — | ✅ | Discover supports selecting up to three events and comparing event details side by side (working-tree follow-up, §15) |
 | 1.4.1 Speed & SEO (W4) | 5 | Lalitha | **Rubashree** (scaffold) + **Divyashree** (landing) | 🟨 | `index.html` title + meta description only. **No sitemap.xml, robots.txt, OpenGraph/Twitter cards, SSR or Lighthouse gate** |
 | 1.4.2 Error & edge-case handling (W4) | 3 | Lalitha | **Rubashree** + **Senthil** | 🟨 | `pages/NotFound.jsx`, Sentry `ErrorBoundary` in `main.jsx`, retry in `Discover.jsx`. No offline banner / custom 500 |
 | 1.4.3 Bug fixes & visual polish (W4) | 5 | Lalitha | **Senthil** (`fix: resolve QA findings…`), **Divyashree** (`docs/design/QA_REPORT.md`), **Rubashree** | ✅ | QA report + fix commits, 320px→1440px notes in QA report |
@@ -86,7 +86,7 @@ done by someone else — Lalitha authored none of it.**
 
 ## 3. PERSON 2 — Rubashree · Frontend (assigned 61 EP) — 6 commits
 
-**Verdict: 8 of 12 complete, 3 partial, 1 bonus skipped. The strongest frontend delivery after Divyashree.**
+**Verdict at report generation: 8 of 12 complete, 3 partial, 1 bonus skipped. Working-tree follow-up in §15 implements the bonus and adds detail, scoring, and recommendations; platform sourcing remains externally blocked.**
 
 | Task | EP | Assigned to | **Done by** | Status | Evidence |
 |---|---|---|---|---|---|
@@ -97,10 +97,10 @@ done by someone else — Lalitha authored none of it.**
 | 2.2.2 Status management (W2) | 5 | Rubashree | **Rubashree** + **Berwin** (API) | ✅ | `updateSavedHackathon`, `removeSavedHackathon`, private notes, status change from the UI |
 | 2.2.3 Dashboard search, filters, empty screens (W2) | 3 | Rubashree | **Rubashree** | ✅ | Tab filter + search term + friendly empty states in `pages/Dashboard.jsx` |
 | 2.3.1 Calendar views (W3) | 8 | Rubashree | **Rubashree** (UI) + **Divyashree** (`GET /calendar`) | ✅ | `pages/Calendar.jsx` — `VIEWS = ["month","week","agenda"]`, IST default |
-| 2.3.2 Reminder settings (W3) | 5 | Rubashree | **Rubashree** (form) + **Divyashree** (API) | 🟨 | `components/ReminderPreferencesForm.jsx`, `GET/PUT /reminders/preferences`. **No scheduler in the deployed API** — reminders are never dispatched |
-| 2.3.3 Calendar export `.ics` (W3, **Bonus**) | 3 | Rubashree | — | ⭕ | README lists ICS export as "still planned" |
-| 2.4.1 Accessibility WCAG 2.1 AA (W4) | 5 | Rubashree | **Divyashree** (`docs/design/QA_REPORT.md` a11y section) | 🟨 | Labels, `role="status"/"alert"`, `aria-pressed`, reduced-motion smoke run. **No axe-core run in CI** |
-| 2.4.2 Browser & screen-size testing (W4) | 5 | Rubashree | **Divyashree** (browser smoke checks in QA report) | 🟨 | One documented smoke run; no BrowserStack / device matrix |
+| 2.3.2 Reminder settings (W3) | 5 | Rubashree | **Rubashree** (form) + **Divyashree** (API) | 🟨 | User-scoped preferences and deployed minute scheduler now dispatch with IST quiet-hour/deduplication handling (working-tree follow-up, §15); external email credentials still require deployment configuration |
+| 2.3.3 Calendar export `.ics` (W3, **Bonus**) | 3 | Rubashree | — | ✅ | Working-tree follow-up adds `.ics` export, UTC normalization, escaping, folding, and tests (§15) |
+| 2.4.1 Accessibility WCAG 2.1 AA (W4) | 5 | Rubashree | **Divyashree** (`docs/design/QA_REPORT.md` a11y section) | 🟨 | Focus/semantic improvements and axe-core tests; Chromium axe check found no critical/serious violations on six routes in light/dark. Full WCAG certification and assistive-technology testing remain |
+| 2.4.2 Browser & screen-size testing (W4) | 5 | Rubashree | **Divyashree** (browser smoke checks in QA report) | 🟨 | Chromium responsive checks passed at ten requested widths for six page groups; Firefox, Edge, Safari and real devices were unavailable (§15) |
 | 2.4.3 Settings & account pages (W4) | 3 | Rubashree | **Rubashree** (UI) + **Berwin** (endpoints) | ✅ | `pages/Settings.jsx`, `/users/me/change-password`, `/users/me/export`, `DELETE /users/me` |
 
 ---
@@ -319,8 +319,8 @@ they came from Senthil, Divyashree and Berwin.
 | Week | Planned goal | Actual state | Verdict |
 |---|---|---|---|
 | **1 — Build the Base** | Register/login, browse real hackathons from **2 platforms** on staging, CI/CD working | Register/login/verify/reset ✅, CI ✅, staging pipeline ✅, catalogue = 1 platform (Devpost ingestion) + a file importer | 🟨 |
-| **2 — Find & Personalize** | Hackathons from **all 6 platforms**, full search/filter/save/dashboard/profile, recommendations + Worth Score v1 | Dashboard ✅, profile ✅, search is 3 regex filters 🟨, 1 of 6 platforms 🟨, **recommendations ⬜, Worth Score ⬜** | 🔴 |
-| **3 — Connect & Collaborate** | Teams + requests, calendar + email reminders, self-explaining Worth Score, instant notifications | Teams ✅, requests ✅, notifications SSE ✅, calendar UI ✅, **reminders never dispatched 🟨**, **Worth Score ⬜** | 🟡 |
+| **2 — Find & Personalize** | Hackathons from **all 6 platforms**, full search/filter/save/dashboard/profile, recommendations + Worth Score v1 | Dashboard/profile ✅, expanded filters/facets/sorting and URL state ✅, recommendations and heuristic Worth Score ✅; official multi-platform ingestion remains blocked pending documented/authorized sources | 🟨 |
+| **3 — Connect & Collaborate** | Teams + requests, calendar + email reminders, self-explaining Worth Score, instant notifications | Teams ✅, requests ✅, notifications SSE ✅, calendar UI/export ✅, deployed reminder dispatch ✅; email provider configuration is still needed for email delivery | 🟨 |
 | **4 — Polish & Launch** | Security audit, speed, re-test, student trial, monitoring/backups, **v1.0 live** | Monitoring ✅, ops docs ✅, gitleaks ✅, k6 baseline run ✅, **no ZAP/OWASP audit ⬜, no student trial ⬜, no Lighthouse gate ⬜, no recorded v1.0 go-live ⬜** | 🔴 |
 
 ---
@@ -331,11 +331,11 @@ they came from Senthil, Divyashree and Berwin.
 |---|---|---|
 | All must-do tasks finished, no open serious bugs | 🟨 | 49 of 109 tasks complete, 37 partial, 23 not done |
 | OWASP checklist complete, ZAP fixed, secrets scan clean | 🟨 | Gitleaks ✅ only |
-| Lighthouse 90+, no critical axe issues | ⬜ | No Lighthouse/axe run recorded |
+| Lighthouse 90+, no critical axe issues | 🟨 | Chromium axe check: no critical/serious findings on six selected routes in two themes; no Lighthouse 90+ run or full-site axe gate |
 | 95% of API requests < 300 ms in load test | 🟨 | Local baseline run 2026-10-31: p95 **129 ms**, 0.00 % errors, 100 % checks (`tools/loadtest/RESULTS.md`). Staging-scale run still pending credentials |
 | Atlas backups on, restore tested | 🟨 | **Backup/restore drill verified 2026-10-31** (314 documents restored, inventory match, exit 0) after fixing the drill's `mongorestore --uri` bug. Atlas PITR itself still needs the Atlas account |
 | Sentry, uptime monitoring, alerts working | ✅ | Sentry + `uptime.yml` + Grafana dashboard |
-| Collectors scheduled, healthy, alerting | ⬜ | Only an ad-hoc Devpost ingestion |
+| Collectors scheduled, healthy, alerting | ⬜ | No approved source adapters or scheduled collector; the existing Devpost JSON endpoint is not documented by Devpost as an authorized public API |
 | Terms, Privacy, cookie consent, source credit live | ✅ | Legal pages + `ConsentProvider` |
 | Rollback plan practiced, go/no-go held | 🟨 | Rollback procedure documented, meeting not recorded |
 | Someone on call for first 48 hours | ⬜ | No record |
@@ -344,13 +344,12 @@ they came from Senthil, Divyashree and Berwin.
 
 ## 14. Top gaps to close (priority order)
 
-1. **Collectors for the other 5 platforms** + a schedule (Gokul's area — currently 1/6, done by Senthil).
-   The product's core promise depends on it.
-2. **Worth Score + recommendations service** (Selva's area — 0 code). Endpoints, scoring, and the UI breakdown.
-3. **Reminder dispatch job in the deployed API** (Nandhini's area). Users can save reminders that never fire.
+1. **Authorized hackathon data sources** for MLH, Unstop, Devfolio, HackerEarth, Hack2Skill and Devpost. Official-source research found no public documented API/feed; do not scrape or schedule the undocumented Devpost endpoint. Platform approval/API details are required.
+2. **Production reminder email configuration** (`RESEND_API_KEY`, `EMAIL_FROM`) and verify scheduler behavior under the deployed process topology.
+3. **Cloudinary avatar-storage credentials** for persistent uploads/removal; the current local environment has no configured Cloudinary credentials.
 4. **Hire in the three empty seats or reassign their EP** — Lalitha (61), Gokul (61), Selva (62) = **184 EP ≈ 33% of the plan** has no author.
 5. **Testing ownership for Deva** — no authored tests, no e2e runner, no ZAP/Lighthouse gates.
-6. **Hackathon detail page, facets, URL-synced filters, SEO basics** (Lalitha's remaining UI work).
+6. **Broader accessibility/browser checks** — full-site axe/assistive-tech review, Lighthouse, and Firefox/Edge/Safari.
 7. **Decide the `backend/` prototype's fate** — either merge Nandhini's reminder/cache/ingestion work into
    `apps/api` or delete it; today it is dead code that makes the report look better than reality.
 
@@ -358,3 +357,35 @@ they came from Senthil, Divyashree and Berwin.
 
 *Generated from repository evidence on 2026-10-31. Authorship comes from `git log`/`git shortlog`,
 co-author trailers and per-file history; status comes from inspecting the code paths named in each row.*
+
+---
+
+## 15. Working-tree follow-up — 2026-10-31
+
+The status tables above were first generated before the follow-up implementation. The following updates describe the current working tree and are not yet represented in git history; historical contributor counts/authorship are unchanged.
+
+### Implemented after the report's initial audit
+
+- Added the `/discover/:id` hackathon detail route, richer discovery filters with counted facets, URL-preserved filters/sorting/pagination, and a three-event comparison table.
+- Added authenticated `/hackathons/recommendations` ranking with a visible score breakdown. The score is a transparent heuristic over profile fit, upcoming dates, disclosed prizes, and listing completeness; it is not a prediction of outcomes.
+- Added a profile avatar removal endpoint, Cloudinary asset identifiers/cleanup, and explicit missing-provider errors. Avatar upload/removal requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`; these are absent from the current local environment.
+- Reminder dispatch, `.ics` export, responsive checks and the axe checks are documented in `docs/RUBASHREE_TASK_COMPLETION.md`.
+
+### Official platform source gate
+
+The requested source policy was **official APIs/feeds only**. Review of official sources found public event listing pages but no documented machine-readable public API/feed for MLH, Unstop, Devfolio, HackerEarth or Hack2Skill. The existing Devpost JSON endpoint is not documented by Devpost as an authorized public API for ingestion. Therefore no new collectors were added and none was scheduled. This remains blocked until the platforms provide or approve documented API/feed access.
+
+Reviewed official pages:
+
+- [MLH events](https://www.mlh.com/seasons/2026/events) and [MLH partnerships](https://sponsor.mlh.com/)
+- [Unstop opportunities](https://unstop.com/hackathons)
+- [Devfolio hackathons](https://devfolio.co/hackathons)
+- [HackerEarth help center](https://help.hackerearth.com/)
+- [Hack2Skill events](https://hack2skill.com/events)
+- [Devpost public hackathons](https://info.devpost.com/product/public-hackathons) and [Devpost terms](https://info.devpost.com/legal/terms-of-service)
+
+### Current implementation limitations
+
+- Official multi-platform ingestion needs approved API/feed documentation and any required credentials. No scraping or undocumented endpoint polling was added.
+- Cloudinary storage code is wired, but actual uploads and asset deletion cannot be verified until deployment credentials are configured.
+- Full cross-browser/device/screen-reader testing, Lighthouse, staging production tests and externally imported `.ics` verification remain open.

@@ -17,14 +17,14 @@
   /* Ink */
   --ink: #161a15;
   --ink-2: #3d453c;
-  --muted: #6e7569;
-  --faint: #8f9588;
+  --muted: #5a6157;
+  --faint: #5f665c;
   --line: #d8d2c3;
   --line-strong: #bdb6a4;
 
   /* Accent */
-  --signal: #e8592e;
-  --signal-hover: #d24a21;
+  --signal: #a33b1d;
+  --signal-hover: #8c2c11;
   --signal-ink: #8c2c11;
   --signal-soft: #f7e3d8;
   --moss: #2e5b44;

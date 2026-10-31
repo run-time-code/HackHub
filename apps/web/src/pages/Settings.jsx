@@ -87,7 +87,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="settings-page space-y-7">
       <section>
         <p className="field-label">YOUR ACCOUNT / 05</p>
         <h1 className="product-heading mt-2">Keep it yours.</h1>

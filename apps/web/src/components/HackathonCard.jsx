@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import {
   formatDate,
@@ -20,6 +21,8 @@ export default function HackathonCard({
   actionBusy = false,
   isSaving = false,
   isSaved = false,
+  onCompare,
+  isCompared = false,
 }) {
   const [notes, setNotes] = useState(trackingRecord?.notes || "");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -27,6 +30,7 @@ export default function HackathonCard({
   const id = getHackathonId(hackathon);
   const registrationDeadline = getRegistrationDeadline(hackathon);
   const submissionDeadline = getSubmissionDeadline(hackathon);
+  const detailsId = hackathon.slug || id;
 
   async function saveNotes() {
     setIsSavingNotes(true);
@@ -66,6 +70,34 @@ export default function HackathonCard({
         <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{hackathon.description}</p>
       )}
 
+      {hackathon.scoreBreakdown && (
+        <details className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-slate-700">
+          <summary className="cursor-pointer font-semibold">
+            How this score was calculated
+          </summary>
+          <p className="mt-2 text-xs leading-5">{hackathon.scoreBreakdown.methodology}</p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {hackathon.scoreBreakdown.factors.map((factor) => (
+              <li key={factor.key}>
+                {factor.label}: {factor.earned}/{factor.possible}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {hackathon.recommendationReasons?.length > 0 && (
+        <ul className="mt-2 space-y-1 text-xs text-emerald-900" aria-label="Why this is recommended">
+          {hackathon.recommendationReasons.map((reason) => <li key={reason}>{reason}</li>)}
+        </ul>
+      )}
+
+      <Link
+        to={`/discover/${encodeURIComponent(detailsId)}`}
+        className="mt-3 inline-flex w-fit rounded-sm text-sm font-semibold text-emerald-800 underline-offset-2 hover:underline focus-visible:outline-amber-700"
+      >
+        View hackathon details
+      </Link>
+
       <dl className="entry-facts mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
           <dt className="text-xs text-slate-500">Register by</dt>
@@ -94,6 +126,16 @@ export default function HackathonCard({
       )}
 
       <div className="mt-auto pt-5">
+        {onCompare && (
+          <button
+            type="button"
+            aria-pressed={isCompared}
+            onClick={() => onCompare(hackathon)}
+            className="mb-3 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {isCompared ? "Remove from comparison" : "Compare hackathon"}
+          </button>
+        )}
         {trackingRecord ? (
           <div className="space-y-3 border-t border-slate-100 pt-4">
             <label className="block text-sm font-medium text-slate-700" htmlFor={`status-${id}`}>

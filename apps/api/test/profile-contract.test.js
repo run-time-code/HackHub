@@ -16,6 +16,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const config = require('../src/config');
 const createApp = require('../src/app');
+const cloudinary = require('../config/cloudinary');
 const User = require('../models/User');
 
 describe('profile contract', () => {
@@ -56,6 +57,18 @@ describe('profile contract', () => {
     return { res, body: await res.json() };
   }
 
+  async function remove(path) {
+    const res = await fetch(`${base}${path}`, {
+      method: 'DELETE',
+      headers: {
+        authorization: 'Bearer '.concat(token),
+        'x-csrf-token': csrf.token,
+        cookie: csrf.cookie,
+      },
+    });
+    return { res, body: await res.json() };
+  }
+
   before(async () => {
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
@@ -85,7 +98,7 @@ describe('profile contract', () => {
 
   it('GET /users/me returns the full own-profile shape with defaults', async () => {
     const { res, body } = await get('/users/me');
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 200, JSON.stringify(body));
 
     assert.deepEqual(Object.keys(body.user).sort(), [
       'availability',
@@ -220,6 +233,38 @@ describe('profile contract', () => {
     const { body } = await get('/users/me');
     assert.deepEqual(body.user.skills, ['Node.js']);
     assert.deepEqual(body.user.skillProficiency, { 'Node.js': 'intermediate' });
+  });
+
+  it('removes a profile avatar from the account record', async () => {
+    user.avatarUrl = 'https://cdn.example.com/legacy-avatar.png';
+    await user.save();
+
+    const { res, body } = await remove('/users/avatar');
+    assert.equal(res.status, 200, JSON.stringify(body));
+    assert.equal(body.avatarUrl, '');
+    assert.equal((await User.findById(user._id)).avatarUrl, '');
+  });
+
+  it('returns an actionable service error when avatar storage is not configured', async () => {
+    const previousConfig = cloudinary.config();
+    cloudinary.config({ cloud_name: '', api_key: '', api_secret: '' });
+    try {
+      const form = new FormData();
+      form.append('avatar', new Blob(['image'], { type: 'image/png' }), 'avatar.png');
+      const res = await fetch(`${base}/users/avatar`, {
+        method: 'PUT',
+        headers: {
+          authorization: 'Bearer '.concat(token),
+          'x-csrf-token': csrf.token,
+          cookie: csrf.cookie,
+        },
+        body: form,
+      });
+      assert.equal(res.status, 503, JSON.stringify(await res.clone().json()));
+      assert.match((await res.json()).message, /CLOUDINARY_CLOUD_NAME/);
+    } finally {
+      cloudinary.config(previousConfig);
+    }
   });
 
   it('GET /users/public/:id never exposes private profile fields', async () => {

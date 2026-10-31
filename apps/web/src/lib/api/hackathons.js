@@ -27,6 +27,30 @@ export async function getHackathons(filters = {}) {
   };
 }
 
+export async function getHackathon(id) {
+  const data = await apiRequest(`/hackathons/${encodeURIComponent(id)}`);
+  if (!data || typeof data !== "object") {
+    throw new Error("The API returned an unexpected hackathon response.");
+  }
+  return data;
+}
+
+export async function getHackathonFacets() {
+  const data = await apiRequest("/hackathons/facets");
+  if (!data || typeof data !== "object") {
+    throw new Error("The API returned unexpected discovery filters.");
+  }
+  return data;
+}
+
+export async function getHackathonRecommendations({ limit = 12 } = {}) {
+  const data = await apiRequest(`/hackathons/recommendations?limit=${encodeURIComponent(limit)}`);
+  return {
+    items: collectionFrom(data, ["items", "results", "hackathons"]),
+    total: Number(data?.total) || 0,
+  };
+}
+
 export async function getSavedHackathons() {
   const data = await apiRequest("/saved");
   return collectionFrom(data, ["items", "results", "saved", "hackathons"]);

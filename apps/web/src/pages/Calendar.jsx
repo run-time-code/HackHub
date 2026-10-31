@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createReminder, getCalendarEvents, getReminders } from "../lib/api/calendar";
 import { getEventIdentity, getHackathonId, getHackathon, getTitle } from "../lib/utils/hackathon";
 import ReminderPreferencesForm from "../components/ReminderPreferencesForm";
+import { downloadCalendarIcs } from "../lib/ics";
 
 const TIME_ZONE = "Asia/Kolkata";
 const VIEWS = ["month", "week", "agenda"];
@@ -266,7 +267,7 @@ export default function Calendar() {
     : new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: TIME_ZONE }).format(focusDate);
 
   return (
-    <div className="space-y-7">
+    <div className="calendar-page space-y-7">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="field-label">THE DEADLINE MAP / 03</p>
@@ -277,6 +278,7 @@ export default function Calendar() {
           <button type="button" onClick={() => moveRange(-1)} aria-label="Previous period" className="grid size-10 place-items-center rounded-lg border border-slate-300 bg-white text-lg hover:bg-slate-50">‹</button>
           <button type="button" onClick={() => { setFocusDate(todayIst()); setSelectedEvent(null); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Today</button>
           <button type="button" onClick={() => moveRange(1)} aria-label="Next period" className="grid size-10 place-items-center rounded-lg border border-slate-300 bg-white text-lg hover:bg-slate-50">›</button>
+          <button type="button" onClick={() => downloadCalendarIcs(events)} disabled={!events.length} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Export .ics</button>
         </div>
       </section>
 
@@ -318,7 +320,12 @@ export default function Calendar() {
               </div>
             ) : <p className="py-12 text-center text-sm text-slate-600">No events in this period.</p>
           ) : (
-            <div className="grid grid-cols-7 overflow-x-auto rounded-lg border border-slate-200">
+            <div
+              className="grid grid-cols-7 overflow-x-auto rounded-lg border border-slate-200"
+              role="region"
+              aria-label={`Calendar ${view} view`}
+              tabIndex={0}
+            >
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                 <div key={day} className="border-b border-r border-slate-200 bg-slate-50 p-2 text-center text-xs font-semibold text-slate-600">{day}</div>
               ))}

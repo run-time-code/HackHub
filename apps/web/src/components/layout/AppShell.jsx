@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -64,6 +64,7 @@ export default function AppShell() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const menuTriggerRef = useRef(null);
 
   const meta = useMemo(() => metaForPath(location.pathname), [location.pathname]);
 
@@ -125,6 +126,7 @@ export default function AppShell() {
             <NotificationBell />
             <UserMenu />
             <IconButton
+              ref={menuTriggerRef}
               label="Open menu"
               className="app-nav__mobile-trigger"
               onClick={() => setMenuOpen(true)}
@@ -193,6 +195,7 @@ export default function AppShell() {
       <MobileMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        triggerRef={menuTriggerRef}
         items={NAV_ITEMS}
         eyebrow={`Field guide / ${meta.index} · ${meta.label}`}
         footLinks={[

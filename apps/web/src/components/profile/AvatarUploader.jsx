@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Camera, ImagePlus, LoaderCircle } from "lucide-react";
 import Avatar from "../ui/Avatar";
 import Button from "../ui/Button";
-import { uploadAvatar } from "../../lib/api/users";
+import { removeAvatar, uploadAvatar } from "../../lib/api/users";
 import { errorMessage } from "../../lib/api/http";
 import { useToast } from "../../providers/ToastProvider";
 import { useAuth } from "../../context/auth-context";
@@ -41,6 +41,22 @@ export default function AvatarUploader({ name, avatarUrl, onUploaded, disabled }
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleRemove() {
+    if (disabled || uploading) return;
+    setError("");
+    setUploading(true);
+    try {
+      const url = await removeAvatar();
+      onUploaded(url);
+      updateUser({ avatarUrl: url });
+      toast.success("Portrait removed", "Your profile is using its initials again.");
+    } catch (removeError) {
+      setError(errorMessage(removeError, "The portrait could not be removed. Try again."));
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -97,7 +113,7 @@ export default function AvatarUploader({ name, avatarUrl, onUploaded, disabled }
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onUploaded("")}
+              onClick={handleRemove}
               disabled={disabled || uploading}
             >
               Remove

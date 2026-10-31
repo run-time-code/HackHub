@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Brand({ to = "/", className = "" }) {
   return (
-    <Link to={to} className={`brand ${className}`.trim()} aria-label="HackHub home">
+    <Link to={to} className={`brand ${className}`.trim()}>
       <span className="brand__mark" aria-hidden="true">
         H
       </span>

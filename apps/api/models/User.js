@@ -180,6 +180,12 @@ const userSchema = new mongoose.Schema(
             default: ""
         },
 
+        avatarPublicId: {
+            type: String,
+            default: "",
+            select: false
+        },
+
         availability: {
             type: String,
             enum: ["available", "limited", "unavailable"],
