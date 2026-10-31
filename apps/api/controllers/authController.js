@@ -3,6 +3,7 @@ const validator = require("validator");
 const crypto = require("crypto");
 
 const User = require("../models/User");
+const config = require("../src/config");
 
 const {
     sendVerificationEmail,
@@ -30,7 +31,12 @@ const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        if (!name || !email || !password) {
+        const normalizedEmail =
+            typeof email === "string"
+                ? email.trim().toLowerCase()
+                : "";
+
+        if (!name || !normalizedEmail || !password) {
             return res.status(400).json({
                 message: "All fields are required"
             });
@@ -45,7 +51,7 @@ const register = async (req, res) => {
             });
         }
 
-        if (!validator.isEmail(email)) {
+        if (!validator.isEmail(normalizedEmail)) {
             console.log("Invalid email format");
 
             return res.status(400).json({
@@ -61,7 +67,9 @@ const register = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({
+            email: normalizedEmail
+        });
 
         if (existingUser) {
             console.log("User already exists");
@@ -88,8 +96,8 @@ const register = async (req, res) => {
 
         try {
             user = await User.create({
-                name,
-                email,
+                name: name.trim(),
+                email: normalizedEmail,
                 password: hashedPassword,
                 emailVerified: false,
                 emailVerificationTokenHash:
@@ -106,6 +114,25 @@ const register = async (req, res) => {
             }
 
             throw createError;
+        }
+
+        // Local development can skip email verification when transactional
+        // email is unavailable. Production still requires a verified inbox.
+        if (config.devAutoVerify) {
+            user.emailVerified = true;
+            user.emailVerificationTokenHash = null;
+            user.emailVerificationTokenExpiresAt = null;
+            await user.save();
+
+            console.log(
+                `Development auto-verify enabled for: ${user.email}`
+            );
+
+            return res.status(200).json({
+                message:
+                    "Account created. Email verification is disabled in development; you can log in now.",
+                autoVerified: true
+            });
         }
 
         // Send verification email
@@ -136,7 +163,8 @@ const register = async (req, res) => {
         // Registration is NOT completed yet
         return res.status(200).json({
             message:
-                "Verification email sent. Please verify your email to complete registration."
+                "Verification email sent. Please verify your email to complete registration.",
+            autoVerified: false
         });
 
     } catch (error) {
@@ -421,6 +449,18 @@ const login = async (req, res) => {
             return res.status(401).json({
                 message: "Invalid email or password"
             });
+        }
+
+        // Local development can bypass verification for pre-existing accounts
+        // created while transactional email was unavailable.
+        if (!user.emailVerified && config.devAutoVerify) {
+            user.emailVerified = true;
+            user.emailVerificationTokenHash = null;
+            user.emailVerificationTokenExpiresAt = null;
+
+            console.log(
+                `Development auto-verify applied at login: ${user.email}`
+            );
         }
 
         // Require verified email before completing login.

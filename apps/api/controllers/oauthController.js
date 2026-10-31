@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const config = require("../src/config");
 const {
     generateAccessToken,
     generateRefreshToken,
@@ -59,6 +60,19 @@ const completeOAuthLogin = async (req, res) => {
             }
 
             if (user) {
+                // Local development can link an existing unverified account
+                // when transactional email is unavailable. Production still
+                // requires the inbox to be verified before linking.
+                if (!user.emailVerified && config.devAutoVerify) {
+                    user.emailVerified = true;
+                    user.emailVerificationTokenHash = null;
+                    user.emailVerificationTokenExpiresAt = null;
+
+                    console.log(
+                        `Development auto-verify applied during OAuth link: ${user.email}`
+                    );
+                }
+
                 if (!user.emailVerified) {
                     return res.status(409).json({
                         message:

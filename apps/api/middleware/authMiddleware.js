@@ -1,9 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const logger = require("../src/utils/logger");
-
 // Structured logger (avoids console.* which bypasses pino-http).
-const logger = require("../../src/utils/logger");
+const logger = require("../src/utils/logger");
 
 // Accept the httpOnly accessToken cookie as well as an Authorization:
 // Bearer header so API clients and tests can authenticate too.

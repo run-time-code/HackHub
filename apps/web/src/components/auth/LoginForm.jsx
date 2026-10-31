@@ -28,6 +28,7 @@ export default function LoginForm() {
     ? { message: location.state.oauthError }
     : null;
   const oauthPending = Boolean(location.state?.oauthPending);
+  const registrationSuccess = location.state?.registrationSuccess;
 
   // The OAuth callback redirects back here: pick the session up from the
   // httpOnly cookies and route to the dashboard (or surface the failure).
@@ -101,6 +102,14 @@ export default function LoginForm() {
       </div>
 
       <AuthErrorBanner error={error || oauthError} />
+      {registrationSuccess && (
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        >
+          {registrationSuccess}
+        </p>
+      )}
       <SocialAuthButtons disabled={isLoading || oauthPending} />
       <div className="auth-divider"><span>OR EMAIL AND PASSWORD</span></div>
 

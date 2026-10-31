@@ -20,6 +20,11 @@ const base = {
   logLevel: process.env.LOG_LEVEL || (env === 'production' ? 'info' : 'debug'),
   sentryDsn: process.env.SENTRY_DSN || '',
   metricsToken: process.env.METRICS_TOKEN || '',
+  // Local-development escape hatch: when Resend is unavailable, skip the
+  // verification email and treat new accounts as verified. Never enable in
+  // staging or production.
+  devAutoVerify:
+    env === 'development' && process.env.DEV_AUTO_VERIFY === 'true',
   maxJoinRequestsPerDay: Number(process.env.MAX_JOIN_REQUESTS_PER_DAY || 10),
   corsOrigin: (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
