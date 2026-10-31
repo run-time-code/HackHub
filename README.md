@@ -1,228 +1,72 @@
-# HackHub — Discover. Team Up. Compete.
+# HackHub Frontend — Work Area 1
 
-> One platform to discover, track, and win hackathons.
+React + Vite implementation of the Week 1–3 Design System & Hackathon Discovery UI from the provided schedule.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Stack: MERN](https://img.shields.io/badge/Stack-MERN-0FAAFF)](https://github.com/run-time-code/HackHub)
-[![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black)](https://vercel.com)
-[![Deploy: Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7)](https://netlify.com)
+## Requirements
+- Node.js 18+ (Node 20 LTS recommended)
+- VS Code
 
-**HackHub** centralizes hackathons from **Devpost, Unstop, Devfolio, HackerEarth, MLH, Hack2Skill** and more — so students never miss a deadline, find the right event by skills/interests, and build winning teams.
-
----
-
-## Table of Contents
-- [Problem](#problem)
-- [Solution & Features](#solution--features)
-- [Demo](#demo)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Hackathon Worth Score](#hackathon-worth-score)
-- [Roadmap](#roadmap)
-- [Team](#team)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Problem
-- Hackathon info is scattered across 6+ platforms
-- Students miss deadlines and relevant opportunities
-- Hard to filter by skills, domain, mode (online/offline)
-- No easy way to find teammates
-- No signal on whether a hackathon is *worth* entering
-- No single place to manage saved / registered / ongoing / completed hackathons
-
-## Solution & Features
-
-| Feature | Description |
-|---|---|
-| **Unified Discovery** | Aggregated listings scraped/fetched from multiple sources, normalized and deduplicated |
-| **Smart Search & Filters** | By skills, interests, tech domain, mode, prize, deadline, organizer |
-| **Public Field Guide** | A story-led landing page, live network numbers, legal and help pages, shareable `/u/:id` builder cards |
-| **Builder Cards** | Profile editor with skills, links, hackathon history, availability and public/private visibility |
-| **Teammate Finder** | Opt-in discovery, skill/interest match scoring, filters, sorting and direct invitations |
-| **Team Hub** | Create and edit crews, browse open teams, view members, manage seats and leadership controls |
-| **Request Wire** | Incoming/outgoing join requests and invitations, accept/decline/cancel history |
-| **Notifications** | Bell inbox with unread counts, mark-one/mark-all, SSE stream with polling fallback |
-| **Dashboard** | One view for crews, open seats, pending handshakes, deadlines, profile checklist and suggested people |
-| **Consent-aware Analytics** | No analytics loads before opt-in; preferences can be changed from the cookie settings |
-| **Calendar & Reminders** | Month/week/agenda deadline views backed by `GET /calendar`; create reminders and save per-user reminder preferences |
-| **Save & Track** | Save, register, mark ongoing/completed and keep private notes from the dashboard (`/saved` CRUD) |
-| **Worth Score (0-100)** | Data-driven score: skill relevance, learning value, prize pool, organizer reputation, difficulty |
-
-> **Status:** the WA3 frontend now ships the public field guide, builder cards, dashboard, finder, team hub, request wire, notifications, legal/help and consent-aware analytics. Authentication remains in place, and the previous `/app` workspace is still available during migration. Calendar/reminders, reminder preferences and the saved-hackathon dashboard list are implemented in the active API, and account settings use the `/users/me/*` routes. Remaining planned work: Worth Score, catalogue scrapers and optional ICS export. Live staging/production verification still requires the provider secrets listed in [docs/staging.md](docs/staging.md) and [docs/production-operations.md](docs/production-operations.md).
-
-## Demo
-
-### Zero-service demo (recommended for UI review)
-
-The frontend includes a complete MSW demo: no MongoDB, API server or environment file required.
+## Run in VS Code
+1. Extract the ZIP.
+2. Open the `hackhub-frontend` folder in VS Code.
+3. Open Terminal → New Terminal.
+4. Run:
 
 ```bash
 npm install
-npm run dev:demo --workspace @hackhub/web
+npm run dev
 ```
 
-Open the printed Vite URL (usually `http://localhost:5173`), sign in with any non-empty email/password, and the demo hydrates as Asha Raman. Fixtures reset on every reload. The demo banner in the app shell makes that explicit.
+5. Open the local URL Vite prints (usually `http://localhost:5173`).
 
-The same switch is available without the npm script:
+To verify a production build:
 
 ```bash
-# apps/web/.env
-VITE_USE_MOCKS=true
+npm run build
 ```
 
-See [docs/DEMO.md](docs/DEMO.md) for the guided tour, supported interactions, and demo build instructions.
+## What works with demo data
+- Week 1: reusable UI components, hackathon cards and detail modal, empty states.
+- Week 2: live keyword filtering, domain/mode/skill/prize filters, URL query-state sync, sorting, saved state in localStorage, compare selection up to three.
+- Week 3: Worth Score badge (0–100), six-factor explanation panel, For You / Ending Soon / Trending / New This Week sections, graceful undisclosed-prize label, Not relevant action.
+- Responsive desktop/mobile layout.
 
-### Full stack
+The initial data is in `src/data.js`. It is sample/demo content, not real event data.
 
-Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo links are placeholders: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`.
+## Connect the team's APIs
+1. Copy `.env.example` to `.env` in the project root.
+2. Ask teammates for the exact base URLs, routes, auth method, and JSON response shapes.
+3. Set `VITE_HACKATHON_API_BASE_URL` and `VITE_BOOKMARK_API_BASE_URL` to the confirmed URLs.
+4. The current adapter expects `GET {base}/hackathons` to return either an array or `{ "items": [...] }` / `{ "hackathons": [...] }`.
+5. Bookmark adapter currently assumes `POST /bookmarks` with `{ "hackathonId": "..." }`, `DELETE /bookmarks/:id`, and `POST /feedback` with `{ "hackathonId": "...", "feedback": "not_relevant" }`. Change these only to match Berwin's actual API contract.
+6. If Selva's Worth Score endpoint provides score/factors/reasons, map its actual response in `normalize()` in `src/App.jsx` and the data adapter. Until then, the UI uses demo scores/factors.
 
-## Tech Stack
-- **Frontend:** React 19, Vite, custom CSS design system (Tailwind CSS v4 for auth/legacy surfaces), Radix UI primitives, TanStack Query, Framer Motion
-- **Backend:** Node.js, Express.js, session cookies (JWT access/refresh) + CSRF, Passport (Google/GitHub OAuth)
-- **Database:** MongoDB (Mongoose)
-- **Data:** Python importer for the hackathon catalogue (`tools/data-importer`); scrapers planned
-- **Deployment:** Render (API), Vercel (web), MongoDB Atlas
-- **Monitoring:** Sentry, Prometheus `/metrics`, scheduled uptime checks
-- **Version Control:** GitHub
+### API keys and secrets
+- Do not invent a key or commit a real key to Git.
+- Do not place private server keys in `VITE_*` variables; Vite exposes these values to browser code.
+- If a secret key is required, the backend should keep it server-side and expose a safe endpoint for the frontend.
+- The optional `VITE_PUBLIC_API_KEY` is only for a key explicitly documented by your team as safe for browser use; it is not wired in by default.
 
-## Architecture
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, and DB schema overview.
-Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
+## Main structure
 
-```
-[tools/data-importer] ──> [Express API /api] <──> [MongoDB Atlas]
-[scrapers (planned)] ────>        ▲
-                                  │  cookies + CSRF, Google/GitHub OAuth
-                     [React 19 web app (field guide)]
-```
-
-## Getting Started
-
-### Prerequisites
-- Node.js 20+ (see `engines` in the root `package.json`)
-- MongoDB (local or Atlas)
-- npm (the repo uses npm workspaces with a single root lockfile)
-
-### 1. Clone
-```bash
-git clone https://github.com/run-time-code/HackHub.git
-cd HackHub
-```
-
-### 2. Install dependencies (monorepo, single install)
-```bash
-npm install
+```text
+hackhub-frontend/
+├── .env.example
+├── index.html
+├── package.json
+├── README.md
+└── src/
+    ├── main.jsx
+    ├── App.jsx
+    ├── data.js
+    ├── styles.css
+    ├── components/
+    │   └── UI.jsx
+    └── services/
+        └── api.js
 ```
 
-### 3. Environment variables
-Copy the example env files for the apps you run:
-```bash
-cp apps/web/.env.example apps/web/.env
-cp apps/api/.env.example apps/api/.env
-```
-See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_USE_MOCKS`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons. To explore the UI without any services, skip this step and run the zero-service demo above.
-
-### 4. Run the apps
-```bash
-npm run dev          # starts API + web together via Turborepo
-```
-Or run them individually:
-```bash
-npm run dev --workspace @hackhub/api     # Express API on :5000
-npm run dev --workspace @hackhub/web     # Vite web on :5173
-```
-
-### 5. Build
-```bash
-npm run build        # builds every workspace via Turborepo
-```
-
-### 6. Checks
-```bash
-npm run check        # turbo lint + test + build across all workspaces
-```
-
-## Project Structure
-This is a **Turborepo + npm workspaces monorepo**. One lockfile at the root; every app under `apps/` is a workspace.
-```
-HackHub/
-├── apps/
-│   ├── web/                  # React 19 + Vite frontend — @hackhub/web
-│   │   └── src/
-│   │       ├── components/   # AppShell, builder cards, team/request UI, shared primitives
-│   │       ├── pages/        # Landing, Dashboard, Teammates, Teams, Requests, Profile, legal/help…
-│   │       ├── mocks/        # MSW fixtures + handlers for the zero-service demo
-│   │       ├── context/      # Auth provider (+ shared hook)
-│   │       ├── styles/       # WA3 design tokens, layouts and components
-│   │       └── lib/          # API clients, hooks, validation, demo/discovery/request helpers
-│   ├── api/                  # Express API — @hackhub/api (deployed to Render)
-│   │   ├── src/              # production entrypoint: app factory, routes, services, models
-│   │   ├── routes/           # legacy-but-mounted auth, users, saved hackathons, dashboard, admin
-│   │   ├── models/           # User, Hackathon, Registration, SavedHackathon, AuditLog
-│   │   └── middleware/       # auth, CSRF, rate limits, sanitize, audit
-│   └── backend-prototype/    # @hackhub/backend-prototype (exploratory, not deployed)
-├── tools/
-│   ├── data-importer/        # Python importer for the hackathon catalogue
-│   ├── loadtest/             # k6 load scenarios
-│   └── monitoring/           # Grafana dashboard JSON
-├── docs/                     # Architecture, API spec, staging, monitoring, operations
-├── turbo.json                # Turborepo pipeline (build/test/lint/dev)
-├── package.json              # workspaces root + turbo scripts
-├── package-lock.json         # single lockfile for the whole monorepo
-├── vercel.json               # builds @hackhub/web
-├── netlify.toml
-└── README.md
-```
-Add `--filter` to any task to run it for a single app and whatever it depends on, e.g. `npm run build -- --filter=@hackhub/web`.
-
-## Hackathon Worth Score
-> Planned — the scoring service and endpoints are not implemented yet.
-
-Formula in `docs/WORTH_SCORE.md` — weighted composite (0-100):
-- Skill Relevance (30%)
-- Learning Opportunity (20%)
-- Prize Pool (15%)
-- Organizer Reputation (20%)
-- Difficulty Fit (15%)
-
-Score tiers: `90+ Must Join` | `70-89 Worth It` | `50-69 Consider` | `<50 Skip`
-
-## Roadmap
-Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
-[docs/API_SPEC.md](docs/API_SPEC.md); open frontend assumptions are flagged there.
-
-| Phase | Focus |
-|---|---|
-| 1 | Planning, UI design, DB setup, auth, basic listing |
-| 2 | Search/filters, dashboard, teams, teammate discovery |
-| 3 | Calendar/reminders, testing, integration, deployment, docs |
-| 4 | Security hardening, monitoring, staging/production operations |
-
-Still planned: hackathon scrapers, the Worth Score service and optional ICS
-calendar export. The Week 3 API gaps (calendar, reminders, saved-hackathon
-CRUD and account-settings aliases) are implemented and covered by
-`apps/api/test/calendar-reminders-saved.test.js`.
-
-## Team
-| Role | Responsibility |
-|---|---|
-| Frontend Developer | UI, search, filters, dashboard, calendar |
-| Backend Developer | APIs, auth, server logic |
-| Database | Schema design, scraping/fetching across platforms |
-| Data/Recommendation | Recommendation engine + Worth Score |
-| Tester/Deployment | QA, bug fixes, deployment |
-
-## Contributing
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-```bash
-git checkout -b feat/your-feature
-git commit -m "feat: add your feature"
-git push origin feat/your-feature
-```
-
-## License
-[MIT](LICENSE) © 2026 RunTimeCode
+## Notes before team integration
+- This is a Vite React JavaScript starter rather than Next.js. The schedule recommends Next.js, but this setup is intentionally straightforward to run locally. If your team mandates Next.js + TypeScript, confirm before merging.
+- The API adapter uses standard `fetch`. Add auth headers only after the backend team confirms the required auth scheme.
+- Registration links should come from the event API; no fake registration URL is created here.
