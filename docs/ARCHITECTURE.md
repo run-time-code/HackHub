@@ -52,16 +52,25 @@ hackathon catalogue; scheduled scrapers are still planned.
   Sentry when configured, then builds the app with `createApp()` (`src/app.js`)
   and handles graceful shutdown. `apps/api/server.js` at the package root is a
   legacy duplicate and is not used by `npm start`, Docker or Render.
-- **Mounted routers** (single process, paths served under `/api`):
-  - `src/routes`: `/health`, `/teams`, `/team-requests`, `/users`, `/notifications`, `/hackathons`, `/stats`, `/feedback`, `/calendar`, `/reminders`, `/saved`
-  - flat legacy routers: `/auth`, `/users`, `/saved-hackathons`, `/dashboard/summary`, `/admin/{hackathons,users,reports}`. The `/users/me/*` account aliases bridge the WA3 settings page to the legacy controller.
+- **Mounted routers** (single process; feature APIs are available under `/api`):
+  - `src/routes`: `/health`, `/teams`, `/team-requests`, `/users`, `/notifications`,
+    `/hackathons`, `/stats`, `/feedback`, `/calendar`, `/reminders`, and `/saved`
+  - flat legacy routers: `/auth`, `/users`, `/saved-hackathons`, `/dashboard/summary`,
+    `/admin/{hackathons,users,reports}`. The `/users/me/*` aliases bridge the
+    WA3 settings page to the legacy controller.
 - **Security**: helmet, credentialed CORS restricted to `FRONTEND_URL`/`CORS_ORIGIN`,
   request sanitization, rate limits (login, register, OAuth start, resets,
   team writes, join requests), audit logging, trust proxy for Render.
 - **Background work**: nightly cron purges soft-deleted accounts past the
   retention window. Notifications fan out over an in-process event bus (SSE) —
   a multi-instance deployment would need a shared bus (Redis is intentionally
-  absent).
+  absent). A reminder worker claims due reminders atomically from the
+  MongoDB-backed `Reminder` collection once per minute, applies the user's
+  IST quiet hours, then delivers email or in-app notifications. Prometheus
+  metrics expose scheduler runs and delivery outcomes.
+- **Catalogue**: search, filtering, facets, and pagination run in the API.
+  Public list responses use a bounded, process-local 60-second cache that is
+  invalidated by admin edits; cache entries expire naturally after imports.
 - **Observability**: `requestId` on every response plus Pino JSON request logs,
   `GET /metrics` (Prometheus, bearer `METRICS_TOKEN`), Sentry (optional),
   `/health` + `/api/health`.
@@ -84,10 +93,10 @@ hackathon catalogue; scheduled scrapers are still planned.
 | Model | Key fields |
 |---|---|
 | `User` | name, email, password (hashed, `select: false`), googleId/githubId (sparse unique), role, banned + lockout fields, bio/college/location, skills, preferences, avatarUrl, availability, lookingForTeam, discoverable, emailVerified + verification/reset token hashes, deletedAt (soft delete), `tokenVersion` |
-| `Hackathon` | `hackathon_id` slug (unique), title, `registration_deadline` (string), optional `submission_deadline`, description/organizer/mode/location/url, prizes, skills/domain tags, event dates, is_active, is_hidden, is_featured |
-| `SavedHackathon` | user, hackathon slug, status `saved/registered/ongoing/completed`, private notes, timestamps |
+| `Hackathon` | stable `hackathon_id`/`slug`, title/description, organizer/source metadata, skills/domains, mode/location, prize/status, registration/submission/event dates, active/hidden/featured flags |
+| `SavedHackathon` | user, hackathon slug, tracking status, private notes, timestamps |
 | `Registration` | user, hackathon slug, registered, notes |
-| `Reminder` | user, hackathon ObjectId, event type `registration/submission/event`, daysBefore, channel `email/in_app`, remindAt, active, timestamps; unique per user/hackathon/event/lead-time/channel |
+| `Reminder` | user, hackathon ObjectId, event type, event date, daysBefore, channel `email/in_app`, remindAt, delivery lock/status, timestamps; unique per user/hackathon/event/lead-time/channel |
 | `Team` | name, description, hackathon (ObjectId), leader, members `[{ user, role, joinedAt }]`, rolesNeeded, maxTeamSize (2–10), status `open/closed` |
 | `JoinRequest` | team, user, type `request/invite`, initiatedBy, role, message, status `pending → accepted/declined/cancelled/expired`, 7-day TTL |
 | `Notification` | user, type, title, message, data, read/readAt |
@@ -116,7 +125,15 @@ both (`id` and `slug`) so clients never guess.
 
 ## Planned / known gaps
 
-- Hackathon scrapers and richer catalogue facets.
-- The Worth Score service ([WORTH_SCORE.md](WORTH_SCORE.md)).
+- Automated multi-source hackathon scrapers.
+- Validating and refining the heuristic recommendation/Worth Score model
+  ([WORTH_SCORE.md](WORTH_SCORE.md)).
 - Optional ICS calendar export.
 - Live staging/production provisioning and verification with provider secrets.
+- Automated multi-source scrapers and the Worth Score service
+  ([WORTH_SCORE.md](WORTH_SCORE.md)).
+- The importer is still an operator-run job; schedule it only after confirming
+  the provider response represents a complete snapshot. It deliberately does
+  not mark records inactive when absent from an import.
+- Catalogue caching is process-local and is not shared across instances; use a
+  shared cache only if measured traffic requires multi-instance consistency.

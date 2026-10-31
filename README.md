@@ -51,7 +51,15 @@
 | **Save & Track** | Save, register, mark ongoing/completed and keep private notes from the dashboard (`/saved` CRUD) |
 | **Worth Score (0-100)** | Data-driven score: skill relevance, learning value, prize pool, organizer reputation, difficulty |
 
-> **Status:** the WA3 frontend now ships the public field guide, builder cards, dashboard, finder, team hub, request wire, notifications, legal/help and consent-aware analytics. Authentication remains in place, and the previous `/app` workspace is still available during migration. Calendar/reminders, reminder preferences and the saved-hackathon dashboard list are implemented in the active API, and account settings use the `/users/me/*` routes. Remaining planned work: Worth Score, catalogue scrapers and optional ICS export. Live staging/production verification still requires the provider secrets listed in [docs/staging.md](docs/staging.md) and [docs/production-operations.md](docs/production-operations.md).
+> **Status:** the WA3 frontend ships the public field guide, builder cards,
+> dashboard, teammate finder, team hub, request inbox, notifications, legal/help,
+> and consent-aware analytics. Authentication, catalogue discovery, calendar,
+> reminders, saved-hackathon tracking, and account settings are wired to the
+> active API. Recommendations include a heuristic `worthScore`; validating a
+> production scoring model, automated catalogue scrapers, and optional ICS
+> export remain future work. Staging and production still need provider-backed
+> verification; see [docs/staging.md](docs/staging.md) and
+> [docs/production-operations.md](docs/production-operations.md).
 
 ## Demo
 
@@ -125,6 +133,16 @@ cp apps/api/.env.example apps/api/.env
 ```
 See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_USE_MOCKS`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons. To explore the UI without any services, skip this step and run the zero-service demo above.
 
+The hackathon importer needs `BRABBLE_API_KEY` and `MONGODB_URI`. Put them in
+`tools/data-importer/.env` (the importer also recognizes the older
+`data_importer/.env` location), then run this from the repository root:
+
+```bash
+python tools/data-importer/import_hackathons.py
+```
+
+Keep the `.env` file private; do not commit it.
+
 ### 4. Run the apps
 ```bash
 npm run dev          # starts API + web together via Turborepo
@@ -192,7 +210,7 @@ Score tiers: `90+ Must Join` | `70-89 Worth It` | `50-69 Consider` | `<50 Skip`
 
 ## Roadmap
 Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
-[docs/API_SPEC.md](docs/API_SPEC.md); open frontend assumptions are flagged there.
+[docs/API_SPEC.md](docs/API_SPEC.md); remaining planned features are marked there.
 
 | Phase | Focus |
 |---|---|
@@ -201,10 +219,12 @@ Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
 | 3 | Calendar/reminders, testing, integration, deployment, docs |
 | 4 | Security hardening, monitoring, staging/production operations |
 
-Still planned: hackathon scrapers, the Worth Score service and optional ICS
-calendar export. The Week 3 API gaps (calendar, reminders, saved-hackathon
-CRUD and account-settings aliases) are implemented and covered by
-`apps/api/test/calendar-reminders-saved.test.js`.
+Still planned: automated multi-source scrapers and optional ICS calendar
+export. Recommendations currently expose an explainable heuristic `worthScore`;
+its scoring model still needs product validation. Calendar/reminders,
+saved-hackathon CRUD, and account settings are covered by
+`apps/api/test/calendar-reminders-saved.test.js`. The Python importer remains
+an operator-run job.
 
 ## Team
 | Role | Responsibility |

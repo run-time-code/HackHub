@@ -175,6 +175,24 @@ const userSchema = new mongoose.Schema(
             default: {}
         },
 
+        reminderPreferences: {
+            defaultDaysBefore: {
+                type: Number,
+                min: 0,
+                max: 365,
+                default: 1
+            },
+            channels: {
+                type: [String],
+                enum: ["email", "in_app"],
+                default: ["email"]
+            },
+            quietHours: {
+                start: { type: String, default: "22:00" },
+                end: { type: String, default: "08:00" }
+            }
+        },
+
         avatarUrl: {
             type: String,
             default: ""
@@ -212,32 +230,6 @@ const userSchema = new mongoose.Schema(
         emailVerified: {
             type: Boolean,
             default: false
-        },
-
-        reminderPreferences: {
-            defaultDaysBefore: {
-                type: Number,
-                default: 1,
-                min: 0,
-                max: 365
-            },
-
-            channels: {
-                type: [String],
-                default: ["email"]
-            },
-
-            quietHours: {
-                start: {
-                    type: String,
-                    default: "22:00"
-                },
-
-                end: {
-                    type: String,
-                    default: "08:00"
-                }
-            }
         },
 
         emailVerificationTokenHash: {

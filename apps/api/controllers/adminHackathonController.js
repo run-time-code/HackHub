@@ -1,5 +1,6 @@
 
 const Hackathon = require("../models/Hackathon");
+const { invalidateHackathonCache } = require("../src/services/hackathonsService");
 
 // Hide or unhide a hackathon
 const toggleHackathonVisibility = async (req, res) => {
@@ -25,6 +26,7 @@ const toggleHackathonVisibility = async (req, res) => {
             });
         }
 
+        invalidateHackathonCache();
         return res.status(200).json({
             message: is_hidden
                 ? "Hackathon hidden successfully"
@@ -64,6 +66,7 @@ const toggleHackathonFeatured = async (req, res) => {
             });
         }
 
+        invalidateHackathonCache();
         return res.status(200).json({
             message: is_featured
                 ? "Hackathon featured successfully"
@@ -148,6 +151,7 @@ const editHackathon = async (req, res) => {
             });
         }
 
+        invalidateHackathonCache();
         return res.status(200).json({
             message: "Hackathon updated successfully",
             data: hackathon

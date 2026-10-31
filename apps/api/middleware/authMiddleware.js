@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const logger = require("../src/utils/logger");
 
 // Structured logger (avoids console.* which bypasses pino-http).
 const logger = require("../../src/utils/logger");
@@ -87,7 +88,8 @@ if (user.banned === true) {
             });
         }
 
-        logger.error({ err: error }, "authentication error");
+        
+        logger.error({ err: error }, "Authentication error");
 
         return res.status(500).json({
             message: "Authentication error"

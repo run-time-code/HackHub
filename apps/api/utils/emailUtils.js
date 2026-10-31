@@ -250,6 +250,62 @@ const sendTeamEmail = async (email, subject, message) => {
         text
     });
 };
+const buildReminderEmail = ({ hackathonTitle, eventType, eventAt }) => {
+    const date = new Date(eventAt);
+    if (Number.isNaN(date.getTime())) {
+        throw new TypeError("eventAt must be a valid date");
+    }
+
+    const safeHackathonTitle = String(hackathonTitle || "Hackathon")
+        .replace(/[\r\n]+/g, " ")
+        .trim();
+    const subject = `${safeHackathonTitle} reminder`;
+    const formattedDate = date.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "long",
+        timeStyle: "short"
+    });
+    const dashboardUrl = getFrontendUrl();
+    const safeTitle = escapeHtml(safeHackathonTitle);
+    const safeEventType = escapeHtml(eventType);
+    const safeDate = escapeHtml(formattedDate);
+    const safeIsoDate = escapeHtml(date.toISOString());
+    const text = [
+        subject,
+        "",
+        `Your ${eventType} date is ${formattedDate} IST.`,
+        ...(dashboardUrl ? ["", `Open HackHub: ${dashboardUrl}`] : [])
+    ].join("\n");
+    const html = createEmailHtml({
+        title: subject,
+        preheader: `Reminder: ${eventType} date for ${safeHackathonTitle}.`,
+        content: `
+            <p style="font-size: 15px; line-height: 1.8; color: #475569;">
+                This is a reminder about the ${safeEventType} date for ${safeTitle}.
+            </p>
+            <p style="font-size: 14px; line-height: 1.8; color: #475569;">
+                <time datetime="${safeIsoDate}">${safeDate} IST</time>
+            </p>
+        `,
+        actionLabel: dashboardUrl ? "Open HackHub" : undefined,
+        actionUrl: dashboardUrl || undefined,
+    });
+
+    return {
+        subject,
+        text,
+        html
+    };
+};
+
+const sendReminderEmail = async (email, reminder) => {
+    const template = buildReminderEmail(reminder);
+    return sendEmail({
+        to: email,
+        ...template
+    });
+};
+
 
 const sendPasswordResetEmail = async (email, resetToken) => {
     // The current reset endpoint is POST-only and requires { token, password }
@@ -305,5 +361,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 module.exports = {
     sendVerificationEmail,
     sendPasswordResetEmail,
-    sendTeamEmail
+    sendTeamEmail,
+    buildReminderEmail,
+    sendReminderEmail
 };

@@ -1,0 +1,153 @@
+{
+  "info": {
+    "_postman_id": "baafec7a-7ef7-41fb-8d37-2b64aa10726b",
+    "name": "HackHub API",
+    "description": "Smoke-test the deployed HackHub API. The collection uses the API's cookie session. Run CSRF bootstrap before mutations; Postman retains the CSRF and session cookies for the configured baseUrl.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Bootstrap CSRF",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('CSRF token issued', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.collectionVariables.set('csrfToken', pm.response.json().csrfToken);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/auth/csrf-token"
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-CSRF-Token", "value": "{{csrfToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "List catalogue",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/hackathons?q={{search}}&page=1&limit=20&sort=title"
+      }
+    },
+    {
+      "name": "List saved hackathons",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/saved"
+      }
+    },
+    {
+      "name": "Save hackathon",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-CSRF-Token", "value": "{{csrfToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hackathonId\": \"{{hackathonId}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/saved"
+      }
+    },
+    {
+      "name": "Calendar month",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/calendar?month={{month}}"
+      }
+    },
+    {
+      "name": "Get reminder preferences",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/reminders/preferences"
+      }
+    },
+    {
+      "name": "Update reminder preferences",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-CSRF-Token", "value": "{{csrfToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"defaultDaysBefore\": 3,\n  \"channels\": [\"email\", \"in_app\"],\n  \"quietHours\": { \"start\": \"22:00\", \"end\": \"08:00\" }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/reminders/preferences"
+      }
+    },
+    {
+      "name": "Create reminder",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-CSRF-Token", "value": "{{csrfToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hackathonId\": \"{{hackathonId}}\",\n  \"eventType\": \"registration\",\n  \"daysBefore\": 3,\n  \"channel\": \"email\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/reminders"
+      }
+    },
+    {
+      "name": "List reminders",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/reminders"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "email", "value": "test@example.com" },
+    { "key": "password", "value": "change-me" },
+    { "key": "csrfToken", "value": "" },
+    { "key": "hackathonId", "value": "sample-hackathon" },
+    { "key": "month", "value": "2099-01" },
+    { "key": "search", "value": "climate" }
+  ]
+}
