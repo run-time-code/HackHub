@@ -270,6 +270,40 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     assert.equal(await Notification.countDocuments({ reminder: reminder._id }), 1);
   });
 
+  it('postpones reminders until the exact end of overnight IST quiet hours', async () => {
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          reminderPreferences: {
+            channels: ['in_app'],
+            quietHours: { start: '22:00', end: '08:00' },
+          },
+        },
+      }
+    );
+
+    const dueAt = new Date('2031-01-01T18:00:00.000Z');
+    const reminder = await Reminder.create({
+      user: user._id,
+      hackathon: hackathon._id,
+      eventType: 'event',
+      daysBefore: 1,
+      channel: 'in_app',
+      remindAt: dueAt,
+    });
+
+    const result = await processDueReminder({ now: dueAt });
+    const updated = await Reminder.findById(reminder._id);
+
+    assert.equal(result, null);
+    assert.equal(updated.remindAt.toISOString(), '2031-01-02T02:30:00.000Z');
+    assert.equal(updated.deliveredAt, null);
+    assert.equal(updated.processingUntil, null);
+    assert.equal(await Notification.countDocuments({ reminder: reminder._id }), 0);
+
+    await Reminder.deleteOne({ _id: reminder._id });
+  });
   it('uses IST quiet hours and continues after an individual reminder fails', async () => {
     assert.equal(
       isInQuietHours(new Date('2031-01-01T18:00:00.000Z'), {
