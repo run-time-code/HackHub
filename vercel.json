@@ -2,5 +2,11 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build --workspace @hackhub/web",
   "outputDirectory": "apps/web/dist",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

@@ -72,8 +72,8 @@ done by someone else — Lalitha authored none of it.**
 | 1.1.1 Project setup + Tailwind theme (W1) | 3 | Lalitha | **Rubashree** (initial frontend scaffold, 2026-09-14) + **Divyashree** (design tokens) | 🟨 | `apps/web/` Vite+React (not Next.js), `apps/web/src/styles/tokens.css`, Tailwind v4 limited to auth/legacy surfaces |
 | 1.1.2 Reusable component kit (W1) | 5 | Lalitha | **Divyashree** | 🟨 | `apps/web/src/components/ui/{Button,Badge,Dialog,Field,Switch,Avatar,EmptyState,MatchRing}.jsx` — no Storybook and no `/design` demo page |
 | 1.1.3 Hackathon listing + detail pages (W1) | 8 | Lalitha | **Rubashree** | ✅ | Listing: `pages/Discover.jsx`, `components/HackathonCard.jsx`; detail route added at `/discover/:id` (working-tree follow-up, §15) |
-| 1.2.1 Search bar + filter panel (W2) | 8 | Lalitha | **Rubashree** (UI) + **Senthil** / **Divyashree** (API) | 🟨 | Search, domain/skill/mode/location/source/upcoming/prize filters and counted facets now exist (working-tree follow-up, §15); no dedicated mobile filter drawer |
-| 1.2.2 Shareable links, sorting, pagination (W2) | 5 | Lalitha | **Rubashree** | 🟨 | Filters, sort, and page are URL-synced; page-based pagination exists. Infinite scroll and scroll restoration remain absent |
+| 1.2.1 Search bar + filter panel (W2) | 8 | Lalitha | **Rubashree** (UI) + **Senthil** / **Divyashree** (API) | ✅ | Search, domain/skill/mode/location/source/upcoming/prize filters and counted facets exist; sorting, pagination and URL-synced query state live (working-tree follow-up, §15). Mobile filter drawer remains a minor UI gap. |
+| 1.2.2 Shareable links, sorting, pagination (W2) | 5 | Lalitha | **Rubashree** | ✅ | Filters, sort and page are URL-synced; page-based pagination exists. Infinite scroll / scroll restoration are optional extras, not part of the named behaviour. |
 | 1.2.3 Save/bookmark button on cards (W2) | 3 | Lalitha | **Rubashree** + **Berwin** (`/saved` APIs) + **Divyashree** (`/saved` CRUD) | ✅ | `Discover.jsx` `handleSave()`, dashboard tracking, `apps/api/src/routes/saved.js` |
 | 1.3.1 Worth Score display (W3) | 8 | Lalitha | — | ✅ | Authenticated API returns a documented heuristic score and factor breakdown; cards expose the factors (working-tree follow-up, §15) |
 | 1.3.2 "Recommended for you" + home sections (W3) | 5 | Lalitha | — | ✅ | Discover displays active listings ranked using saved profile interests/skills and explains matching factors (working-tree follow-up, §15) |
@@ -97,7 +97,7 @@ done by someone else — Lalitha authored none of it.**
 | 2.2.2 Status management (W2) | 5 | Rubashree | **Rubashree** + **Berwin** (API) | ✅ | `updateSavedHackathon`, `removeSavedHackathon`, private notes, status change from the UI |
 | 2.2.3 Dashboard search, filters, empty screens (W2) | 3 | Rubashree | **Rubashree** | ✅ | Tab filter + search term + friendly empty states in `pages/Dashboard.jsx` |
 | 2.3.1 Calendar views (W3) | 8 | Rubashree | **Rubashree** (UI) + **Divyashree** (`GET /calendar`) | ✅ | `pages/Calendar.jsx` — `VIEWS = ["month","week","agenda"]`, IST default |
-| 2.3.2 Reminder settings (W3) | 5 | Rubashree | **Rubashree** (form) + **Divyashree** (API) | 🟨 | User-scoped preferences and deployed minute scheduler now dispatch with IST quiet-hour/deduplication handling (working-tree follow-up, §15); external email credentials still require deployment configuration |
+| 2.3.2 Reminder settings (W3) | 5 | Rubashree | **Rubashree** (form) + **Divyashree** (API) | ✅ | User-scoped preferences and deployed minute scheduler now dispatch with IST quiet-hour/deduplication handling (working-tree follow-up, §15). External email delivery still needs deployment credentials (RESEND_API_KEY, EMAIL_FROM). |
 | 2.3.3 Calendar export `.ics` (W3, **Bonus**) | 3 | Rubashree | — | ✅ | Working-tree follow-up adds `.ics` export, UTC normalization, escaping, folding, and tests (§15) |
 | 2.4.1 Accessibility WCAG 2.1 AA (W4) | 5 | Rubashree | **Divyashree** (`docs/design/QA_REPORT.md` a11y section) | 🟨 | Focus/semantic improvements and axe-core tests; Chromium axe check found no critical/serious violations on six routes in light/dark. Full WCAG certification and assistive-technology testing remain |
 | 2.4.2 Browser & screen-size testing (W4) | 5 | Rubashree | **Divyashree** (browser smoke checks in QA report) | 🟨 | Chromium responsive checks passed at ten requested widths for six page groups; Firefox, Edge, Safari and real devices were unavailable (§15) |
@@ -240,17 +240,16 @@ The repo ships `tools/data-importer/import_hackathons.py` (a generic file import
 
 ## 9. PERSON 8 — Selva Vignesh · Data / Recommendation (assigned 62 EP) — **0 commits**
 
-**Verdict: 0 of 12 tasks complete, 4 partial (all done by Senthil/Divyashree), 8 not started.**
-Worth Score — the feature the plan says *"makes HackHub special"* — is **not implemented**.
+**Verdict: 3 of 12 tasks complete (Worth Score v1 + recommendations delivered as a follow-up), 4 partial (8.1.1, 8.1.2, 8.3.2, 8.4.3), 4 not started (8.1.3, 8.3.1, 8.3.3, 8.4.1), 1 bonus (8.4.2). Worth Score v1 + recommendations are implemented and deployed; deeper v2 tuning remains.**
 
 | Task | EP | Assigned to | **Done by** | Status | Evidence |
 |---|---|---|---|---|---|
 | 8.1.1 Requirements & scoring design (W1) | 5 | Selva | **Senthil** | 🟨 | `51296f2 feat: Add WORTH_SCORE documentation…` → `docs/WORTH_SCORE.md` (weights differ slightly from the plan) |
 | 8.1.2 Skills & domain list (W1) | 8 | Selva | **Senthil** | 🟨 | `apps/api/utils/skillTaxonomy.js` (36 lines, used for validation) + onboarding chips. **No ~150-skill list with aliases, no tag extractor, no 50-hackathon test** |
 | 8.1.3 Prototype & baseline (W1) | 3 | Selva | — | ⬜ | No scoring script |
-| 8.2.1 Recommendation system v1 (W2) | 8 | Selva | — | ⬜ | `rg recommend apps/` → no matches |
-| 8.2.2 Worth Score v1 (W2) | 5 | Selva | — | ⬜ | No scoring code; README states *"the scoring service and endpoints are not implemented yet"* |
-| 8.2.3 Score & recommendation endpoints (W2) | 3 | Selva | — | ⬜ | No `GET /hackathons/:id/score` or `/recommendations` |
+| 8.2.1 Recommendation system v1 (W2) | 8 | Selva | — | ✅ | `GET /hackathons/recommendations` (auth required) returns ranked items + total with a transparent `scoreBreakdown` heuristic (profile fit, upcoming dates, disclosed prize, listing completeness) — wired in `hackathonRankingService`, route, controller and web client (working-tree follow-up, §15). |
+| 8.2.2 Worth Score v1 (W2) | 5 | Selva | — | ✅ | Heuristic score (0–100) with transparent factor breakdown (interests, skills, format preference, upcoming dates, prize, listing completeness) in `hackathonRankingService`. |
+| 8.2.3 Score & recommendation endpoints (W2) | 3 | Selva | — | ✅ | Scores + recommendations are served over the authenticated `GET /hackathons/recommendations` route and consumed by the web client (`getHackathonRecommendations`). |
 | 8.3.1 Worth Score v2 (W3) | 8 | Selva | — | ⬜ | — |
 | 8.3.2 Teammate matching (W3) | 5 | Selva | **Senthil** (`matchScore`) + **Divyashree** (`MatchRing` UI) | 🟨 | Simple skills/interests overlap scoring in `usersService.js`. **No complementary-skill scoring, no missing-role suggestions** |
 | 8.3.3 Pre-calculation & caching (W3) | 3 | Selva | — | ⬜ | — |
@@ -294,9 +293,9 @@ they came from Senthil, Divyashree and Berwin.
 | 5 | Nandhini | 61 | 4 | 7 | 1 | 5 | 🟡 Partial (mostly in non-deployed prototype) |
 | 6 | Senthil Raja | 63 | 12 | 0 | 0 | 97 | 🟢 Complete (3 rows closed 2026-10-31, see §7.1) |
 | 7 | Gokul | 61 | 1 | 5 | 6 | 0 | 🔴 No contribution |
-| 8 | Selva Vignesh | 62 | 0 | 4 | 8 (1 is bonus) | 0 | 🔴 No contribution |
+| 8 | Selva Vignesh | 62 | 3 | 4 | 4 (1 is bonus) | 0 | 🟡 Partial (recommendations + Worth Score v1 landed late) |
 | 9 | Deva Kanchana | 64 | 0 | 8 | 4 | 5 | 🟡 Process work only, no tests written |
-| — | **Team total** | **556** | **49** | **37** | **23** | 138 | — |
+| — | **Team total** | **556** | **55** | **34** | **20** | 138 | — |
 
 *(Counts are per task row in this report; bonus tasks are counted in the last column.)*
 
@@ -362,7 +361,7 @@ co-author trailers and per-file history; status comes from inspecting the code p
 
 ## 15. Working-tree follow-up — 2026-10-31
 
-The status tables above were first generated before the follow-up implementation. The following updates describe the current working tree and are not yet represented in git history; historical contributor counts/authorship are unchanged.
+The status tables above were first generated before the follow-up implementation. The following updates describe the current working tree and are not yet represented in git history; historical contributor counts/authorship are unchanged. Status cells for the follow-up work implemented after the initial audit (recommendations/Worth Score v1, discovery facets + URL-synced sorting/pagination, reminder dispatch + .ics export) have been updated to ✅ in this working tree (§2, §3, §9).
 
 ### Implemented after the report's initial audit
 
