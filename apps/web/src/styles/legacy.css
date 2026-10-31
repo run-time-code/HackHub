@@ -82,8 +82,9 @@ textarea:focus-visible {
   line-height: 0.98;
 }
 
-.auth-brand__mark,
-.workbench-brand__mark {
+.auth-brand .logo-mark,
+.workbench-brand .logo-mark,
+.mobile-brand .logo-mark {
   width: 2.4rem;
   height: 2.4rem;
 }
