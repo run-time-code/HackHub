@@ -7,6 +7,13 @@
 
 Base URL: `/api`
 
+An importable Postman collection for the primary auth, catalogue, saved,
+calendar, and reminder flows is available at
+[`apps/api/HackHub.postman_collection.json`](../apps/api/HackHub.postman_collection.json).
+Configure its base URL and test account, run **Bootstrap CSRF**, then run
+**Login** before authenticated requests. Postman must retain cookies for the
+same API host.
+
 ## Auth
 | Method | Endpoint | Description |
 |---|---|---|
@@ -27,15 +34,19 @@ Base URL: `/api`
 `GET /users/me` returns `id,name,email,role,bio,college,location,headline,year,links,pastHackathons,skills,skillProficiency,preferences,avatarUrl,availability,lookingForTeam,discoverable,emailVerified,createdAt,updatedAt`.
 `GET /users/public/:id` returns `id,name,bio,college,location,headline,year,skills,skillProficiency,links,pastHackathons,avatarUrl,availability,lookingForTeam,createdAt` and never email, preferences or discoverable.
 
-## Hackathons (public catalogue for the team feature)
+## Hackathons (public catalogue)
 | Method | Endpoint | Query | Description |
 |---|---|---|---|
-| GET | `/hackathons?q=&domain=&mode=&skill=&active=&page=&limit=` | search + filters + pagination | List visible hackathons. `q` searches title/organizer/description; domain matches `domain[]` or `theme`; skill matches `skills[]` |
+| GET | `/hackathons?q=&domain=&skills=&mode=&location=&status=&active=&upcoming=&hasPrize=&minPrize=&maxPrize=&fromDate=&toDate=&sort=&page=&limit=` | search, filters, sorting, pagination | List visible hackathons (active by default). `q` searches title/organizer/description; `domain` and `skills` accept comma-separated values. Response includes mode/status/domain/skill/location facet counts. |
+| GET | `/hackathons/facets` | — | Active catalogue counts for domains, skills, modes, and sources |
+| GET | `/hackathons/recommendations?limit=` | — | Authenticated recommendations with heuristic `worthScore`, score breakdown, and reasons |
 | GET | `/hackathons/:id` | ObjectId **or** slug | Detail. Use `id` for `/teams` |
 
 Identifier decision (F-05b): teams reference hackathons by ObjectId (`id`
 from this endpoint). Saved hackathons/registrations keep the long-lived
 `hackathon_id` slug string. Both are exposed here so clients never guess.
+The list endpoint caps `limit` at 50 and supports `title`, `deadline`,
+`prize_high`, `prize_low`, and `newest` sorting.
 
 ## Dashboard / Save
 | Method | Endpoint | Description |
@@ -54,12 +65,12 @@ from this endpoint). Saved hackathons/registrations keep the long-lived
 ## Calendar and reminders (authenticated)
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/calendar?month=YYYY-MM` | Month events from visible hackathon deadlines. Items expose `id`, `type` (`registration`/`submission`/`event`), `date` (ISO), `hackathonId` and a nested `hackathon` summary |
+| GET | `/calendar?month=YYYY-MM` | Authenticated month view of visible catalogue deadlines. Items expose `id`, `type` (`registration`/`submission`/`event`), `date` (ISO), `hackathonId` and a nested `hackathon` summary |
 | GET | `/reminders` | Caller reminders (`{ items }`), sorted by `remindAt` |
-| POST | `/reminders` | Create `{ hackathonId, eventType?, daysBefore, channel? }`. `eventType` defaults to `registration`; channel is `email` or `in_app`; duplicates return `409 REMINDER_EXISTS` |
+| POST | `/reminders` | Create `{ hackathonId, eventType?, daysBefore, channel? }`. `eventType` defaults to `registration`; `daysBefore` is required; channel defaults to `email` and may be `in_app`; duplicates return `409 REMINDER_EXISTS` |
 | DELETE | `/reminders/:id` | Delete a caller reminder |
 | GET | `/reminders/preferences` | Saved defaults: `{ defaultDaysBefore, channels, quietHours: { start, end } }` (IST) |
-| PUT | `/reminders/preferences` | Update any subset of the preference object (CSRF) |
+| PUT | `/reminders/preferences` | Update any subset of preferences (CSRF). Quiet hours defer delivery; `channels` controls enabled delivery channels. |
 
 ## Account settings (authenticated, CSRF for mutations)
 | Method | Endpoint | Description |
@@ -145,17 +156,15 @@ Server-Sent Events (`/notifications/stream`) are exempt from the JSON envelope.
 
 ## Frontend integration notes
 
-The Vite app (`apps/web`) uses the `/saved` CRUD, `/calendar`, `/reminders` and
-`/users/me/*` account routes above. Calendar month/week/agenda views read the
-month endpoint; reminder mutations send the CSRF header through the shared
-`api/http.js` client. Contract coverage lives in
-`apps/api/test/calendar-reminders-saved.test.js` and the browser smoke checks in
-[design/QA_REPORT.md](design/QA_REPORT.md).
+The Vite app (`apps/web`) uses `/saved`, `/calendar`, `/reminders`, and
+`/users/me/*`. Reminder mutations use the shared `api/http.js` client, which
+handles CSRF. API contract tests are in
+`apps/api/test/calendar-reminders-saved.test.js`.
 
-ICS download/subscription is not implemented; it remains an optional future
-addition to the calendar views.
+## Planned / operational follow-up
 
-## Planned (not implemented)
-- Worth Score service and endpoints.
-- Hackathon facet counts (server-side aggregation for discovery filters).
-- ICS calendar export/subscription.
+- Automated multi-source scrapers; the importer remains an operator-run job.
+- Product validation of the heuristic recommendation score.
+- Optional ICS calendar export/subscription.
+- Staging verification of provider email delivery, multi-instance behavior,
+  monitoring, and alert routing.

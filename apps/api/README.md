@@ -22,14 +22,20 @@ hackathons from different platforms in one place.
   change, session revocation, data export, soft-delete with a purge job.
 - **Saved hackathons & dashboard** — save/unsave/register/notes by slug plus a
   dashboard summary.
+- **Catalogue discovery** — search and filter by skills, domain, mode,
+  location, status, prize, and deadline, with pagination and facet counts;
+  authenticated recommendations include an explainable heuristic `worthScore`.
+- **Calendar & reminders** — calendar events from visible catalogue deadlines,
+  persisted user preferences, idempotent reminders, and scheduled email or
+  in-app delivery.
 - **Teams** — create/join/leave, leadership transfer, join requests and
   invitations, teammate discovery.
 - **Notifications** — in-app inbox with an SSE stream and best-effort email.
 - **Admin** — hackathon visibility/featured edits, user bans, reports.
 
-Planned (not implemented): calendar & reminder persistence, hackathon facets
-and the Worth Score endpoints. See [docs/API_SPEC.md](../../docs/API_SPEC.md)
-for the full endpoint reference and the frontend's provisional assumptions.
+Planned: automated multi-source scrapers and product validation of the
+recommendation score. The data importer is a separate operator-run job. See
+[docs/API_SPEC.md](../../docs/API_SPEC.md) for the endpoint reference.
 
 ## API structure (`apps/api/`)
 
@@ -47,7 +53,7 @@ apps/api/
     server.js            # entrypoint: Mongo connect + graceful shutdown + Sentry + purge cron
     app.js               # createApp() factory (security, logging, router mounts)
     config/index.js      # per-env config (development / staging / production)
-    routes/              # index.js: /health /teams /team-requests /users /notifications /hackathons
+    routes/              # /health /teams /team-requests /users /notifications /hackathons /stats /feedback /calendar /reminders /saved
     controllers/         # thin HTTP layer (req/res + status codes)
     services/            # business logic (controllers call services)
     models/              # Team, JoinRequest, Notification
@@ -153,6 +159,16 @@ the `mongo-data` volume (`docker compose down -v` wipes it).
 - `npm start` — production run (`src/server.js`)
 - `npm run lint` / `npm test` — ESLint, `node --test`
 - `npm run smoke:staging` — staging smoke checks
+- `npm run explain:catalogue` — MongoDB `executionStats` for representative
+  catalogue list, filter, sort, and facet queries. Set `MONGODB_URI` to the
+  target database; this reports observed plans and is not a substitute for
+  staging load-test p95 measurements.
+
+The Postman collection is at
+[`HackHub.postman_collection.json`](HackHub.postman_collection.json).
+It uses the API cookie session; run the CSRF bootstrap request before
+mutations, then configure the collection's email, password, and hackathon
+variables.
 
 Health: `GET /health` and `GET /api/health` (`503` + `degraded` when Mongo is down).
 
@@ -164,6 +180,9 @@ Health: `GET /health` and `GET /api/health` (`503` + `degraded` when Mongo is do
   `Authorization: Bearer $METRICS_TOKEN` and is hidden when unset.
 - Sentry projects, uptime checks, log drain and the Grafana dashboard are
   documented in [docs/monitoring.md](../../docs/monitoring.md).
+- Reminder scheduler runs and delivery outcomes are exposed as
+  `hackhub_reminder_*` Prometheus counters/gauges. Reminder jobs are queued
+  durably in MongoDB; this is not a separate Redis/RabbitMQ service.
 
 ### Teams (`/teams`, also served under `/api/teams`)
 
@@ -240,9 +259,9 @@ The web app (`apps/web`) talks to this API with credentialed requests:
 - Session tokens live in httpOnly cookies — the SPA keeps only `user` state
   in memory.
 
-The frontend's provisional assumptions (calendar/reminders persistence and the
-`/saved` vs `/saved-hackathons/*` naming) are tracked in
-[docs/API_SPEC.md](../../docs/API_SPEC.md).
+The calendar/reminder and `/saved` routes are implemented in the active API.
+Legacy `/saved-hackathons/*` routes remain available for existing clients.
+See [docs/API_SPEC.md](../../docs/API_SPEC.md) for request and response details.
 
 ### Staging
 

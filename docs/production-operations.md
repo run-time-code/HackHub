@@ -48,6 +48,20 @@ Before go-live, rehearse both rollback paths in staging and record the operator,
 
 ## Load and capacity review
 
+Before load testing, capture MongoDB execution plans against a representative
+staging dataset:
+
+```sh
+cd apps/api
+npm run explain:catalogue
+```
+
+The command reports `executionTimeMillis`, keys/documents examined, returned
+rows, and the winning plan for catalogue listing, filtering, sorting, and
+facet aggregation. Use the actual plan to decide whether indexes or query
+shapes need adjustment; do not infer a production latency target from a local
+or in-memory database.
+
 Install k6 and run the scenarios against staging with a dedicated test account and representative, non-production data. Set `BASE_URL`, `BROWSE_PATH`, `SEARCH_PATH`, `LOGIN_PATH`, `LOGIN_EMAIL`, and `LOGIN_PASSWORD` in the environment, then run:
 
 ```sh
@@ -60,11 +74,36 @@ Record p50/p95 latency, error rate, Render CPU/memory, MongoDB Atlas connections
 
 ## Current readiness gap
 
-The active `npm start` entry point (`apps/api/src/server.js`) connects MongoDB and mounts the auth/profile/dashboard, saved-hackathon CRUD, calendar/reminders, team, teammate-discovery, join-request/invitation, notification, public hackathon catalogue and admin routes in one process. The WA3 integration gap is closed: `/saved` CRUD, `/calendar`, `/reminders` and the account-settings aliases are implemented and contract-tested (see [design/QA_REPORT.md](design/QA_REPORT.md)).
+The active `npm start` entry point (`apps/api/src/server.js`) connects MongoDB
+and mounts auth/profile/dashboard, saved-hackathon CRUD, calendar/reminders,
+teams, teammate discovery, join requests/invitations, notifications, catalogue,
+recommendations, and admin routes. Calendar, reminder, saved-hackathon, and
+account-settings contracts are covered by
+`apps/api/test/calendar-reminders-saved.test.js`.
 
 Remaining work before a full live release:
 
-- Provision the staging and production environments with the secrets in [staging.md](staging.md) and the table above, then run `apps/api/scripts/smoke-staging.js`, the k6 scenarios, and the backup/restore drill against those environments. This repository contains the workflows and procedures, but cannot create the Render/Vercel/Atlas resources or supply their credentials.
-- The public catalogue serves whatever is in the `Hackathon` collection; populate it with `tools/data-importer` (scheduled scrapers are still planned). A successful health check alone does not verify hackathon discovery.
-- Worth Score is still a planned service and has no endpoints yet. It is not part of the Week 4 release gate.
-- `apps/backend-prototype/` is exploratory only and is not deployed; the active API has its own hackathon routes, so it can be ignored rather than integrated.
+- Provision staging and production using the secrets in [staging.md](staging.md),
+  then run `apps/api/scripts/smoke-staging.js`, k6 scenarios, and a backup/restore
+  drill. This repository contains procedures, but cannot create provider
+  resources or supply credentials.
+- The calendar/reminder and `/saved` APIs are now mounted in `apps/api`.
+  Verify the complete sign-up → save → calendar → reminder delivery flow in
+  staging with configured email and a test account.
+- The public catalogue serves whatever is in the `Hackathon` collection;
+  populate it with `tools/data-importer`. Automated scrapers are still
+  planned. The importer no longer deactivates records absent from a fetch,
+  because the provider response is not proven to be a complete snapshot.
+- Run the documented k6 test in staging and record actual p50/p95 latency,
+  error rate, and database/instance utilization. The one-second p95 target is
+  a test threshold, not a result measured by this repository change.
+- Configure and verify provider-side Sentry, uptime, metrics, and alert
+  routing in staging and production.
+- `/metrics` exposes reminder scheduler heartbeat, duration, and delivery
+  counters. Configure and verify alerts for a stale heartbeat and increasing
+  delivery failures.
+- The heuristic recommendation score is implemented, but its scoring model
+  needs product validation before being treated as an outcome predictor.
+- `backend/` is an older, non-deployed implementation. Production remains
+  `apps/api`; do not start both against the same collections without a
+  migration plan.

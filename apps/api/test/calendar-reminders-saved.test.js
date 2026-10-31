@@ -21,6 +21,7 @@ const Hackathon = require('../models/Hackathon');
 const SavedHackathon = require('../models/SavedHackathon');
 const { Reminder } = require('../src/models/reminder');
 const { Notification } = require('../src/models/notification');
+const { buildReminderEmail } = require('../utils/emailUtils');
 const {
   isInQuietHours,
   processDueReminder,
@@ -217,6 +218,7 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     });
     assert.equal(created.res.status, 201);
     assert.equal(created.body.data.hackathonTitle, 'Calendar Hack');
+    assert.equal(created.body.data.eventAt, '2030-05-15T12:00:00.000Z');
     assert.equal(created.body.data.remindAt, '2030-05-12T12:00:00.000Z');
 
     const list = await api('GET', '/reminders', undefined, { csrf: false });
@@ -268,6 +270,18 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
       null
     );
     assert.equal(await Notification.countDocuments({ reminder: reminder._id }), 1);
+  });
+
+  it('builds a safely escaped reminder email with the event date', () => {
+    const email = buildReminderEmail({
+      hackathonTitle: '<Hackathon>',
+      eventType: 'registration',
+      eventAt: '2030-05-15T12:00:00.000Z',
+    });
+    assert.match(email.subject, /<Hackathon>/);
+    assert.match(email.html, /&lt;Hackathon&gt;/);
+    assert.match(email.text, /15 May 2030/);
+    assert.doesNotMatch(email.html, /<Hackathon>/);
   });
 
   it('postpones reminders until the exact end of overnight IST quiet hours', async () => {

@@ -110,6 +110,7 @@ function serializeReminder(reminder, hackathon) {
     eventType: source.eventType,
     daysBefore: source.daysBefore,
     channel: source.channel,
+    eventAt: source.eventAt || null,
     remindAt: source.remindAt,
     active: source.active !== false,
     createdAt: source.createdAt,
@@ -161,6 +162,7 @@ async function createReminder(userId, payload) {
       eventType,
       daysBefore,
       channel,
+      eventAt: deadline,
       remindAt,
     });
     return serializeReminder(reminder, hackathon);
