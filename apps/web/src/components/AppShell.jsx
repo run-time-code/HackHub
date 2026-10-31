@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
+import LogoMark from "./LogoMark";
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "My desk" },
@@ -33,8 +34,8 @@ export default function AppShell({ activeSection, children }) {
       <header className="workbench-header">
         <div className="workbench-header-inner">
           <button type="button" onClick={() => selectSection("dashboard")} className="workbench-brand" aria-label="Go to my desk">
-            <span className="brand-mark" aria-hidden="true"><span>H</span><i /></span>
-            <span>HackHub <small>FIELD GUIDE</small></span>
+            <LogoMark className="workbench-brand__mark" />
+            <span>HackHub <small>Builder&apos;s field guide</small></span>
           </button>
           <nav aria-label="Workspace sections" className="workbench-nav">
             {NAV_ITEMS.map(({ key, label }) => (
