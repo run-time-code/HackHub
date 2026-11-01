@@ -7,8 +7,17 @@ const Hackathon = require('../../models/Hackathon');
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const CACHE_TTL_MS = 60_000;
+// Facet counts move slowly and are expensive (a scan of every matching row),
+// so they are reused for longer than a page of results.
+const FACET_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHE_ENTRIES = 500;
 const listCache = new Map();
+// Facets and the total are derived from the whole filtered result set, so
+// computing them per page request is a full scan on every page/sort change.
+// They are identical for every page of the same filter, so they get their own
+// cache entry plus single-flight dedupe: a burst of cold requests for the same
+// filter runs the aggregation once, not once per request.
+const facetsInFlight = new Map();
 
 function badRequest(message) {
   return { status: 400, code: 'VALIDATION_ERROR', message };
@@ -124,6 +133,53 @@ function addCondition(filter, condition) {
 
 function invalidateHackathonCache() {
   listCache.clear();
+  facetsInFlight.clear();
+}
+
+// One full scan per filter per TTL, shared by every page and sort of the same
+// filter. Returns { total, facets }.
+async function loadFacets(filter, filterKey) {
+  const cacheKey = `facets:${filterKey}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const inFlight = facetsInFlight.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  const startedAt = Date.now();
+  const promise = (async () => {
+    const [total, grouped] = await Promise.all([
+      Hackathon.countDocuments(filter),
+      Hackathon.aggregate([
+        { $match: filter },
+        {
+          $facet: {
+            modes: [{ $group: { _id: '$mode', count: { $sum: 1 } } }],
+            statuses: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+            domains: [{ $unwind: '$domain' }, { $group: { _id: '$domain', count: { $sum: 1 } } }],
+            skills: [{ $unwind: '$skills' }, { $group: { _id: '$skills', count: { $sum: 1 } } }],
+            locations: [{ $match: { location: { $nin: ['', null] } } }, { $group: { _id: '$location', count: { $sum: 1 } } }],
+          },
+        },
+      ]),
+    ]);
+
+    const facets = Object.fromEntries(
+      Object.entries(grouped[0] || {}).map(([name, groups]) => [
+        name,
+        groups.filter((item) => item._id !== null && item._id !== '').map((item) => ({ value: item._id, count: item.count })),
+      ])
+    );
+
+    const value = { total, facets, tookMs: Date.now() - startedAt };
+    setCached(cacheKey, value, FACET_CACHE_TTL_MS);
+    return value;
+  })().finally(() => {
+    facetsInFlight.delete(cacheKey);
+  });
+
+  facetsInFlight.set(cacheKey, promise);
+  return promise;
 }
 
 function getCached(key) {
@@ -136,12 +192,12 @@ function getCached(key) {
   return entry.value;
 }
 
-function setCached(key, value) {
+function setCached(key, value, ttlMs = CACHE_TTL_MS) {
   if (listCache.size >= MAX_CACHE_ENTRIES) {
     const oldestKey = listCache.keys().next().value;
     if (oldestKey !== undefined) listCache.delete(oldestKey);
   }
-  listCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  listCache.set(key, { value, expiresAt: Date.now() + ttlMs });
 }
 
 async function listHackathons(query = {}) {
@@ -327,28 +383,11 @@ async function listHackathons(query = {}) {
       .sort(sorts[sortBy])
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
-  const [items, total, groupedFacets] = await Promise.all([
+  const filterKey = JSON.stringify(filter);
+  const [items, { total, facets }] = await Promise.all([
     listQuery,
-    Hackathon.countDocuments(filter),
-    Hackathon.aggregate([
-      { $match: filter },
-      {
-        $facet: {
-          modes: [{ $group: { _id: '$mode', count: { $sum: 1 } } }],
-          statuses: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
-          domains: [{ $unwind: '$domain' }, { $group: { _id: '$domain', count: { $sum: 1 } } }],
-          skills: [{ $unwind: '$skills' }, { $group: { _id: '$skills', count: { $sum: 1 } } }],
-          locations: [{ $match: { location: { $nin: ['', null] } } }, { $group: { _id: '$location', count: { $sum: 1 } } }],
-        },
-      },
-    ]),
+    loadFacets(filter, filterKey),
   ]);
-  const facets = Object.fromEntries(
-    Object.entries(groupedFacets[0] || {}).map(([name, groups]) => [
-      name,
-      groups.filter((item) => item._id !== null && item._id !== '').map((item) => ({ value: item._id, count: item.count })),
-    ])
-  );
   const result = {
     items: items.map(serialize),
     page: pageNum,

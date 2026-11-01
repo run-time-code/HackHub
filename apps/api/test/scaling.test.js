@@ -59,11 +59,7 @@ describe('scaling', () => {
 
       assert.equal(runs, 1);
       assert.equal([first, second].filter((result) => result.acquired).length, 1);
-      const lockCount = await JobLock.countDocuments({ key: 'concurrent-job' });
-      // One insert, one delete, plus the no-op expired-path insert from the
-      // failed race => 1 left. The check below is against what the test
-      // observes, not against this arithmetic.
-      assert.equal(lockCount, 0);
+      assert.equal(await JobLock.countDocuments({ key: 'concurrent-job' }), 0);
     });
 
     it('recovers an expired lock left by a crashed instance', async () => {
