@@ -144,6 +144,22 @@ function formatPrize(value) {
   return `$${value.toLocaleString('en-US')}`;
 }
 
+// External listings are untrusted input. Only http(s) URLs may be stored so
+// a malicious or malformed scrape cannot persist javascript:/data: values
+// that later break (or, outside React's URL sanitisation, execute in) another
+// consumer such as the calendar export.
+function safeHttpUrl(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+
+  try {
+    const url = new URL(text);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 function normalizeMode(value, fallback = 'ONLINE') {
   const text = cleanText(value).toUpperCase();
   if (/HYBRID|BOTH/.test(text)) return 'HYBRID';
@@ -223,6 +239,7 @@ module.exports = {
   parseDateValue,
   parsePrizeAmount,
   parseSubmissionPeriod,
+  safeHttpUrl,
   slugify,
   startOfUtcDay,
   stripHtml,

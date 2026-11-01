@@ -2,6 +2,7 @@
 
 const service = require('../services/notificationsService');
 const { subscribeToUser } = require('../utils/eventBus');
+const sseLimiter = require('../utils/sseLimiter');
 
 async function list(req, res, next) {
   try {
@@ -33,6 +34,17 @@ async function markAllRead(req, res, next) {
 // Server-Sent Events stream. Clients that cannot hold a stream open should
 // poll GET /notifications?unreadOnly=true as the fallback.
 function stream(req, res) {
+  if (!sseLimiter.tryAcquire(req.user.id)) {
+    return res.status(429).json({
+      success: false,
+      error: {
+        code: 'NOTIFICATION_STREAM_LIMIT',
+        message: 'Too many open notification streams. Close another tab and retry.',
+      },
+      requestId: req.id,
+    });
+  }
+
   res.set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -54,6 +66,7 @@ function stream(req, res) {
     closed = true;
     clearInterval(heartbeat);
     unsubscribe();
+    sseLimiter.release(req.user.id);
   };
 
   // A write to a socket that died between heartbeats emits an error on the

@@ -20,6 +20,7 @@ const {
   formatPrize,
   normalizeMode,
   parseDateValue,
+  safeHttpUrl,
   slugify,
   truncate,
 } = require('./normalize');
@@ -60,10 +61,10 @@ function candidateToDocument(candidate, now = new Date()) {
       source: candidate.sourceKey,
       externalId,
       external_id: externalId,
-      url: cleanText(candidate.url),
-      sourceUrl: cleanText(candidate.url),
-      source_url: cleanText(candidate.url),
-      imageUrl: cleanText(candidate.imageUrl),
+      url: safeHttpUrl(candidate.url),
+      sourceUrl: safeHttpUrl(candidate.url),
+      source_url: safeHttpUrl(candidate.url),
+      imageUrl: safeHttpUrl(candidate.imageUrl),
       mode,
       location: cleanText(candidate.location) || (mode === 'ONLINE' ? 'Online' : ''),
       registrationDeadline,
@@ -96,7 +97,7 @@ function candidateToDocument(candidate, now = new Date()) {
     sourceRecord: {
       source: candidate.sourceKey,
       externalId,
-      url: cleanText(candidate.url),
+      url: safeHttpUrl(candidate.url),
     },
   };
 }
