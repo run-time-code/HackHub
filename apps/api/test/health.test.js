@@ -1,3 +1,4 @@
+
 'use strict';
 
 // Smoke tests for the API skeleton.
@@ -17,57 +18,93 @@ describe('health', () => {
 
   before(async () => {
     const app = createApp();
-    await new Promise((resolve) => {
+
+    await new Promise((resolve, reject) => {
       server = app.listen(0, resolve);
+      server.once('error', reject);
     });
+
     base = `http://localhost:${server.address().port}`;
   });
 
-  after(() => new Promise((resolve) => server.close(resolve)));
+  after(async () => {
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
 
   it('GET /api/health returns the ok envelope', async () => {
     const mongoose = require('mongoose');
     const orig = mongoose.connection.readyState;
-    Object.defineProperty(mongoose.connection, 'readyState', { value: 1, configurable: true });
+
+    Object.defineProperty(mongoose.connection, 'readyState', {
+      value: 1,
+      configurable: true,
+    });
+
     try {
       const res = await fetch(`${base}/api/health`);
+
       assert.equal(res.status, 200);
-      assert.ok(res.headers.get('x-request-id'), 'missing x-request-id header');
+      assert.ok(
+        res.headers.get('x-request-id'),
+        'missing x-request-id header'
+      );
+
       const body = await res.json();
+
       assert.equal(body.success, true);
       assert.equal(body.data.status, 'ok');
       assert.equal(body.data.db, 'up');
       assert.equal(body.data.service, 'hackhub-api');
     } finally {
-      Object.defineProperty(mongoose.connection, 'readyState', { value: orig, configurable: true });
+      Object.defineProperty(mongoose.connection, 'readyState', {
+        value: orig,
+        configurable: true,
+      });
     }
   });
 
   it('GET /health reports degraded 503 when the database is down', async () => {
     const { getHealth } = require('../src/services/healthService');
+
     assert.equal(getHealth(0).db, 'down');
     assert.equal(getHealth(0).status, 'degraded');
+
     const res = await fetch(`${base}/health`);
-    // No DB in this suite -> degraded.
+
     assert.equal(res.status, 503);
+
     const body = await res.json();
+
     assert.equal(body.success, false);
     assert.equal(body.data.db, 'down');
   });
 
   it('auth routes expose CSRF bootstrap and reject mutations without a token', async () => {
     const bootstrap = await fetch(`${base}/api/auth/csrf-token`);
+
     assert.equal(bootstrap.status, 200);
+
     const { csrfToken } = await bootstrap.json();
-    const csrfCookie = bootstrap.headers.get('set-cookie').split(';', 1)[0];
+    const setCookie = bootstrap.headers.get('set-cookie') || '';
+    const csrfCookie = setCookie.split(';', 1)[0];
+
     assert.ok(csrfToken);
-    assert.match(bootstrap.headers.get('set-cookie'), /psifi\.x-csrf-token/);
+    assert.ok(csrfCookie);
+    assert.match(setCookie, /psifi\.x-csrf-token/);
 
     const login = await fetch(`${base}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'test@example.com', password: 'password' }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'password',
+      }),
     });
+
     assert.equal(login.status, 403);
 
     const logout = await fetch(`${base}/api/auth/logout`, {
@@ -79,15 +116,48 @@ describe('health', () => {
       },
       body: JSON.stringify({}),
     });
+
     assert.equal(logout.status, 200);
   });
 
   it('mounted profile and optional OAuth routes respond without a database or provider credentials', async () => {
     const profile = await fetch(`${base}/api/users/me`);
+
     assert.equal(profile.status, 401);
 
-    const oauth = await fetch(`${base}/api/auth/google`);
-    assert.equal(oauth.status, 503);
+    // Save the current environment values.
+    const previousClientId = process.env.GOOGLE_CLIENT_ID;
+    const previousClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    try {
+      // Simulate an environment where Google OAuth is not configured.
+      delete process.env.GOOGLE_CLIENT_ID;
+      delete process.env.GOOGLE_CLIENT_SECRET;
+
+      const oauth = await fetch(`${base}/api/auth/google`);
+
+      assert.equal(oauth.status, 503);
+
+      const body = await oauth.json();
+
+      assert.match(
+        body.message,
+        /google login is not configured/i
+      );
+    } finally {
+      // Restore the original environment values.
+      if (previousClientId === undefined) {
+        delete process.env.GOOGLE_CLIENT_ID;
+      } else {
+        process.env.GOOGLE_CLIENT_ID = previousClientId;
+      }
+
+      if (previousClientSecret === undefined) {
+        delete process.env.GOOGLE_CLIENT_SECRET;
+      } else {
+        process.env.GOOGLE_CLIENT_SECRET = previousClientSecret;
+      }
+    }
   });
 
   it('credentialed CORS allows the configured frontend origin', async () => {
@@ -99,14 +169,22 @@ describe('health', () => {
         'Access-Control-Request-Headers': 'content-type,x-csrf-token',
       },
     });
+
     assert.equal(response.status, 204);
-    assert.equal(response.headers.get('access-control-allow-credentials'), 'true');
+
+    assert.equal(
+      response.headers.get('access-control-allow-credentials'),
+      'true'
+    );
   });
 
   it('unknown routes return the NOT_FOUND envelope', async () => {
     const res = await fetch(`${base}/no-such-route`);
+
     assert.equal(res.status, 404);
+
     const body = await res.json();
+
     assert.equal(body.success, false);
     assert.equal(body.error.code, 'NOT_FOUND');
     assert.ok(body.requestId, 'missing requestId in body');
@@ -114,18 +192,31 @@ describe('health', () => {
 
   it('metrics are hidden unless the scrape token is supplied', async () => {
     const previousToken = config.metricsToken;
+
     config.metricsToken = 'test-metrics-token';
 
     try {
       const hidden = await fetch(`${base}/metrics`);
+
       assert.equal(hidden.status, 404);
 
       const response = await fetch(`${base}/metrics`, {
-        headers: { authorization: 'Bearer test-metrics-token' },
+        headers: {
+          authorization: 'Bearer test-metrics-token',
+        },
       });
+
       assert.equal(response.status, 200);
-      assert.match(response.headers.get('content-type'), /text\/plain/);
-      assert.match(await response.text(), /hackhub_http_requests_total/);
+
+      assert.match(
+        response.headers.get('content-type'),
+        /text\/plain/
+      );
+
+      assert.match(
+        await response.text(),
+        /hackhub_http_requests_total/
+      );
     } finally {
       config.metricsToken = previousToken;
     }

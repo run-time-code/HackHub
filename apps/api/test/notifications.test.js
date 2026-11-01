@@ -1,3 +1,4 @@
+
 'use strict';
 
 // Integration tests for in-app notifications: list, unread filter, mark
@@ -21,23 +22,69 @@ describe('notifications', () => {
   let server;
   let base;
   let mongo;
+  let csrf;
   let token;
   let otherToken;
   let userId;
 
   function sign(id) {
-    return jwt.sign({ id, email: `${id}@test.com`, role: 'student' }, config.jwtSecret);
+    return jwt.sign(
+      { id, email: `${id}@test.com`, role: 'student' },
+      config.jwtSecret
+    );
+  }
+
+  async function bootstrapCsrf() {
+    const res = await fetch(`${base}/auth/csrf-token`);
+    const payload = await res.json();
+
+    assert.equal(res.status, 200, 'CSRF bootstrap endpoint failed');
+    assert.ok(payload.csrfToken, 'CSRF token was not returned');
+
+    const cookie = (res.headers.get('set-cookie') || '').split(';')[0];
+
+    assert.ok(cookie, 'CSRF cookie was not set');
+
+    return {
+      token: payload.csrfToken,
+      cookie,
+    };
   }
 
   async function api(method, path, options = {}) {
-    const headers = { 'content-type': 'application/json' };
-    if (options.token) headers.authorization = `Bearer ${options.token}`;
+    const headers = {
+      'content-type': 'application/json',
+      'x-csrf-token': csrf.token,
+      cookie: csrf.cookie,
+    };
+
+    if (options.token) {
+      headers.authorization = `Bearer ${options.token}`;
+    }
+
     const res = await fetch(`${base}${path}`, {
       method,
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined
+        ? undefined
+        : JSON.stringify(options.body),
     });
-    return { res, body: await res.json() };
+
+    const text = await res.text();
+    let responseBody = {};
+
+    if (text) {
+      try {
+        responseBody = JSON.parse(text);
+      } catch {
+        responseBody = { raw: text };
+      }
+    }
+
+    return {
+      res,
+      body: responseBody,
+    };
   }
 
   before(async () => {
@@ -45,9 +92,18 @@ describe('notifications', () => {
     await mongoose.connect(mongo.getUri());
 
     const [me, other] = await User.insertMany([
-      { name: 'Me', email: 'me@test.com', password: 'HashedPlaceholder' },
-      { name: 'Other', email: 'other@test.com', password: 'HashedPlaceholder' },
+      {
+        name: 'Me',
+        email: 'me@test.com',
+        password: 'HashedPlaceholder',
+      },
+      {
+        name: 'Other',
+        email: 'other@test.com',
+        password: 'HashedPlaceholder',
+      },
     ]);
+
     userId = String(me._id);
     token = sign(userId);
     otherToken = sign(String(other._id));
@@ -55,35 +111,79 @@ describe('notifications', () => {
     await new Promise((resolve) => {
       server = createApp().listen(0, resolve);
     });
+
     base = `http://localhost:${server.address().port}/api`;
+
+    // Bootstrap CSRF before any protected mutation requests.
+    csrf = await bootstrapCsrf();
   });
 
   after(async () => {
-    await new Promise((resolve) => server.close(resolve));
-    await mongoose.disconnect();
-    await mongo.stop();
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+
+    if (mongo) {
+      await mongo.stop();
+    }
   });
 
   it('requires authentication', async () => {
     const { res, body } = await api('GET', '/notifications');
+
     assert.equal(res.status, 401);
     assert.equal(body.error.code, 'UNAUTHENTICATED');
   });
 
   it('rejects revoked, banned and deleted sessions', async () => {
-    const revoked = await User.create({ name: 'Revoked', email: 'revoked@test.com' });
+    const revoked = await User.create({
+      name: 'Revoked',
+      email: 'revoked@test.com',
+    });
+
     const revokedToken = sign(String(revoked._id));
+
     revoked.tokenVersion += 1;
     await revoked.save();
-    const revokedResponse = await api('GET', '/notifications', { token: revokedToken });
+
+    const revokedResponse = await api(
+      'GET',
+      '/notifications',
+      { token: revokedToken }
+    );
+
     assert.equal(revokedResponse.res.status, 401);
 
-    const banned = await User.create({ name: 'Banned', email: 'banned@test.com', banned: true });
-    const bannedResponse = await api('GET', '/notifications', { token: sign(String(banned._id)) });
+    const banned = await User.create({
+      name: 'Banned',
+      email: 'banned@test.com',
+      banned: true,
+    });
+
+    const bannedResponse = await api(
+      'GET',
+      '/notifications',
+      { token: sign(String(banned._id)) }
+    );
+
     assert.equal(bannedResponse.res.status, 403);
 
-    const deleted = await User.create({ name: 'Deleted', email: 'deleted@test.com', deletedAt: new Date() });
-    const deletedResponse = await api('GET', '/notifications', { token: sign(String(deleted._id)) });
+    const deleted = await User.create({
+      name: 'Deleted',
+      email: 'deleted@test.com',
+      deletedAt: new Date(),
+    });
+
+    const deletedResponse = await api(
+      'GET',
+      '/notifications',
+      { token: sign(String(deleted._id)) }
+    );
+
     assert.equal(deletedResponse.res.status, 401);
   });
 
@@ -95,6 +195,7 @@ describe('notifications', () => {
       message: 'oldest',
       email: false,
     });
+
     await notificationsService.createNotification({
       userId,
       type: 'team_full',
@@ -103,25 +204,40 @@ describe('notifications', () => {
       email: false,
     });
 
-    const all = await api('GET', '/notifications', { token });
+    const all = await api(
+      'GET',
+      '/notifications',
+      { token }
+    );
+
     assert.equal(all.res.status, 200);
     assert.equal(all.body.data.total, 2);
     assert.equal(all.body.data.unread, 2);
     assert.equal(all.body.data.items[0].title, 'Second');
     assert.equal(all.body.data.items[0].read, false);
 
-    const unread = await api('GET', '/notifications?unreadOnly=true', { token });
+    const unread = await api(
+      'GET',
+      '/notifications?unreadOnly=true',
+      { token }
+    );
+
     assert.equal(unread.body.data.total, 2);
   });
 
   it('creates multiple notifications without a reminder reference', async () => {
-    const user = await User.create({ name: 'No reminder', email: 'no-reminder@test.com' });
+    const user = await User.create({
+      name: 'No reminder',
+      email: 'no-reminder@test.com',
+    });
+
     await notificationsService.createNotification({
       userId: user._id,
       type: 'team_full',
       title: 'First notification',
       email: false,
     });
+
     await notificationsService.createNotification({
       userId: user._id,
       type: 'request_accepted',
@@ -130,61 +246,109 @@ describe('notifications', () => {
     });
 
     const result = await notificationsService.listNotifications(user._id);
+
     assert.equal(result.total, 2);
   });
 
   it('marks one notification read without leaking other users', async () => {
-    const list = await api('GET', '/notifications', { token });
+    const list = await api(
+      'GET',
+      '/notifications',
+      { token }
+    );
+
     const id = list.body.data.items[0].id;
 
-    const denied = await api('PATCH', `/notifications/${id}/read`, { token: otherToken });
+    const denied = await api(
+      'PATCH',
+      `/notifications/${id}/read`,
+      { token: otherToken }
+    );
+
     assert.equal(denied.res.status, 404);
 
-    const marked = await api('PATCH', `/notifications/${id}/read`, { token });
+    const marked = await api(
+      'PATCH',
+      `/notifications/${id}/read`,
+      { token }
+    );
+
     assert.equal(marked.res.status, 200);
     assert.equal(marked.body.data.read, true);
 
-    const after = await api('GET', '/notifications', { token });
+    const after = await api(
+      'GET',
+      '/notifications',
+      { token }
+    );
+
     assert.equal(after.body.data.unread, 1);
     assert.equal(after.body.data.items[0].read, true);
   });
 
   it('marks every notification read (polling fallback endpoint)', async () => {
-    const marked = await api('PATCH', '/notifications/read-all', { token });
+    const marked = await api(
+      'PATCH',
+      '/notifications/read-all',
+      { token }
+    );
+
     assert.equal(marked.res.status, 200);
     assert.equal(marked.body.data.updated, 1);
 
-    const after = await api('GET', '/notifications?unreadOnly=true', { token });
+    const after = await api(
+      'GET',
+      '/notifications?unreadOnly=true',
+      { token }
+    );
+
     assert.equal(after.body.data.total, 0);
   });
 
   it('validates notification ids', async () => {
-    const { res, body } = await api('PATCH', '/notifications/not-an-id/read', { token });
+    const { res, body } = await api(
+      'PATCH',
+      '/notifications/not-an-id/read',
+      { token }
+    );
+
     assert.equal(res.status, 400);
     assert.equal(body.error.code, 'VALIDATION_ERROR');
   });
 
   it('pushes new notifications over a server-sent events stream', async () => {
     const controller = new AbortController();
+
     const response = await fetch(`${base}/notifications/stream`, {
-      headers: { authorization: `Bearer ${token}` },
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
       signal: controller.signal,
     });
+
     assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type'), /text\/event-stream/);
+    assert.match(
+      response.headers.get('content-type'),
+      /text\/event-stream/
+    );
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+
     const readChunk = () =>
       Promise.race([
         reader.read(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timed out waiting for SSE data')), 3000)
+          setTimeout(
+            () => reject(new Error('timed out waiting for SSE data')),
+            3000
+          )
         ),
       ]);
 
     try {
       const ready = await readChunk();
+
       assert.match(decoder.decode(ready.value), /event: ready/);
 
       await notificationsService.createNotification({
@@ -197,11 +361,18 @@ describe('notifications', () => {
 
       let received = '';
       const deadline = Date.now() + 5000;
-      while (!received.includes('event: notification') && Date.now() < deadline) {
+
+      while (
+        !received.includes('event: notification') &&
+        Date.now() < deadline
+      ) {
         const { value, done } = await readChunk();
+
         if (done) break;
+
         received += decoder.decode(value);
       }
+
       assert.match(received, /event: notification/);
       assert.match(received, /Instant delivery/);
     } finally {
