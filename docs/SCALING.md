@@ -39,6 +39,7 @@ bounded and cacheable:
 | Mongo connection pool is configurable | `src/config/index.js` (`MONGO_MAX_POOL_SIZE`) | Instances do not exhaust the cluster connection limit |
 | Background jobs can be disabled per instance | `RUN_BACKGROUND_JOBS=false` | Web replicas stay stateless; one worker owns the crons |
 | SSE streams are capped per user and globally | `src/utils/sseLimiter.js` | One client cannot exhaust file descriptors |
+| General API limiter buckets by account (IP only when anonymous) | `src/middleware/rateLimitIdentity.js`, `src/app.js` | Users behind one campus/NAT IP no longer share a single 300-request bucket |
 
 Regression coverage: `apps/api/test/scaling.test.js` (lock concurrency, cache
 behaviour, discovery cap, index presence). Full API suite: **154/154 passing**.
@@ -66,9 +67,10 @@ These are deployment changes, not code defects:
    service. Three instances behind a load balancer are required for
    availability (rolling deploys, instance loss) and throughput.
 2. **Shared rate limiting.** `express-rate-limit` keeps counters in process
-   memory. With N instances the effective limit is N times the configured one,
-   and a blocked client can simply retry against another instance. Move the
-   store to Redis (or enforce limits at the load balancer/CDN).
+   memory (the keying is already per account). With N instances the effective
+   limit is N times the configured one, and a blocked client can simply retry
+   against another instance. Move the store to Redis (or enforce limits at the
+   load balancer/CDN).
 3. **Shared SSE fan-out.** The notification event bus is an in-process
    `EventEmitter`. An event published on instance A is only delivered to
    browsers connected to A. Multi-instance requires Redis pub/sub (or polling
