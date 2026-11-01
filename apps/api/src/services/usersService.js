@@ -1,6 +1,7 @@
 'use strict';
 
 const User = require('../../models/User');
+const config = require('../config');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -195,9 +196,19 @@ async function searchTeammates(query) {
     DISCOVERY_FIELDS.split(' ').map((field) => [field, 1])
   );
 
+  // Even with database-side scoring, a broad filter can match hundreds of
+  // thousands of users. Score at most the newest N candidates (0 disables the
+  // cap) so one request has a bounded cost; this is reported to the client as
+  // `truncated` rather than silently pretending the page is complete.
+  const maxCandidates = Number(config.discoveryMaxCandidates) || 0;
+  const candidateStages = maxCandidates > 0
+    ? [{ $sort: { _id: -1 } }, { $limit: maxCandidates }]
+    : [];
+
   const [users, total] = await Promise.all([
     User.aggregate([
       { $match: filter },
+      ...candidateStages,
       {
         $addFields: {
           matchedSkills: {
@@ -253,6 +264,7 @@ async function searchTeammates(query) {
     page: pageNum,
     limit: limitNum,
     total,
+    truncated: maxCandidates > 0 && total > maxCandidates,
   };
 }
 
