@@ -11,6 +11,7 @@ const {
 } = require("../utils/emailUtils");
 
 const {
+    REFRESH_TOKEN_TTL_MS,
     generateAccessToken,
     generateRefreshToken,
     generateEmailVerificationToken,
@@ -247,31 +248,32 @@ const resendVerification = async (req, res) => {
     try {
         const { email } = req.body;
 
-        if (!email) {
+        const normalizedEmail =
+            typeof email === "string"
+                ? email.trim().toLowerCase()
+                : "";
+
+        if (!normalizedEmail) {
             return res.status(400).json({
                 message: "Email is required"
             });
         }
 
-        if (!validator.isEmail(email)) {
+        if (!validator.isEmail(normalizedEmail)) {
             return res.status(400).json({
                 message: "Invalid email format"
             });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
 
-        // Don't reveal whether an account exists
-        if (!user) {
+        // Don't reveal whether an account exists, and don't reveal whether
+        // an existing account is already verified. Both cases return the
+        // same response as the "email sent" path.
+        if (!user || user.emailVerified) {
             return res.status(200).json({
                 message:
                     "If the account exists, a verification email has been sent"
-            });
-        }
-
-        if (user.emailVerified) {
-            return res.status(400).json({
-                message: "Email is already verified"
             });
         }
 
@@ -451,6 +453,15 @@ const login = async (req, res) => {
             });
         }
 
+        // Banned accounts must not be able to mint new sessions. Check after
+        // the password comparison so a wrong password still gets the generic
+        // 401 response and does not disclose the ban state.
+        if (user.banned) {
+            return res.status(403).json({
+                message: "Your account has been banned"
+            });
+        }
+
         // Local development can bypass verification for pre-existing accounts
         // created while transactional email was unavailable.
         if (!user.emailVerified && config.devAutoVerify) {
@@ -484,6 +495,9 @@ const login = async (req, res) => {
             .digest("hex");
 
         user.refreshTokenHash = refreshTokenHash;
+        user.refreshTokenExpiresAt = new Date(
+            Date.now() + REFRESH_TOKEN_TTL_MS
+        );
 
         await user.save();
 
@@ -559,6 +573,39 @@ const refreshToken = async (req, res) => {
             });
         }
 
+        if (user.deletedAt) {
+            return res.status(401).json({
+                message: "Invalid refresh token"
+            });
+        }
+
+        if (user.banned) {
+            return res.status(403).json({
+                message: "Your account has been banned"
+            });
+        }
+
+        if (!user.emailVerified) {
+            return res.status(403).json({
+                message:
+                    "Please verify your email before logging in"
+            });
+        }
+
+        const now = new Date();
+
+        // The cookie has a 7-day max-age, but that is client-enforced only.
+        // Enforce the same lifetime server-side so a leaked token cannot be
+        // replayed forever.
+        if (
+            !user.refreshTokenExpiresAt ||
+            user.refreshTokenExpiresAt <= now
+        ) {
+            return res.status(401).json({
+                message: "Refresh token expired"
+            });
+        }
+
         // Generate new tokens
         const newAccessToken =
             generateAccessToken(user);
@@ -572,11 +619,36 @@ const refreshToken = async (req, res) => {
             .update(newRefreshToken)
             .digest("hex");
 
-        // Rotate refresh token
-        user.refreshTokenHash =
-            newRefreshTokenHash;
+        const newRefreshTokenExpiresAt = new Date(
+            now.getTime() + REFRESH_TOKEN_TTL_MS
+        );
 
-        await user.save();
+        // Rotate atomically. If two requests race with the same token, only
+        // the first can replace the stored hash; the loser gets a 401 instead
+        // of both requests believing they own the session.
+        const rotated = await User.findOneAndUpdate(
+            {
+                _id: user._id,
+                refreshTokenHash,
+                deletedAt: null,
+                banned: { $ne: true },
+                emailVerified: true,
+                refreshTokenExpiresAt: { $gt: now }
+            },
+            {
+                $set: {
+                    refreshTokenHash: newRefreshTokenHash,
+                    refreshTokenExpiresAt: newRefreshTokenExpiresAt
+                }
+            },
+            { returnDocument: "after" }
+        );
+
+        if (!rotated) {
+            return res.status(401).json({
+                message: "Invalid refresh token"
+            });
+        }
 
         // Send new cookies
         res.cookie(
@@ -628,12 +700,18 @@ const logout = async (req, res) => {
                 .update(refreshToken)
                 .digest("hex");
 
-            // Remove refresh token
+            // Remove the refresh token and revoke access tokens minted for
+            // this session. Without the tokenVersion bump the 15-minute
+            // access token kept working after logout.
             await User.findOneAndUpdate(
                 { refreshTokenHash },
                 {
                     $set: {
-                        refreshTokenHash: null
+                        refreshTokenHash: null,
+                        refreshTokenExpiresAt: null
+                    },
+                    $inc: {
+                        tokenVersion: 1
                     }
                 }
             );
@@ -677,19 +755,24 @@ const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
-        if (!email) {
+        const normalizedEmail =
+            typeof email === "string"
+                ? email.trim().toLowerCase()
+                : "";
+
+        if (!normalizedEmail) {
             return res.status(400).json({
                 message: "Email is required"
             });
         }
 
-        if (!validator.isEmail(email)) {
+        if (!validator.isEmail(normalizedEmail)) {
             return res.status(400).json({
                 message: "Invalid email format"
             });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
 
         // Don't reveal whether account exists
         if (!user) {
@@ -801,7 +884,8 @@ const resetPassword = async (req, res) => {
                     password: hashedPassword,
                     passwordResetTokenHash: null,
                     passwordResetTokenExpiresAt: null,
-                    refreshTokenHash: null
+                    refreshTokenHash: null,
+                    refreshTokenExpiresAt: null
                 },
                 $inc: {
                     tokenVersion: 1

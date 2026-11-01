@@ -97,8 +97,10 @@ function createApp() {
 
   app.get('/metrics', metrics.serveMetrics);
 
-  // Apply the global limiter before mounting API routes.
-  app.use('/api', apiLimiter);
+  // Apply the global limiter once, before every API mount. Mounting it only
+  // on '/api' left the duplicate root-mounted read routes (app.use('/', ...))
+  // unprotected.
+  app.use(apiLimiter);
 
   // Health and other src routes are available at both paths.
   app.use('/', routes);

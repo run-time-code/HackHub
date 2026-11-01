@@ -21,9 +21,15 @@ const getAdminReport = async (req, res) => {
                 banned: true
             }),
             Hackathon.countDocuments({}),
-            Hackathon.countDocuments({ is_active: true }),
-            Hackathon.countDocuments({ is_hidden: true }),
-            Hackathon.countDocuments({ is_featured: true }),
+            Hackathon.countDocuments({
+                $or: [{ isActive: true }, { is_active: true }]
+            }),
+            Hackathon.countDocuments({
+                $or: [{ isHidden: true }, { is_hidden: true }]
+            }),
+            Hackathon.countDocuments({
+                $or: [{ isFeatured: true }, { is_featured: true }]
+            }),
             Registration.countDocuments({ registered: true })
         ]);
 

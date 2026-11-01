@@ -116,6 +116,7 @@ describe('auth routes mounted on the src entrypoint', () => {
     email: 'persistent-session@example.com',
     emailVerified: true,
     refreshTokenHash,
+    refreshTokenExpiresAt: new Date(Date.now() + 60_000),
   });
 
   const csrfRes = await fetch(`${base}/auth/csrf-token`);

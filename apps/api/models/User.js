@@ -224,6 +224,12 @@ const userSchema = new mongoose.Schema(
 
         refreshTokenHash: {
             type: String,
+            default: null,
+            index: true
+        },
+
+        refreshTokenExpiresAt: {
+            type: Date,
             default: null
         },
 

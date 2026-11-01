@@ -52,10 +52,28 @@ function serializeSaved(saved, hackathon) {
 }
 
 async function hydrate(rows) {
-  const slugs = [...new Set(rows.map((row) => row.hackathon))];
-  const hackathons = await Hackathon.find({ hackathon_id: { $in: slugs } }).lean();
-  const bySlug = new Map(hackathons.map((hackathon) => [hackathon.hackathon_id, hackathon]));
-  return rows.map((row) => serializeSaved(row, bySlug.get(row.hackathon)));
+  const keys = [...new Set(rows.map((row) => String(row.hackathon)))];
+  const objectIds = keys.filter((key) => mongoose.Types.ObjectId.isValid(key));
+
+  // Current rows store the public slug. Older rows were written with the
+  // hackathon ObjectId as a string; resolve both so those cards do not fall
+  // back to a placeholder.
+  const [bySlug, byId] = await Promise.all([
+    Hackathon.find({ hackathon_id: { $in: keys } }).lean(),
+    objectIds.length
+      ? Hackathon.find({ _id: { $in: objectIds } }).lean()
+      : [],
+  ]);
+
+  const byKey = new Map();
+  for (const hackathon of [...bySlug, ...byId]) {
+    if (hackathon.hackathon_id) {
+      byKey.set(String(hackathon.hackathon_id), hackathon);
+    }
+    byKey.set(String(hackathon._id), hackathon);
+  }
+
+  return rows.map((row) => serializeSaved(row, byKey.get(String(row.hackathon))));
 }
 
 async function listSaved(userId) {
@@ -120,8 +138,17 @@ async function update(userId, id, payload) {
   );
   if (!saved) throw notFound();
 
-  const hackathon = await Hackathon.findOne({ hackathon_id: saved.hackathon });
+  const hackathon = await resolveSavedHackathon(saved.hackathon);
   return serializeSaved(saved, hackathon);
+}
+
+async function resolveSavedHackathon(key) {
+  const value = String(key || '');
+  if (mongoose.Types.ObjectId.isValid(value)) {
+    const byId = await Hackathon.findById(value);
+    if (byId) return byId;
+  }
+  return Hackathon.findOne({ hackathon_id: value });
 }
 
 async function remove(userId, id) {

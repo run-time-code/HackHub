@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const config = require("../src/config");
 const {
+    REFRESH_TOKEN_TTL_MS,
     generateAccessToken,
     generateRefreshToken,
     hashToken
@@ -49,6 +50,12 @@ const completeOAuthLogin = async (req, res) => {
             deletedAt: null
         });
 
+        if (user && user.banned) {
+            return res.status(403).json({
+                message: "Your account has been banned"
+            });
+        }
+
         if (!user) {
             user = await User.findOne({ email }).select("+password");
 
@@ -56,6 +63,12 @@ const completeOAuthLogin = async (req, res) => {
                 return res.status(403).json({
                     message:
                         "This account has been deactivated and cannot be used for social login"
+                });
+            }
+
+            if (user && user.banned) {
+                return res.status(403).json({
+                    message: "Your account has been banned"
                 });
             }
 
@@ -97,6 +110,9 @@ const completeOAuthLogin = async (req, res) => {
         const refreshToken = generateRefreshToken();
 
         user.refreshTokenHash = hashToken(refreshToken);
+        user.refreshTokenExpiresAt = new Date(
+            Date.now() + REFRESH_TOKEN_TTL_MS
+        );
         await user.save();
 
         res.cookie(

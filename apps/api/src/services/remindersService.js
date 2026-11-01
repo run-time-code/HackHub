@@ -143,7 +143,9 @@ async function createReminder(userId, payload) {
   if (!CHANNELS.includes(channel)) {
     throw badRequest(`channel must be one of ${CHANNELS.join(', ')}`);
   }
-  const daysBefore = parseDaysBefore(data.daysBefore);
+  const daysBefore = data.daysBefore === undefined
+    ? (await getPreferences(userId)).defaultDaysBefore
+    : parseDaysBefore(data.daysBefore);
 
   const hackathon = await resolveHackathon(hackathonId);
   const deadline = upcomingDeadline(hackathon, eventType);

@@ -208,6 +208,8 @@ hackathonSchema.index({ mode: 1, status: 1, isActive: 1 });
 hackathonSchema.index({ title: 1, _id: 1 });
 hackathonSchema.index({ registrationDeadline: 1, _id: 1 });
 hackathonSchema.index({ registration_deadline: 1, _id: 1 });
+hackathonSchema.index({ submission_deadline: 1, _id: 1 });
+hackathonSchema.index({ event_start_date: 1, _id: 1 });
 hackathonSchema.index({ prize: -1, _id: 1 });
 hackathonSchema.index({ prize: 1, _id: 1 });
 hackathonSchema.index({ createdAt: -1, _id: -1 });

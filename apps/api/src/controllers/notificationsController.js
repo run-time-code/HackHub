@@ -47,12 +47,29 @@ function stream(req, res) {
     res.write(`event: notification\ndata: ${JSON.stringify(notification)}\n\n`);
   });
   const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 25000);
+
+  let closed = false;
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    unsubscribe();
+  };
+
+  // A write to a socket that died between heartbeats emits an error on the
+  // response. Without a listener that becomes an unhandled EventEmitter
+  // error and can terminate the process.
+  res.on('error', cleanup);
+  res.on('close', cleanup);
+  req.on('error', cleanup);
+
   res.write(`event: ready\ndata: ${JSON.stringify({ requestId: req.id })}\n\n`);
 
   req.on('close', () => {
-    clearInterval(heartbeat);
-    unsubscribe();
-    res.end();
+    cleanup();
+    if (!res.writableEnded) {
+      res.end();
+    }
   });
 }
 

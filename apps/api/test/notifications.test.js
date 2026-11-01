@@ -9,6 +9,7 @@ process.env.LOG_LEVEL = 'fatal';
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -17,6 +18,7 @@ const config = require('../src/config');
 const createApp = require('../src/app');
 const User = require('../models/User');
 const notificationsService = require('../src/services/notificationsService');
+const notificationsController = require('../src/controllers/notificationsController');
 
 describe('notifications', () => {
   let server;
@@ -379,5 +381,33 @@ describe('notifications', () => {
       controller.abort();
       await reader.cancel().catch(() => {});
     }
+  });
+});
+
+describe('notification SSE lifecycle', () => {
+  it('handles a response error and unsubscribes instead of crashing', () => {
+    const req = new EventEmitter();
+    req.user = { id: new mongoose.Types.ObjectId().toString() };
+    req.id = 'sse-lifecycle-test';
+
+    const writes = [];
+    const res = new EventEmitter();
+    res.set = () => res;
+    res.flushHeaders = () => {};
+    res.write = (chunk) => {
+      writes.push(String(chunk));
+      return true;
+    };
+    res.end = () => {};
+    res.writableEnded = false;
+
+    notificationsController.stream(req, res);
+
+    assert.equal(res.listenerCount('error'), 1);
+    assert.ok(writes.some((chunk) => chunk.includes('event: ready')));
+
+    assert.doesNotThrow(() => {
+      res.emit('error', new Error('socket closed'));
+    });
   });
 });

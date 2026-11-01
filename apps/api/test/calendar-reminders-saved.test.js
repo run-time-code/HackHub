@@ -203,6 +203,21 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     assert.equal(badTime.res.status, 400);
   });
 
+  it('uses the saved default lead time when daysBefore is omitted', async () => {
+    const created = await api('POST', '/reminders', {
+      hackathonId: String(hackathon._id),
+      eventType: 'event',
+      channel: 'in_app',
+    });
+
+    assert.equal(created.res.status, 201);
+    assert.equal(created.body.data.daysBefore, 7);
+    assert.equal(created.body.data.remindAt, '2030-05-11T09:00:00.000Z');
+
+    const removed = await api('DELETE', `/reminders/${created.body.data.id}`);
+    assert.equal(removed.res.status, 204);
+  });
+
   it('POST /reminders persists a reminder once and GET lists it', async () => {
     const unauthorized = await api('GET', '/reminders', undefined, {
       token: null,
@@ -411,6 +426,25 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     assert.equal(removed.res.status, 204);
     const empty = await api('GET', '/saved', undefined, { csrf: false });
     assert.equal(empty.body.data.items.length, 0);
+  });
+
+  it('hydrates legacy saved rows keyed by hackathon ObjectId', async () => {
+    const legacy = await SavedHackathon.create({
+      user: user._id,
+      hackathon: String(hackathon._id),
+    });
+
+    const list = await api('GET', '/saved', undefined, { csrf: false });
+    assert.equal(list.res.status, 200);
+
+    const item = list.body.data.items.find(
+      (entry) => entry.id === String(legacy._id)
+    );
+    assert.ok(item);
+    assert.equal(item.hackathon.title, 'Calendar Hack');
+    assert.equal(item.hackathon.slug, 'calendar-hack');
+
+    await SavedHackathon.deleteOne({ _id: legacy._id });
   });
 
   it('account settings aliases export, change the password and delete the account', async () => {

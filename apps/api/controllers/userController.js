@@ -130,7 +130,7 @@ function serializePublicProfile(user) {
 const getMyProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select(
-            "-password -refreshTokenHash -emailVerificationTokenHash -emailVerificationTokenExpiresAt -passwordResetTokenHash -passwordResetTokenExpiresAt"
+            "-password -refreshTokenHash -refreshTokenExpiresAt -emailVerificationTokenHash -emailVerificationTokenExpiresAt -passwordResetTokenHash -passwordResetTokenExpiresAt"
         );
 
         if (!user) {
@@ -584,6 +584,7 @@ const changePassword = async (req, res) => {
         // Invalidate access tokens and refresh-token sessions.
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         user.refreshTokenHash = null;
+        user.refreshTokenExpiresAt = null;
 
         await user.save();
 
@@ -619,6 +620,7 @@ const revokeAllSessions = async (req, res) => {
 
         // Invalidate the stored refresh token.
         user.refreshTokenHash = null;
+        user.refreshTokenExpiresAt = null;
 
         await user.save();
 
@@ -654,6 +656,7 @@ const deleteMyAccount = async (req, res) => {
         // Invalidate existing access and refresh tokens.
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         user.refreshTokenHash = null;
+        user.refreshTokenExpiresAt = null;
 
         // Remove outstanding password-reset and verification tokens.
         user.passwordResetTokenHash = null;
@@ -684,6 +687,7 @@ const exportMyData = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select(
             "-password -refreshTokenHash " +
+            "-refreshTokenExpiresAt " +
             "-emailVerificationTokenHash " +
             "-emailVerificationTokenExpiresAt " +
             "-passwordResetTokenHash " +

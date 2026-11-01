@@ -114,8 +114,7 @@ export async function apiRequest(path, options = {}) {
   if (
     response.status === 401 &&
     retryOnUnauthorized &&
-    !isAuthPath(path) &&
-    !path.startsWith("/users/me")
+    !isAuthPath(path)
   ) {
     const refreshed = await refreshSession();
     if (refreshed) {

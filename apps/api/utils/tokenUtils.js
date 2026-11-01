@@ -3,6 +3,8 @@ const crypto = require("crypto");
 
 // Fall back to JWT_SECRET so local dev and CI keep working; the
 // authMiddleware verifies against both secrets (mirrors it here).
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 const accessTokenSecret = () =>
     process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
 
@@ -37,6 +39,7 @@ const hashToken = (token) => {
 };
 
 module.exports = {
+    REFRESH_TOKEN_TTL_MS,
     generateAccessToken,
     generateRefreshToken,
     generateEmailVerificationToken,

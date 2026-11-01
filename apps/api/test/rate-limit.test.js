@@ -56,6 +56,10 @@ assert.ok(
     lastResponse.headers.get('x-ratelimit-limit'),
   'Expected rate-limit headers'
 );
+
+    // Root-mounted duplicates must be covered by the same limiter.
+    const rootResponse = await fetch(`${base}/rate-limit-test`);
+    assert.equal(rootResponse.status, 429);
   });
 
   it('does not rate-limit the health endpoint', async () => {
@@ -63,5 +67,8 @@ assert.ok(
 
 
     assert.notEqual(response.status, 429);
+
+    const rootHealth = await fetch(`${base}/health`);
+    assert.notEqual(rootHealth.status, 429);
   });
 });

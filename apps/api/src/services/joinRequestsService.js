@@ -121,12 +121,18 @@ async function findPending(teamId, userId) {
 }
 
 // Pending rows past their expiry are lazily moved to `expired`; the API
-// returns a distinct 410 so clients can drop them from their list.
+// returns a distinct 410 so clients can drop them from their list. The
+// transition is conditional so it can never overwrite a concurrent
+// accept/decline/cancel.
 async function expireIfNeeded(doc) {
   if (doc.status === PENDING_STATUS && doc.expiresAt && doc.expiresAt.getTime() <= Date.now()) {
-    doc.status = 'expired';
-    doc.respondedAt = new Date();
-    await doc.save();
+    const expired = await JoinRequest.findOneAndUpdate(
+      { _id: doc._id, status: PENDING_STATUS, expiresAt: { $lte: new Date() } },
+      { $set: { status: 'expired', respondedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    if (expired) return expired;
+    return (await JoinRequest.findById(doc._id)) || doc;
   }
   return doc;
 }
@@ -315,11 +321,11 @@ async function respond(requestId, userId, input = {}) {
     throw badRequest("action must be 'accept' or 'decline'");
   }
   assertObjectId(requestId, 'request id');
-  const request = await JoinRequest.findById(requestId);
+  let request = await JoinRequest.findById(requestId);
   if (!request) {
     throw notFound();
   }
-  await expireIfNeeded(request);
+  request = await expireIfNeeded(request);
   if (request.status === 'expired') {
     throw { status: 410, code: 'REQUEST_EXPIRED', message: 'This request has expired' };
   }
@@ -335,10 +341,41 @@ async function respond(requestId, userId, input = {}) {
     throw forbidden('Only the invited user can respond to an invitation');
   }
 
+  // Claim the pending row before touching the team. The old flow wrote the
+  // request status after adding the member, so a concurrent cancel/decline
+  // could win the status write while the member stayed in the team. A single
+  // conditional update makes exactly one responder the winner.
+  const now = new Date();
+  const nextStatus = action === 'decline' ? 'declined' : 'accepted';
+  const claimed = await JoinRequest.findOneAndUpdate(
+    {
+      _id: request._id,
+      status: PENDING_STATUS,
+      expiresAt: { $gt: now },
+    },
+    { $set: { status: nextStatus, respondedAt: now } },
+    { returnDocument: 'after' }
+  );
+
+  if (!claimed) {
+    const current = await JoinRequest.findById(request._id);
+    if (!current) {
+      throw notFound();
+    }
+    if (
+      current.status === 'expired' ||
+      (current.status === PENDING_STATUS &&
+        current.expiresAt &&
+        current.expiresAt.getTime() <= now.getTime())
+    ) {
+      throw { status: 410, code: 'REQUEST_EXPIRED', message: 'This request has expired' };
+    }
+    throw conflict('REQUEST_NOT_PENDING', `This request is already ${current.status}`);
+  }
+
+  request = claimed;
+
   if (action === 'decline') {
-    request.status = 'declined';
-    request.respondedAt = new Date();
-    await request.save();
     const recipient = request.type === 'request' ? request.user : request.initiatedBy;
     await notifications.createNotification({
       userId: recipient,
@@ -355,9 +392,11 @@ async function respond(requestId, userId, input = {}) {
 
   // accept
   if (team.status !== 'open') {
+    await releaseClaim(request._id);
     throw conflict('TEAM_CLOSED', 'This team is closed');
   }
   if (isMember(team, request.user)) {
+    await releaseClaim(request._id);
     throw conflict('ALREADY_MEMBER', 'That user is already a member of this team');
   }
 
@@ -384,17 +423,21 @@ async function respond(requestId, userId, input = {}) {
   if (!acceptedTeam) {
     const current = await Team.findById(team._id);
     if (!current) {
+      await releaseClaim(request._id);
       throw notFound('TEAM_NOT_FOUND', 'Team not found');
     }
     if (current.status !== 'open') {
+      await releaseClaim(request._id);
       throw conflict('TEAM_CLOSED', 'This team is closed');
     }
     if (isMember(current, request.user)) {
+      await releaseClaim(request._id);
       throw conflict('ALREADY_MEMBER', 'That user is already a member of this team');
     }
     current.status = 'closed';
     await current.save();
     await cancelPendingForTeam(current._id, request._id);
+    await releaseClaim(request._id);
     throw conflict('TEAM_FULL', 'This team is full');
   }
 
@@ -402,10 +445,6 @@ async function respond(requestId, userId, input = {}) {
   if (becameFull) {
     await Team.updateOne({ _id: acceptedTeam._id }, { $set: { status: 'closed' } });
   }
-
-  request.status = 'accepted';
-  request.respondedAt = new Date();
-  await request.save();
 
   if (becameFull) {
     await cancelPendingForTeam(team._id, request._id);
@@ -436,13 +475,23 @@ async function respond(requestId, userId, input = {}) {
   return serialize(request);
 }
 
+// If the seat update cannot complete, put the row back in the pending state
+// so it can still be cancelled or retried. The status guard ensures we only
+// undo our own claim.
+async function releaseClaim(requestId) {
+  await JoinRequest.updateOne(
+    { _id: requestId, status: 'accepted' },
+    { $set: { status: PENDING_STATUS, respondedAt: null } }
+  );
+}
+
 async function cancel(requestId, userId) {
   assertObjectId(requestId, 'request id');
-  const request = await JoinRequest.findById(requestId);
+  let request = await JoinRequest.findById(requestId);
   if (!request) {
     throw notFound();
   }
-  await expireIfNeeded(request);
+  request = await expireIfNeeded(request);
   if (request.status !== PENDING_STATUS) {
     throw conflict('REQUEST_NOT_PENDING', `This request is already ${request.status}`);
   }
@@ -455,10 +504,27 @@ async function cancel(requestId, userId) {
     throw forbidden('You cannot cancel this request');
   }
 
-  request.status = 'cancelled';
-  request.respondedAt = new Date();
-  await request.save();
-  return serialize(request);
+  // Conditional claim: if an accept/decline won the race, the cancel must
+  // fail instead of overwriting the resolved status.
+  const cancelled = await JoinRequest.findOneAndUpdate(
+    {
+      _id: request._id,
+      status: PENDING_STATUS,
+      expiresAt: { $gt: new Date() },
+    },
+    { $set: { status: 'cancelled', respondedAt: new Date() } },
+    { returnDocument: 'after' }
+  );
+
+  if (!cancelled) {
+    const current = await JoinRequest.findById(request._id);
+    if (!current) {
+      throw notFound();
+    }
+    throw conflict('REQUEST_NOT_PENDING', `This request is already ${current.status}`);
+  }
+
+  return serialize(cancelled);
 }
 
 module.exports = {
