@@ -4,7 +4,16 @@
 **Commit assessed:** `649338880a8a028e6713ab0270cc4f5c80b82f24`  
 **Overall classification:** **NOT READY**
 
-## Area-by-area assessment
+> **Post-snapshot note (2026-11-01):** The logger import has been corrected in
+> the local working tree and two sequential post-fix API runs passed 98/98
+> ([BACKEND_REGRESSION_REPORT.md](BACKEND_REGRESSION_REPORT.md)). The auth
+> access-token mismatch has also been fixed and 9/9 auth route/security tests
+> pass ([local validation](../2026-11-01-local-validation/README.md)). Those
+> changes are not part of the commit assessed below. The release decision
+> remains **NOT READY** until the complete gate set is re-run on the release
+> commit.
+
+## Area-by-area assessment (2026-10-31 snapshot)
 
 | Area | Status | Evidence / blocker |
 |---|---|---|
@@ -44,8 +53,8 @@ smoke test was verified. The project owner must make the release decision.
 
 ## Decision
 
-**NOT READY.** Do not treat this report as release approval. Reassess after
-the API test bootstrap is repaired, authenticated functional workflows pass,
-the CSP/API-origin behavior is verified, prior performance failures are
-resolved, security evidence is reconciled, UAT is complete, and rollback and
-release checks are evidenced.
+**NOT READY.** Do not treat this report as release approval. Reassess on the
+release commit after the API test bootstrap correction is verified,
+authenticated functional workflows pass, the CSP/API-origin behavior is
+verified, prior performance failures are resolved, security evidence is
+reconciled, UAT is complete, and rollback and release checks are evidenced.

@@ -98,7 +98,7 @@ Set `VITE_API_BASE_URL` and the API environment described below. The deployed-de
 
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, and DB schema overview.
-Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
+Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md). QA status, test plans and release evidence are indexed in [docs/qa/README.md](docs/qa/README.md).
 
 ```
 [tools/data-importer] ──────────┐
@@ -200,7 +200,7 @@ HackHub/
 │   ├── data-importer/        # Python importer for the hackathon catalogue
 │   ├── loadtest/             # k6 load scenarios
 │   └── monitoring/           # Grafana dashboard JSON
-├── docs/                     # Architecture, API spec, staging, monitoring, operations
+├── docs/                     # Architecture, API spec, QA/release, staging, monitoring, operations
 ├── turbo.json                # Turborepo pipeline (build/test/lint/dev)
 ├── package.json              # workspaces root + turbo scripts
 ├── package-lock.json         # single lockfile for the whole monorepo

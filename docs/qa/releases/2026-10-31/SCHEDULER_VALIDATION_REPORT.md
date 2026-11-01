@@ -5,7 +5,7 @@
 
 ## Historical evidence reviewed
 
-`docs/qa/WEEK_3/SCHEDULER_TEST_RESULTS.md` records automated coverage for:
+`docs/qa/archive/2026-10/SCHEDULER_TEST_RESULTS.md` records automated coverage for:
 
 - Reminder creation and persistence, duplicate rejection, and delivery tracking.
 - Quiet-hour handling, including exact overnight IST rescheduling.

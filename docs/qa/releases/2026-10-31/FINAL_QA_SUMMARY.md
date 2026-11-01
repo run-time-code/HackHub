@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-This report consolidates the Week 1–4 QA activities and the final assessment performed on 31 October 2026.
+This report consolidates the QA programme activities and the final assessment performed on 31 October 2026.
 
 The original backend regression assessment at commit `6493388` failed because of an incorrect logger import path. The import was subsequently corrected in the local working tree.
 

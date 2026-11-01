@@ -13,8 +13,8 @@ started.
 
 ## Historical evidence reviewed
 
-`docs/qa/WEEK_3/load-test-output.txt` records a 30-second run with 100 maximum
-VUs and 2,962 HTTP requests. It reports:
+`docs/qa/archive/2026-10/evidence/load-test-output.txt` records a 30-second
+run with 100 maximum VUs and 2,962 HTTP requests. It reports:
 
 | Metric | Historical result |
 |---|---:|
@@ -32,10 +32,11 @@ VUs and 2,962 HTTP requests. It reports:
 The later `tools/loadtest/RESULTS.md` documents a separate local baseline with
 186 requests, 0% HTTP failures, 100% checks, and p95 of 129.47 ms. It also
 records a repeated-run 429 rate-limit ceiling. The failed run does not provide
-a complete per-status breakdown for all 2,663 failed requests. Week 4
-pending-work evidence continues to list the login 500 and controlled retest as
-open. The root cause of the failed high-error run is not established by the
-reviewed evidence.
+a complete per-status breakdown for all 2,663 failed requests. The archived
+security and release pending-work report
+(`docs/qa/archive/2026-10/SECURITY_AND_RELEASE_PENDING_WORK_REPORT.md`)
+continues to list the login 500 and controlled retest as open. The root cause of
+the failed high-error run is not established by the reviewed evidence.
 
 These are local historical measurements and do not establish staging or
 production capacity. No p50/p90/p95/throughput/error metrics are claimed for

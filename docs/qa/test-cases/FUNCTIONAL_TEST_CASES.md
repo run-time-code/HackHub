@@ -2,7 +2,6 @@
 
 **Work Area:** WA9 – QA, Test Automation & Release Management
 **Owner:** Deva Kanchana
-**Week:** 2
 **Basis:** `docs/API_SPEC.md` and existing application functionality
 
 ## 1. Objective
@@ -86,6 +85,10 @@ The following existing test files provide automated coverage related to some fun
 | Blocked                        | 0               |
 | Not run                        | 30              |
 
+> The execution record above is the 2026-10-31 baseline. Do not mark a scenario
+> PASS without new evidence. The latest release assessment is in
+> [`../releases/2026-10-31/API_FUNCTIONAL_TEST_REPORT.md`](../releases/2026-10-31/API_FUNCTIONAL_TEST_REPORT.md).
+
 ### Separate Integrated API Test Suite Result
 
 The additional PowerShell API test suite produced the following result on its latest recorded run:
@@ -119,11 +122,11 @@ For every executed functional test, record:
 - Automated regression results provide supporting evidence of backend and frontend test coverage.
 - Manual functional test cases must be executed separately before receiving PASS status.
 - BLOCKED indicates that prerequisites prevent execution; it must not be reported as a product failure without further investigation.
-- Any discovered defects must be recorded using the Week 1 bug report template.
+- Any discovered defects must be recorded using the bug report template in [`../test-plan/BUG_REPORT_TEMPLATE.md`](../test-plan/BUG_REPORT_TEMPLATE.md).
 
 ## 7. Conclusion
 
-The Week 2 functional test plan contains 30 defined scenarios covering authentication, profiles, discovery, hackathons, saved items, calendar, reminders, teams, notifications, account management and administration.
+This functional test plan contains 30 defined scenarios covering authentication, profiles, discovery, hackathons, saved items, calendar, reminders, teams, notifications, account management and administration.
 
 Automated regression testing has been completed successfully, but the 30 manual functional scenarios remain pending execution and evidence collection.
 

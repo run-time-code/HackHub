@@ -5,8 +5,9 @@
 
 ## Historical API-level evidence
 
-The Week 2 `DATA_QUALITY_REPORT.md` records 11 PASS and 1 NOT VERIFIED among
-12 API-level checks, based on a prior backend run. It explicitly states that
+The archived detailed data-quality report
+(`docs/qa/archive/2026-10/DATA_QUALITY_REPORT_DETAILED.md`) records 11 PASS and
+1 NOT VERIFIED among 12 API-level checks, based on a prior backend run. It explicitly states that
 the evidence is not a production or database-wide record audit. The checks
 covered profile privacy/links, hackathon identifiers, saved-item status,
 calendar inputs, duplicate reminders, team size, join-request states, and

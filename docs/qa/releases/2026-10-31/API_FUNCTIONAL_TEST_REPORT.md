@@ -16,8 +16,9 @@ Current status: **BLOCKED** for fresh API functional validation.
 
 ## Prior evidence reviewed
 
-The Week 4 `technical-functional-test-output.txt` and final regression report
-record the previous `WA9_API_Test_Suite.ps1` outcome:
+The archived technical functional output
+(`docs/qa/archive/2026-10/evidence/technical-functional-test-output.txt`) and
+final regression report record the previous `WA9_API_Test_Suite.ps1` outcome:
 
 | Prior result | Count |
 |---|---:|
@@ -33,7 +34,9 @@ was not established in the submitted evidence. Six authenticated workflows
 were blocked after the dedicated QA accounts returned HTTP 401. No test
 credentials were reused and the script was not rerun.
 
-The Week 2 manual smoke report separately records 9/9 unauthenticated checks
+The archived manual smoke report
+(`docs/qa/archive/2026-10/MANUAL_API_SMOKE_TEST_RESULTS.md`) separately records
+9/9 unauthenticated checks
 passing against local `http://localhost:5000` on 2026-10-31. It expressly does
 not cover authenticated create/update/delete workflows. These are historical
 results, not current execution.
