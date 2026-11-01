@@ -78,7 +78,7 @@ const saveHackathon = async (req, res) => {
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }
@@ -195,7 +195,7 @@ const markRegistered = async (req, res) => {
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }
@@ -349,7 +349,7 @@ const addNotes = async (req, res) => {
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }

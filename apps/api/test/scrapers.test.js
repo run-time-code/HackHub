@@ -16,6 +16,7 @@ const {
   computeStatus,
   parsePrizeAmount,
   parseSubmissionPeriod,
+  safeHttpUrl,
 } = require('../src/scrapers/normalize');
 const devpost = require('../src/scrapers/sources/devpost');
 const devfolio = require('../src/scrapers/sources/devfolio');
@@ -186,6 +187,31 @@ describe('source adapters map fixture payloads', () => {
 });
 
 describe('candidate mapping', () => {
+  it('only accepts http(s) URLs from untrusted listings', () => {
+    assert.equal(safeHttpUrl('https://example.com/a?b=1'), 'https://example.com/a?b=1');
+    assert.equal(safeHttpUrl('http://example.com'), 'http://example.com/');
+    assert.equal(safeHttpUrl('javascript:alert(1)'), '');
+    assert.equal(safeHttpUrl('data:text/html,<script>alert(1)</script>'), '');
+    assert.equal(safeHttpUrl('ftp://example.com/file'), '');
+    assert.equal(safeHttpUrl('//example.com/path'), '');
+    assert.equal(safeHttpUrl(undefined), '');
+  });
+
+  it('drops unsafe URLs from the stored document and source record', () => {
+    const candidate = {
+      ...devpost.mapHackathon(DEVPOST_ITEM),
+      url: 'javascript:alert(document.cookie)',
+      imageUrl: 'data:image/svg+xml,<svg onload=alert(1)>',
+    };
+    const { set, sourceRecord } = candidateToDocument(candidate, new Date('2026-10-15T00:00:00Z'));
+
+    assert.equal(set.url, '');
+    assert.equal(set.sourceUrl, '');
+    assert.equal(set.source_url, '');
+    assert.equal(set.imageUrl, '');
+    assert.equal(sourceRecord.url, '');
+  });
+
   it('produces both catalogue field styles and a status', () => {
     const candidate = {
       ...devpost.mapHackathon(DEVPOST_ITEM),

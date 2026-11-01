@@ -89,40 +89,6 @@ function parseList(value, label) {
   return entries;
 }
 
-function matchUser(user, skills, interests) {
-  const haveSkills = new Set(
-    (user.skills || []).map((skill) => String(skill).toLowerCase())
-  );
-  const rawInterests =
-    user.preferences && Array.isArray(user.preferences.interests)
-      ? user.preferences.interests
-      : [];
-  const haveInterests = new Set(rawInterests.map((interest) => String(interest).toLowerCase()));
-
-  const matchedSkills = skills.filter((skill) => haveSkills.has(skill.toLowerCase()));
-  const matchedInterests = interests.filter((interest) =>
-    haveInterests.has(interest.toLowerCase())
-  );
-
-  let matchScore = 0;
-  if (skills.length > 0 && interests.length > 0) {
-    matchScore =
-      70 * (matchedSkills.length / skills.length) +
-      30 * (matchedInterests.length / interests.length);
-  } else if (skills.length > 0) {
-    matchScore = 100 * (matchedSkills.length / skills.length);
-  } else if (interests.length > 0) {
-    matchScore = 100 * (matchedInterests.length / interests.length);
-  }
-
-  return {
-    matchCount: matchedSkills.length,
-    matchScore: Math.round(matchScore),
-    matchedSkills,
-    matchedInterests,
-  };
-}
-
 function emptyMatch() {
   return { matchCount: 0, matchScore: 0, matchedSkills: [], matchedInterests: [] };
 }

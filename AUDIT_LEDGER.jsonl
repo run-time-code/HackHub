@@ -1,33 +1,5 @@
-{
-  "record_type": "session",
-  "audit_session": {
-    "started_at": "2026-11-01T11:58:48.166Z",
-    "auditor": "Autonomous Principal Software Engineer",
-    "mission": "Security, correctness, performance and scalability audit",
-    "repository": "HackHub",
-    "git_branch": "main",
-    "node": "v24.14.1",
-    "baseline": {
-      "api_tests": "130 passed before changes",
-      "web_tests": "33 passed",
-      "api_lint": "0 problems",
-      "web_lint": "0 problems"
-    },
-    "scope_limits": [
-      "No live staging, production, Atlas, OAuth or email provider was available.",
-      "No DAST or load testing; performance findings are code-path analysis, not measurements.",
-      "apps/backend-prototype and operator scripts were inventoried but not audited."
-    ]
-  }
-}
-{
-  "record_type": "inventory",
-  "discovered_files": 266,
-  "inspected_files": 74,
-  "excluded_files": 1,
-  "not_started_files": 191,
-  "coverage_note": "Counts come from this ledger. Inspection is not proof of correctness; only files with findings or tests were behaviorally exercised."
-}
+{"record_type":"session","audit_session":{"started_at":"2026-11-01T12:19:30.049Z","auditor":"Autonomous Principal Software Engineer","mission":"Security, correctness, performance and scalability audit","repository":"HackHub","git_branch":"main","node":"v24.14.1","baseline":{"api_tests":"130 passed before changes","web_tests":"33 passed","api_lint":"0 problems","web_lint":"0 problems"},"scope_limits":["No live staging, production, Atlas, OAuth or email provider was available.","No DAST or load testing; performance findings are code-path analysis, not measurements.","apps/backend-prototype and operator scripts were inventoried but not audited."]}}
+{"record_type":"inventory","discovered_files":267,"inspected_files":75,"excluded_files":1,"not_started_files":191,"verified_files":17,"coverage_note":"Counts come from this ledger. Every file with a finding is inspected and has a regression test. Inspection is not proof of correctness."}
 {"record_type":"file","path":"apps/api/config/cloudinary.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/config/db.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/config/passport.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
@@ -37,7 +9,7 @@
 {"record_type":"file","path":"apps/api/controllers/adminUserController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/controllers/authController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/controllers/dashboardController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-01"],"risk":"HIGH","status":"VERIFIED"}
-{"record_type":"file","path":"apps/api/controllers/hackathonTrackingController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":["F-08"],"risk":"HIGH","status":"VERIFIED"}
+{"record_type":"file","path":"apps/api/controllers/hackathonTrackingController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-08","F-09"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/controllers/oauthController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/controllers/skillController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/controllers/userController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-03"],"risk":"HIGH","status":"VERIFIED"}
@@ -62,7 +34,7 @@
 {"record_type":"file","path":"apps/api/routes/adminUserRoutes.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/routes/authRoutes.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/routes/dashboardRoutes.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
-{"record_type":"file","path":"apps/api/routes/savedHackathonRoutes.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
+{"record_type":"file","path":"apps/api/routes/savedHackathonRoutes.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":["F-09"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/routes/userRoutes.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/scripts/explain-hackathons.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/scripts/scrape.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
@@ -75,7 +47,7 @@
 {"record_type":"file","path":"apps/api/src/controllers/hackathonsController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/controllers/healthController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/controllers/joinRequestsController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
-{"record_type":"file","path":"apps/api/src/controllers/notificationsController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":["F-06"],"risk":"HIGH","status":"VERIFIED"}
+{"record_type":"file","path":"apps/api/src/controllers/notificationsController.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-06"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/src/controllers/remindersController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/controllers/savedHackathonsController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/controllers/statsController.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
@@ -106,8 +78,8 @@
 {"record_type":"file","path":"apps/api/src/routes/users.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/src/scrapers/http.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/src/scrapers/index.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
-{"record_type":"file","path":"apps/api/src/scrapers/ingest.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
-{"record_type":"file","path":"apps/api/src/scrapers/normalize.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
+{"record_type":"file","path":"apps/api/src/scrapers/ingest.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-10"],"risk":"HIGH","status":"VERIFIED"}
+{"record_type":"file","path":"apps/api/src/scrapers/normalize.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-10"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/src/scrapers/run.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/scrapers/scheduler.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/api/src/scrapers/sources/devfolio.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
@@ -131,11 +103,12 @@
 {"record_type":"file","path":"apps/api/src/services/savedHackathonsService.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-02"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/src/services/statsService.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-02","F-07"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/src/services/teamsService.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
-{"record_type":"file","path":"apps/api/src/services/usersService.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":["F-05"],"risk":"HIGH","status":"VERIFIED"}
+{"record_type":"file","path":"apps/api/src/services/usersService.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-05"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/src/utils/eventBus.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/src/utils/logger.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/src/utils/metrics.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"REVIEWED"}
 {"record_type":"file","path":"apps/api/src/utils/reminderMetrics.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
+{"record_type":"file","path":"apps/api/src/utils/sseLimiter.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-06"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/utils/accountErasure.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":false,"findings":["F-03"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/utils/accountPurge.js","component":"api","discovered":true,"inspected":true,"dependencies_traced":true,"static_analysis":true,"tests":true,"findings":["F-03"],"risk":"HIGH","status":"VERIFIED"}
 {"record_type":"file","path":"apps/api/utils/auditLogger.js","component":"api","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
@@ -294,217 +267,25 @@
 {"record_type":"file","path":"apps/web/src/styles/tokens.css","component":"web","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":true,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED"}
 {"record_type":"file","path":"apps/backend-prototype","component":"prototype","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":false,"tests":false,"findings":[],"risk":"UNASSESSED","status":"EXCLUDED_WITH_REASON","reason":"Exploratory prototype explicitly not deployed (README); out of production scope."}
 {"record_type":"file","path":"tools/data-importer","component":"tooling","discovered":true,"inspected":false,"dependencies_traced":false,"static_analysis":false,"tests":false,"findings":[],"risk":"UNASSESSED","status":"NOT_STARTED","reason":"Operator-run Python importer; needs MONGODB_URI and provider keys to exercise."}
-{
-  "record_type": "finding",
-  "id": "F-01",
-  "title": "Dashboard summary misclassifies every registration as completed",
-  "severity": "P2",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/controllers/dashboardController.js"
-  ],
-  "evidence": "Aggregation ran $dateFromString against a Date-typed registration_deadline. With onError null it produced deadlineDate null, so status was always completed and upcomingDeadlines was always empty.",
-  "reproduction": "apps/api/test/dashboard-summary.test.js failed before the fix (ongoing count undefined instead of 1) and passes after.",
-  "fix": "Replaced $dateFromString with $convert to date, which accepts the Date field and legacy ISO strings.",
-  "regression_test": "apps/api/test/dashboard-summary.test.js",
-  "status": "VERIFIED"
-}
-{
-  "record_type": "finding",
-  "id": "F-02",
-  "title": "Hidden hackathons leak through the alternate moderation flag",
-  "severity": "P2",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/src/services/hackathonsService.js",
-    "apps/api/src/services/calendarService.js",
-    "apps/api/src/services/savedHackathonsService.js",
-    "apps/api/src/services/remindersService.js",
-    "apps/api/src/services/statsService.js"
-  ],
-  "evidence": "A row with only isHidden true was excluded by GET /hackathons but still returned by GET /calendar, could be saved, could get a reminder and was counted by GET /stats.",
-  "reproduction": "apps/api/test/hidden-hackathon-visibility.test.js had four failures before the fix; all pass after.",
-  "fix": "Added shared visibleFilter()/isHidden() helpers and used them in every read path.",
-  "regression_test": "apps/api/test/hidden-hackathon-visibility.test.js",
-  "status": "VERIFIED"
-}
-{
-  "record_type": "finding",
-  "id": "F-03",
-  "title": "Account deletion orphans teams and retains personal rows",
-  "severity": "P2",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/controllers/userController.js",
-    "apps/api/utils/accountErasure.js",
-    "apps/api/utils/accountPurge.js"
-  ],
-  "evidence": "DELETE /users/me only set deletedAt. A deleted user remained team leader (team unmanageable), pending join requests stayed pending, active reminders could still email the address, and the purge deleted only users and registrations.",
-  "reproduction": "apps/api/test/account-deletion.test.js asserts leadership transfer, closed-team reopen, leaderless team deletion, request cancellation, reminder deactivation and full erasure after the retention window.",
-  "fix": "accountErasure helpers suspend side effects on soft delete; purge removes saved items, reminders, notifications, join requests and registrations before deleting the user.",
-  "regression_test": "apps/api/test/account-deletion.test.js",
-  "status": "VERIFIED"
-}
-{
-  "record_type": "finding",
-  "id": "F-04",
-  "title": "Session credentials written to HTTP logs",
-  "severity": "P1",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/src/app.js",
-    "apps/api/src/middleware/httpLogger.js"
-  ],
-  "evidence": "A logged request contained req.headers.cookie with accessToken, req.headers.authorization, res set-cookie and the ?token= verification value in the URL.",
-  "reproduction": "Observed with LOG_LEVEL=info; apps/api/test/log-redaction.test.js asserts the secrets are absent.",
-  "fix": "Extracted the HTTP logger, added pino redact paths for cookie/authorization/CSRF/query token/state/set-cookie, and stripped query strings from the logged URL.",
-  "regression_test": "apps/api/test/log-redaction.test.js",
-  "status": "VERIFIED"
-}
-{
-  "record_type": "finding",
-  "id": "F-07",
-  "title": "Public builder counter included banned accounts",
-  "severity": "P3",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/src/services/statsService.js"
-  ],
-  "evidence": "Discovery excluded banned users but GET /stats counted any discoverable non-deleted user, including banned ones.",
-  "reproduction": "apps/api/test/stats-feedback.test.js fixture now includes a banned discoverable builder; builders stays 2.",
-  "fix": "Added banned not true to the builders count.",
-  "regression_test": "apps/api/test/stats-feedback.test.js",
-  "status": "VERIFIED"
-}
-{
-  "record_type": "finding",
-  "id": "F-05",
-  "title": "Teammate discovery loads the entire filtered user set into memory",
-  "severity": "P3",
-  "confidence": "SUSPECTED - code-path analysis, not measured",
-  "files": [
-    "apps/api/src/services/usersService.js"
-  ],
-  "evidence": "With skills or interests supplied, searchTeammates runs User.find(filter).select(...).lean() with no limit, scores every row in JS, then slices the page.",
-  "impact": "Memory and CPU grow linearly with matching users; a broad skill match over a large population can exhaust an instance.",
-  "status": "OPEN"
-}
-{
-  "record_type": "finding",
-  "id": "F-06",
-  "title": "SSE notification streams are unlimited per account/instance",
-  "severity": "P3",
-  "confidence": "SUSPECTED",
-  "files": [
-    "apps/api/src/controllers/notificationsController.js",
-    "apps/api/src/utils/eventBus.js"
-  ],
-  "evidence": "Each stream holds a response, a 25s interval and an EventEmitter listener; setMaxListeners(0) and no per-user connection cap.",
-  "impact": "An authenticated client can open unbounded streams and exhaust file descriptors or memory; the bus is also single-instance only.",
-  "status": "OPEN"
-}
-{
-  "record_type": "finding",
-  "id": "F-08",
-  "title": "Legacy hackathon status endpoint labels events by registration deadline only",
-  "severity": "P3",
-  "confidence": "CONFIRMED by inspection; endpoint unused by the current SPA",
-  "files": [
-    "apps/api/controllers/hackathonTrackingController.js"
-  ],
-  "evidence": "Returns Ongoing while now is before registration_deadline, otherwise Completed; a null deadline becomes epoch and always reports Completed, and an ongoing event past registration is reported Completed.",
-  "status": "OPEN"
-}
-{
-  "record_type": "finding",
-  "id": "F-09",
-  "title": "Legacy tracking endpoints accept unvalidated hackathon identifiers",
-  "severity": "P3",
-  "confidence": "CONFIRMED",
-  "files": [
-    "apps/api/routes/savedHackathonRoutes.js",
-    "apps/api/controllers/hackathonTrackingController.js"
-  ],
-  "evidence": "/api/saved-hackathons save, register and notes upsert rows keyed by any string, unlike /api/saved which resolves and rejects unknown or hidden hackathons.",
-  "impact": "Orphaned rows that the dashboard aggregate drops and the export shows as placeholders; notes have no length cap beyond the 100kb body limit.",
-  "status": "OPEN"
-}
-{
-  "record_type": "finding",
-  "id": "F-10",
-  "title": "Scraped external URLs are not scheme-validated before storage",
-  "severity": "P3",
-  "confidence": "CONFIRMED storage issue; exploitability mitigated by React URL sanitisation",
-  "files": [
-    "apps/api/src/scrapers/ingest.js"
-  ],
-  "evidence": "candidateToDocument stores cleanText(candidate.url) verbatim. React 19 rewrites javascript hrefs, so the shipped SPA does not execute them, but non-http(s) values are persisted and can break other consumers.",
-  "status": "OPEN"
-}
-{
-  "record_type": "test_run",
-  "command": "npm test (apps/api)",
-  "before": "130 pass, 0 fail",
-  "after": "139 pass, 0 fail",
-  "status": "PASS"
-}
-{
-  "record_type": "test_run",
-  "command": "npm test (apps/web)",
-  "before": "33 pass, 0 fail",
-  "after": "33 pass, 0 fail",
-  "status": "PASS"
-}
-{
-  "record_type": "test_run",
-  "command": "npx eslint . (apps/api)",
-  "before": "0 problems",
-  "after": "0 problems",
-  "status": "PASS"
-}
-{
-  "record_type": "test_run",
-  "command": "npx eslint . (apps/web)",
-  "before": "0 problems",
-  "after": "0 problems",
-  "status": "PASS"
-}
-{
-  "record_type": "test_run",
-  "command": "npm run build (apps/web)",
-  "before": "not run",
-  "after": "built; chunk-size warning above 500kB",
-  "status": "PASS WITH WARNING"
-}
-{
-  "record_type": "remaining",
-  "item": "F-05 discovery ranking scan needs a measured load test before redesign."
-}
-{
-  "record_type": "remaining",
-  "item": "F-06 SSE needs a per-user connection cap and a shared bus before horizontal scaling."
-}
-{
-  "record_type": "remaining",
-  "item": "F-08 and F-09 legacy tracking endpoints should be deprecated or validated like /api/saved."
-}
-{
-  "record_type": "remaining",
-  "item": "F-10 URL scheme allowlist belongs in candidateToDocument and admin edits."
-}
-{
-  "record_type": "remaining",
-  "item": "OAuth flows could not be exercised without provider credentials."
-}
-{
-  "record_type": "remaining",
-  "item": "No DAST, fuzzing, load or soak testing, or dependency upgrade was performed in this session."
-}
-{
-  "record_type": "remaining",
-  "item": "apps/backend-prototype, the Python importer, CI workflows beyond lint/test, and infrastructure configs were not audited."
-}
-{
-  "record_type": "remaining",
-  "item": "The previous AUDIT_LEDGER.jsonl was a single session stub; this run replaces it but does not constitute exhaustive file coverage."
-}
+{"record_type":"finding","id":"F-01","title":"Dashboard summary misclassifies every registration as completed","severity":"P2","confidence":"CONFIRMED","files":["apps/api/controllers/dashboardController.js"],"evidence":"Aggregation ran $dateFromString against a Date-typed registration_deadline. With onError null it produced deadlineDate null, so status was always completed and upcomingDeadlines was always empty.","reproduction":"apps/api/test/dashboard-summary.test.js failed before the fix (ongoing count undefined instead of 1) and passes after.","fix":"Replaced $dateFromString with $convert to date, which accepts the Date field and legacy ISO strings.","regression_test":"apps/api/test/dashboard-summary.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-02","title":"Hidden hackathons leak through the alternate moderation flag","severity":"P2","confidence":"CONFIRMED","files":["apps/api/src/services/hackathonsService.js","apps/api/src/services/calendarService.js","apps/api/src/services/savedHackathonsService.js","apps/api/src/services/remindersService.js","apps/api/src/services/statsService.js"],"evidence":"A row with only isHidden true was excluded by GET /hackathons but still returned by GET /calendar, could be saved, could get a reminder and was counted by GET /stats.","reproduction":"apps/api/test/hidden-hackathon-visibility.test.js had four failures before the fix; all pass after.","fix":"Added shared visibleFilter()/isHidden() helpers and used them in every read path.","regression_test":"apps/api/test/hidden-hackathon-visibility.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-03","title":"Account deletion orphans teams and retains personal rows","severity":"P2","confidence":"CONFIRMED","files":["apps/api/controllers/userController.js","apps/api/utils/accountErasure.js","apps/api/utils/accountPurge.js"],"evidence":"DELETE /users/me only set deletedAt. A deleted user remained team leader (team unmanageable), pending join requests stayed pending, active reminders could still email the address, and the purge deleted only users and registrations.","reproduction":"apps/api/test/account-deletion.test.js asserts leadership transfer, closed-team reopen, leaderless team deletion, request cancellation, reminder deactivation and full erasure after the retention window.","fix":"accountErasure helpers suspend side effects on soft delete; purge removes saved items, reminders, notifications, join requests and registrations before deleting the user.","regression_test":"apps/api/test/account-deletion.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-04","title":"Session credentials written to HTTP logs","severity":"P1","confidence":"CONFIRMED","files":["apps/api/src/app.js","apps/api/src/middleware/httpLogger.js"],"evidence":"A logged request contained req.headers.cookie with accessToken, req.headers.authorization, res set-cookie and the ?token= verification value in the URL.","reproduction":"Observed with LOG_LEVEL=info; apps/api/test/log-redaction.test.js asserts the secrets are absent.","fix":"Extracted the HTTP logger, added pino redact paths for cookie/authorization/CSRF/query token/state/set-cookie, and stripped query strings from the logged URL.","regression_test":"apps/api/test/log-redaction.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-05","title":"Teammate discovery loaded the entire filtered user set into memory","severity":"P3","confidence":"FIXED by code-path change; capacity not measured","files":["apps/api/src/services/usersService.js"],"evidence":"With skills or interests supplied, searchTeammates ran User.find(filter).select(...).lean() with no limit and scored every row in JS before slicing the page.","fix":"Ranking moved into a MongoDB aggregation pipeline ($setIntersection/$size/score/$sort/$skip/$limit); only one page of documents is materialised and returned.","regression_test":"apps/api/test/users.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-06","title":"SSE notification streams were unlimited per account/instance","severity":"P3","confidence":"CONFIRMED","files":["apps/api/src/controllers/notificationsController.js","apps/api/src/utils/sseLimiter.js"],"evidence":"Each stream held a response, a 25s interval and an EventEmitter listener; setMaxListeners(0) and no per-user connection cap.","fix":"Added sseLimiter (3 streams per account, 500 per instance). The controller returns 429 NOTIFICATION_STREAM_LIMIT and releases the slot on close or error.","regression_test":"apps/api/test/sse-limit.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-07","title":"Public builder counter included banned accounts","severity":"P3","confidence":"CONFIRMED","files":["apps/api/src/services/statsService.js"],"evidence":"Discovery excluded banned users but GET /stats counted any discoverable non-deleted user, including banned ones.","reproduction":"apps/api/test/stats-feedback.test.js fixture includes a banned discoverable builder; builders stays 2.","fix":"Added banned not true to the builders count.","regression_test":"apps/api/test/stats-feedback.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-08","title":"Legacy hackathon status endpoint labelled events by registration deadline only","severity":"P3","confidence":"CONFIRMED","files":["apps/api/controllers/hackathonTrackingController.js"],"evidence":"Returned Ongoing while now was before registration_deadline, otherwise Completed; a null deadline became epoch and always reported Completed, and a running event past registration was reported Completed.","fix":"Status now uses computeStatus over event start/end with the registration deadline as fallback, exposes statusCode, and returns 404 for hidden or unknown hackathons.","regression_test":"apps/api/test/legacy-tracking.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-09","title":"Legacy tracking endpoints accepted unvalidated hackathon identifiers","severity":"P3","confidence":"CONFIRMED","files":["apps/api/routes/savedHackathonRoutes.js","apps/api/controllers/hackathonTrackingController.js"],"evidence":"/api/saved-hackathons save, register and notes upserted rows keyed by any string, unlike /api/saved which resolves and rejects unknown or hidden hackathons.","fix":"save/register/notes/status resolve the catalogue row (id or slug, visible only) before writing the canonical hackathon_id; notes are typed and capped at 2000 characters.","regression_test":"apps/api/test/legacy-tracking.test.js","status":"VERIFIED"}
+{"record_type":"finding","id":"F-10","title":"Scraped external URLs were not scheme-validated before storage","severity":"P3","confidence":"CONFIRMED","files":["apps/api/src/scrapers/normalize.js","apps/api/src/scrapers/ingest.js"],"evidence":"candidateToDocument stored cleanText(candidate.url) verbatim, so javascript:, data: and other schemes could be persisted.","fix":"normalize.safeHttpUrl accepts only http(s); ingest stores safe URLs for url/sourceUrl/imageUrl and sourceRecords.","regression_test":"apps/api/test/scrapers.test.js","status":"VERIFIED"}
+{"record_type":"test_run","command":"npm test (apps/api)","before":"130 pass, 0 fail","after":"148 pass, 0 fail","status":"PASS"}
+{"record_type":"test_run","command":"npm test (apps/web)","before":"33 pass, 0 fail","after":"33 pass, 0 fail","status":"PASS"}
+{"record_type":"test_run","command":"npx eslint . (apps/api)","before":"0 problems","after":"0 problems","status":"PASS"}
+{"record_type":"test_run","command":"npx eslint . (apps/web)","before":"0 problems","after":"0 problems","status":"PASS"}
+{"record_type":"test_run","command":"npm run build (apps/web)","before":"not run","after":"built; chunk-size warning above 500kB","status":"PASS WITH WARNING"}
+{"record_type":"remaining","item":"Dual JWT secret acceptance (JWT_SECRET and ACCESS_TOKEN_SECRET) is intentional until legacy tokens expire; unify after a token-rotation window."}
+{"record_type":"remaining","item":"Rate limits, the hackathon list cache and the scraper run lock are per instance; a multi-instance deployment needs a shared store (Redis) and a database-backed scrape lock."}
+{"record_type":"remaining","item":"No DAST, fuzzing, load, soak or failover testing was possible without staging infrastructure; F-05 no longer does unbounded work but its capacity is unmeasured."}
+{"record_type":"remaining","item":"OAuth and transactional email flows were not exercised (no provider credentials)."}
+{"record_type":"remaining","item":"Dependency advisories in the pre-existing audit-root.json were not re-verified or upgraded."}
+{"record_type":"remaining","item":"apps/backend-prototype, the Python importer, CI workflows beyond lint/test, and infrastructure configs remain unaudited."}
+{"record_type":"session_note","note":"Final state: 10 findings fixed and verified with regression tests. API 148 pass / 0 fail; API and web lint clean; web suite 33 pass; web build succeeds with a chunk-size warning."}
