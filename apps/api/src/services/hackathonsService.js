@@ -101,6 +101,23 @@ function serialize(doc) {
   };
 }
 
+// A catalogue row is hidden when either spelling of the moderation flag is
+// set. Reads must use the same predicate as the public list; older rows and
+// the admin controller wrote only one of the two fields, which used to leak
+// hidden hackathons back through calendar, saved items and reminders.
+const VISIBLE_FILTER = Object.freeze({
+  is_hidden: { $ne: true },
+  isHidden: { $ne: true },
+});
+
+function visibleFilter() {
+  return { ...VISIBLE_FILTER };
+}
+
+function isHidden(doc) {
+  return Boolean(doc && (doc.is_hidden === true || doc.isHidden === true));
+}
+
 function addCondition(filter, condition) {
   filter.$and = [...(filter.$and || []), condition];
 }
@@ -148,10 +165,7 @@ async function listHackathons(query = {}) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const filter = {
-    is_hidden: { $ne: true },
-    isHidden: { $ne: true },
-  };
+  const filter = visibleFilter();
   const statuses = parseList(values.status, 'status');
   if (!statuses.includes('inactive')) {
     filter.is_active = { $ne: false };
@@ -348,8 +362,7 @@ async function listHackathons(query = {}) {
 
 async function getHackathonFacets() {
   const filter = {
-    is_hidden: { $ne: true },
-    isHidden: { $ne: true },
+    ...visibleFilter(),
     is_active: { $ne: false },
     isActive: { $ne: false },
   };
@@ -426,7 +439,7 @@ async function getHackathonById(idOrSlug) {
       $or: [{ hackathon_id: idOrSlug }, { slug: idOrSlug }],
     });
   }
-  if (!doc || doc.is_hidden || doc.isHidden) throw notFound();
+  if (!doc || isHidden(doc)) throw notFound();
   return serialize(doc);
 }
 
@@ -442,4 +455,6 @@ module.exports = {
   hackathonExists,
   serialize,
   invalidateHackathonCache,
+  visibleFilter,
+  isHidden,
 };

@@ -6,6 +6,7 @@ const User = require('../../models/User');
 const Hackathon = require('../../models/Hackathon');
 const { Reminder, EVENT_TYPES, CHANNELS } = require('../models/reminder');
 const { DAY_MS, upcomingDeadline } = require('./calendarService');
+const { isHidden } = require('./hackathonsService');
 
 const DEFAULT_PREFERENCES = Object.freeze({
   defaultDaysBefore: 1,
@@ -86,7 +87,7 @@ async function resolveHackathon(idOrSlug) {
   if (!hackathon) {
     hackathon = await Hackathon.findOne({ hackathon_id: value });
   }
-  if (!hackathon || hackathon.is_hidden) {
+  if (!hackathon || isHidden(hackathon)) {
     throw { status: 404, code: 'HACKATHON_NOT_FOUND', message: 'Hackathon not found' };
   }
   return hackathon;

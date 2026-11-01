@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 const SavedHackathon = require('../../models/SavedHackathon');
 const Hackathon = require('../../models/Hackathon');
-const { serialize: serializeHackathon } = require('./hackathonsService');
+const { serialize: serializeHackathon, isHidden } = require('./hackathonsService');
 
 const STATUSES = ['saved', 'registered', 'ongoing', 'completed'];
 
@@ -27,7 +27,7 @@ async function resolveHackathon(idOrSlug) {
   if (!hackathon) {
     hackathon = await Hackathon.findOne({ hackathon_id: value });
   }
-  if (!hackathon || hackathon.is_hidden) {
+  if (!hackathon || isHidden(hackathon)) {
     throw { status: 404, code: 'HACKATHON_NOT_FOUND', message: 'Hackathon not found' };
   }
   return hackathon;
