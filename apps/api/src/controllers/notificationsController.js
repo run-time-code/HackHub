@@ -45,13 +45,19 @@ function stream(req, res) {
     });
   }
 
-  res.set({
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-  res.flushHeaders();
+  try {
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders();
+  } catch (error) {
+    // Do not leak the slot if the socket died before headers were sent.
+    sseLimiter.release(req.user.id);
+    throw error;
+  }
 
   // Subscribe before announcing readiness so anything created after the
   // client sees `ready` is guaranteed to be delivered.
