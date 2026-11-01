@@ -43,6 +43,9 @@ const teamSchema = new Schema(
 );
 
 teamSchema.index({ hackathon: 1, status: 1 });
+// "teams I belong to" queries filter on members.user; without this index the
+// personal dashboard scans every team as the catalogue grows.
+teamSchema.index({ 'members.user': 1 });
 
 teamSchema.virtual('size').get(function size() {
   // `members` can be absent when a query projects a subset of the fields

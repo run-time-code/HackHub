@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const cron = require('node-cron');
 const config = require('./config');
 const logger = require('./utils/logger');
+const { withJobLock } = require('./utils/jobLock');
 const createApp = require('./app');
 const { purgeDeletedAccounts } = require('../utils/accountPurge');
 const { processDueReminders, TIME_ZONE } = require('./services/reminderScheduler');
@@ -20,59 +21,95 @@ if (config.sentryDsn) {
 
 let server;
 let reminderJob;
+let purgeJob;
+let purgeJobRunning = false;
+
+// Reminder/purge/scraper work is process-wide but not request work. Every
+// instance may run it (the locks make it safe) or the deployment can set
+// RUN_BACKGROUND_JOBS=false on web instances and keep one worker.
+function startBackgroundJobs() {
+  if (!config.runBackgroundJobs) {
+    logger.info('[background-jobs] disabled on this instance');
+    return;
+  }
+
+  const runReminderSweep = async () => {
+    try {
+      const lock = await withJobLock('reminder-dispatch', 55_000, () =>
+        processDueReminders()
+      );
+
+      if (!lock.acquired) {
+        logger.debug('[reminder-dispatch] another instance is running the sweep');
+      }
+    } catch (error) {
+      logger.error({ err: error }, '[reminder-dispatch] failed');
+    }
+  };
+
+  reminderJob = cron.schedule('* * * * *', runReminderSweep, {
+    timezone: TIME_ZONE,
+  });
+
+  runReminderSweep();
+
+  purgeJob = cron.schedule(
+    '0 2 * * *',
+    async () => {
+      if (purgeJobRunning) {
+        logger.warn('[account-purge] previous run still in progress, skipping');
+        return;
+      }
+
+      purgeJobRunning = true;
+
+      try {
+        const lock = await withJobLock('account-purge', 10 * 60 * 1000, () =>
+          purgeDeletedAccounts()
+        );
+
+        if (lock.acquired) {
+          logger.info({ result: lock.value }, '[account-purge] completed');
+        } else {
+          logger.debug('[account-purge] another instance is running the purge');
+        }
+      } catch (err) {
+        logger.error({ err }, '[account-purge] failed');
+      } finally {
+        purgeJobRunning = false;
+      }
+    },
+    { timezone: 'Asia/Kolkata' }
+  );
+
+  startScraperScheduler();
+}
 
 // The legacy auth/profile models and the new src models share this
 // connection (models register themselves on require).
 async function start() {
-  await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 5000 });
-  logger.info('MongoDB connected');
-  reminderJob = cron.schedule(
-    '* * * * *',
-    async () => {
-      try {
-        await processDueReminders();
-      } catch (error) {
-        logger.error({ err: error }, '[reminder-dispatch] failed');
-      }
-    },
-    { timezone: TIME_ZONE }
+  await mongoose.connect(config.mongoUri, {
+    serverSelectionTimeoutMS: 5000,
+    maxPoolSize: config.mongoMaxPoolSize,
+    minPoolSize: config.mongoMinPoolSize,
+  });
+  logger.info(
+    { maxPoolSize: config.mongoMaxPoolSize },
+    'MongoDB connected'
   );
-  await processDueReminders();
-  startScraperScheduler();
+
+  startBackgroundJobs();
+
   const app = createApp();
   server = app.listen(config.port, () => {
     logger.info({ port: config.port, env: config.env }, 'hackhub-api listening');
   });
 }
 
-// Nightly purge of soft-deleted accounts past their retention window.
-let purgeJobRunning = false;
-
-cron.schedule(
-  '0 2 * * *',
-  async () => {
-    if (purgeJobRunning) {
-      logger.warn('[account-purge] previous run still in progress, skipping');
-      return;
-    }
-
-    purgeJobRunning = true;
-
-    try {
-      const result = await purgeDeletedAccounts();
-      logger.info({ result }, '[account-purge] completed');
-    } catch (err) {
-      logger.error({ err }, '[account-purge] failed');
-    } finally {
-      purgeJobRunning = false;
-    }
-  },
-  { timezone: 'Asia/Kolkata' }
-);
-
 function shutdown(signal) {
   logger.info({ signal }, 'shutting down');
   if (reminderJob) reminderJob.stop();
+  if (purgeJob) purgeJob.stop();
   stopScraperScheduler();
   if (!server) {
     mongoose.disconnect().finally(() => process.exit());

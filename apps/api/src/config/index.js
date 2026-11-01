@@ -11,6 +11,11 @@ const base = {
   isProd: env === 'production',
   port: Number(process.env.PORT || 5000),
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/hackhub',
+  // Each API instance keeps its own pool. Keep instances x pool below the
+  // cluster connection limit; the defaults suit a 2-4 instance deployment on
+  // a small Atlas tier.
+  mongoMaxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE || 50),
+  mongoMinPoolSize: Number(process.env.MONGO_MIN_POOL_SIZE || 0),
   // F-16: Redis is declared nowhere and used nowhere (the SSE bus and rate
   // limits are in-process). Keep the field undefined so nothing reads a
   // stale REDIS_URL; deployment is single-instance by design.
@@ -26,6 +31,16 @@ const base = {
   devAutoVerify:
     env === 'development' && process.env.DEV_AUTO_VERIFY === 'true',
   maxJoinRequestsPerDay: Number(process.env.MAX_JOIN_REQUESTS_PER_DAY || 10),
+  // Ranked teammate discovery scores at most this many recent candidates so a
+  // broad skill filter cannot turn one request into a full-collection scan.
+  // 0 means unbounded (not recommended in production).
+  discoveryMaxCandidates: Number(process.env.DISCOVERY_MAX_CANDIDATES || 2000),
+  // Public landing counters are cached briefly; they are global numbers that
+  // do not need to be live to the second.
+  statsCacheTtlMs: Number(process.env.STATS_CACHE_TTL_MS ?? 30000),
+  // Run reminder/purge/scraper crons on this instance. Set false on web
+  // instances that sit behind a load balancer and keep one worker process.
+  runBackgroundJobs: process.env.RUN_BACKGROUND_JOBS !== 'false',
   corsOrigin: (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim())

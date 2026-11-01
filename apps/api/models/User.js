@@ -275,4 +275,13 @@ tokenVersion: {
     }
 );
 
+// Discovery filters on these four fields together; the compound index lets
+// MongoDB narrow the candidate set before ranking instead of scanning users.
+userSchema.index({
+    discoverable: 1,
+    lookingForTeam: 1,
+    banned: 1,
+    deletedAt: 1
+});
+
 module.exports = mongoose.model("User", userSchema);

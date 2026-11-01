@@ -38,6 +38,9 @@ savedHackathonSchema.index(
     { user: 1, hackathon: 1 },
     { unique: true }
 );
+// The dashboard lists one user's rows newest-first; this index avoids an
+// in-memory sort for every page load.
+savedHackathonSchema.index({ user: 1, updatedAt: -1 });
 
 module.exports = mongoose.model(
     "SavedHackathon",

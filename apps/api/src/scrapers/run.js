@@ -8,11 +8,15 @@
 
 const config = require('../config');
 const logger = require('../utils/logger');
+const { withJobLock } = require('../utils/jobLock');
 const ScraperRun = require('../../models/ScraperRun');
 const { resolveSources } = require('./sources');
 const { deactivateMissing, expirePastEvents, ingestCandidates } = require('./ingest');
 
 let running = false;
+// Long enough for the slowest full sweep; the lock is released on completion
+// and expires automatically if the holder dies mid-run.
+const SCRAPER_LOCK_TTL_MS = 30 * 60 * 1000;
 
 function isRunning() {
   return running;
@@ -122,24 +126,41 @@ async function runScrapers({
   const startedAt = new Date();
 
   try {
-    const results = [];
-    for (const adapter of adapters) {
-      results.push(
-        await runSource(adapter, {
-          dryRun,
-          trigger,
-          maxPagesPerSource: maxPagesPerSource || config.scrapers.maxPagesPerSource,
-        })
-      );
+    // A module-level flag only protects this process. Across several API
+    // instances the database lock is what stops concurrent sweeps from
+    // hammering the same sources and fighting over the same rows.
+    const lock = await withJobLock('scraper-run', SCRAPER_LOCK_TTL_MS, async () => {
+      const results = [];
+      for (const adapter of adapters) {
+        results.push(
+          await runSource(adapter, {
+            dryRun,
+            trigger,
+            maxPagesPerSource: maxPagesPerSource || config.scrapers.maxPagesPerSource,
+          })
+        );
+      }
+
+      if (!dryRun) {
+        await expirePastEvents(new Date()).catch((error) => {
+          logger.error({ err: error }, '[scraper] could not expire past events');
+        });
+      }
+
+      return results;
+    });
+
+    if (!lock.acquired) {
+      throw new Error('A scrape is already running');
     }
 
-    if (!dryRun) {
-      await expirePastEvents(new Date()).catch((error) => {
-        logger.error({ err: error }, '[scraper] could not expire past events');
-      });
-    }
-
-    return { dryRun, trigger, startedAt, finishedAt: new Date(), sources: results };
+    return {
+      dryRun,
+      trigger,
+      startedAt,
+      finishedAt: new Date(),
+      sources: lock.value,
+    };
   } finally {
     running = false;
   }
