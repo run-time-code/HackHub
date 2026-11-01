@@ -11,7 +11,8 @@ async function getStats() {
   const [hackathons, teams, builders, openTeams, matches] = await Promise.all([
     Hackathon.countDocuments(visibleFilter()),
     Team.countDocuments({}),
-    User.countDocuments({ discoverable: true, deletedAt: null }),
+    // Discovery excludes banned accounts, so the public counter must too.
+    User.countDocuments({ discoverable: true, deletedAt: null, banned: { $ne: true } }),
     Team.countDocuments({ status: 'open' }),
     JoinRequest.countDocuments({ status: 'accepted' }),
   ]);

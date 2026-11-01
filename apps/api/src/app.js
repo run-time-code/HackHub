@@ -6,12 +6,11 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const passport = require('passport');
-const pinoHttp = require('pino-http');
 const Sentry = require('@sentry/node');
 const rateLimit = require('express-rate-limit');
 
 const config = require('./config');
-const logger = require('./utils/logger');
+const { createHttpLogger } = require('./middleware/httpLogger');
 const requestId = require('./middleware/requestId');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
@@ -58,12 +57,7 @@ function createApp() {
 
   app.use(requestId);
 
-  app.use(
-    pinoHttp({
-      logger,
-      customProps: (req) => ({ requestId: req.id }),
-    })
-  );
+  app.use(createHttpLogger());
 
   app.use(metrics.recordRequest);
 

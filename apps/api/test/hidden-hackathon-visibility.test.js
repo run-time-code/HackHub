@@ -36,7 +36,7 @@ describe('hidden hackathon visibility', () => {
     );
   }
 
-  async function api(method, path, body, options = {}) {
+  async function api(method, path, body) {
     const headers = { 'content-type': 'application/json' };
     if (token) headers.authorization = `Bearer ${token}`;
     if (method !== 'GET') {
