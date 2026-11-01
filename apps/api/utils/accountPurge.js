@@ -1,17 +1,25 @@
-const mongoose = require("mongoose");
 const User = require("../models/User");
-const Registration = require("../models/Registration");
+const {
+    suspendUserSideEffects,
+    purgeUserRows
+} = require("./accountErasure");
 
 const RETENTION_DAYS = 30;
 
+const cutoffDate = () => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
+
+    return cutoff;
+};
+
 const previewDeletedAccounts = async () => {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+    const cutoff = cutoffDate();
 
     const users = await User.find({
         deletedAt: {
             $ne: null,
-            $lte: cutoffDate
+            $lte: cutoff
         }
     })
         .select("_id email deletedAt")
@@ -19,63 +27,60 @@ const previewDeletedAccounts = async () => {
 
     return {
         retentionDays: RETENTION_DAYS,
-        cutoffDate,
+        cutoffDate: cutoff,
         eligibleAccounts: users.length,
         accounts: users
     };
 };
 
+// Permanent erasure. Each account is processed independently so one bad row
+// cannot block the whole nightly run, and the user document is removed last:
+// if the job dies mid-way the account is retried on the next run (every step
+// is idempotent) instead of orphaning rows with no owning account.
 const purgeDeletedAccounts = async () => {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+    const cutoff = cutoffDate();
 
-    const session = await mongoose.startSession();
+    const deletedUsers = await User.find({
+        deletedAt: {
+            $ne: null,
+            $lte: cutoff
+        }
+    })
+        .select("_id")
+        .lean();
 
-    try {
-        let result = {
-            deletedAccounts: 0,
-            deletedRegistrations: 0
-        };
+    const result = {
+        deletedAccounts: 0,
+        deletedRegistrations: 0,
+        deletedSavedHackathons: 0,
+        deletedReminders: 0,
+        deletedNotifications: 0,
+        deletedJoinRequests: 0
+    };
 
-        await session.withTransaction(async () => {
-            const deletedUsers = await User.find({
-                deletedAt: {
-                    $ne: null,
-                    $lte: cutoffDate
-                }
-            })
-                .select("_id")
-                .session(session)
-                .lean();
+    for (const { _id } of deletedUsers) {
+        await suspendUserSideEffects(_id);
 
-            if (deletedUsers.length === 0) {
-                return;
+        const rows = await purgeUserRows(_id);
+
+        result.deletedRegistrations += rows.registrations;
+        result.deletedSavedHackathons += rows.savedHackathons;
+        result.deletedReminders += rows.reminders;
+        result.deletedNotifications += rows.notifications;
+        result.deletedJoinRequests += rows.joinRequests;
+
+        const removed = await User.deleteOne({
+            _id,
+            deletedAt: {
+                $ne: null,
+                $lte: cutoff
             }
-
-            const userIds = deletedUsers.map(user => user._id);
-
-            const registrationResult = await Registration.deleteMany({
-                user: { $in: userIds }
-            }).session(session);
-
-            const userResult = await User.deleteMany({
-                _id: { $in: userIds },
-                deletedAt: {
-                    $ne: null,
-                    $lte: cutoffDate
-                }
-            }).session(session);
-
-            result = {
-                deletedAccounts: userResult.deletedCount,
-                deletedRegistrations: registrationResult.deletedCount
-            };
         });
 
-        return result;
-    } finally {
-        await session.endSession();
+        result.deletedAccounts += removed.deletedCount || 0;
     }
+
+    return result;
 };
 
 module.exports = {

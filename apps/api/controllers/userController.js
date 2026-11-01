@@ -10,6 +10,8 @@ const {
 } = require("../utils/cookieUtils");
 const Registration = require("../models/Registration");
 const Hackathon = require("../models/Hackathon");
+const { suspendUserSideEffects } = require("../utils/accountErasure");
+const logger = require("../src/utils/logger");
 
 function cloudinaryConfigured() {
     const config = cloudinary.config();
@@ -665,6 +667,19 @@ const deleteMyAccount = async (req, res) => {
         user.emailVerificationTokenExpiresAt = null;
 
         await user.save();
+
+        // Release teams, pending requests and reminder jobs that would
+        // otherwise keep pointing at an account nobody can sign in to.
+        // The remaining personal rows are erased by the nightly purge once
+        // the retention window ends.
+        try {
+            await suspendUserSideEffects(user._id);
+        } catch (cleanupError) {
+            logger.error(
+                { err: cleanupError, userId: String(user._id) },
+                "account relationship cleanup failed"
+            );
+        }
 
         // Clear authentication cookies in this browser.
         res.clearCookie("accessToken", accessCookieOptions);
