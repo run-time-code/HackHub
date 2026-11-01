@@ -37,7 +37,7 @@
 
 | Feature | Description |
 |---|---|
-| **Unified Discovery** | Aggregated listings scraped/fetched from multiple sources, normalized and deduplicated |
+| **Unified Discovery** | Daily scraper pulls Devpost, Devfolio, Unstop and HackerEarth (plus opt-in search discovery), normalizes and deduplicates them into one catalogue |
 | **Smart Search & Filters** | By skills, interests, tech domain, mode, prize, deadline, organizer |
 | **Public Field Guide** | A story-led landing page, live network numbers, legal and help pages, shareable `/u/:id` builder cards |
 | **Builder Cards** | Profile editor with skills, links, hackathon history, availability and public/private visibility |
@@ -56,8 +56,8 @@
 > and consent-aware analytics. Authentication, catalogue discovery, calendar,
 > reminders, saved-hackathon tracking, and account settings are wired to the
 > active API. Recommendations include a heuristic `worthScore`; validating a
-> production scoring model, automated catalogue scrapers, and optional ICS
-> export remain future work. Staging and production still need provider-backed
+> production scoring model and optional ICS export remain future work. Daily
+> catalogue scraping is described in [docs/SCRAPERS.md](docs/SCRAPERS.md). Staging and production still need provider-backed
 > verification; see [docs/staging.md](docs/staging.md) and
 > [docs/production-operations.md](docs/production-operations.md).
 
@@ -91,7 +91,7 @@ Set `VITE_API_BASE_URL` and the API environment described below. The deployed-de
 - **Frontend:** React 19, Vite, custom CSS design system (Tailwind CSS v4 for auth/legacy surfaces), Radix UI primitives, TanStack Query, Framer Motion
 - **Backend:** Node.js, Express.js, session cookies (JWT access/refresh) + CSRF, Passport (Google/GitHub OAuth)
 - **Database:** MongoDB (Mongoose)
-- **Data:** Python importer for the hackathon catalogue (`tools/data-importer`); scrapers planned
+- **Data:** multi-source scraper in the API (`apps/api/src/scrapers`, see [docs/SCRAPERS.md](docs/SCRAPERS.md)) + Python importer at `tools/data-importer`
 - **Deployment:** Render (API), Vercel (web), MongoDB Atlas
 - **Monitoring:** Sentry, Prometheus `/metrics`, scheduled uptime checks
 - **Version Control:** GitHub
@@ -101,8 +101,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, 
 Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
 
 ```
-[tools/data-importer] ──> [Express API /api] <──> [MongoDB Atlas]
-[scrapers (planned)] ────>        ▲
+[tools/data-importer] ──────────┐
+[scrapers: daily cron / CLI] ───┼──> [Express API /api] <──> [MongoDB Atlas]
+                                ▼            ▲
                                   │  cookies + CSRF, Google/GitHub OAuth
                      [React 19 web app (field guide)]
 ```
@@ -142,6 +143,19 @@ python tools/data-importer/import_hackathons.py
 ```
 
 Keep the `.env` file private; do not commit it.
+
+The daily catalogue scraper (Devpost, Devfolio, Unstop, HackerEarth) runs from
+the API workspace. It needs `MONGODB_URI` in `apps/api/.env`:
+
+```bash
+npm run scrape --workspace @hackhub/api                      # all enabled sources
+npm run scrape --workspace @hackhub/api -- --source=devpost --dry-run
+npm run scrape --workspace @hackhub/api -- --list
+```
+
+A GitHub Actions workflow (`.github/workflows/scrape-hackathons.yml`) runs it
+daily; set the `MONGODB_URI` repository secret. See
+[docs/SCRAPERS.md](docs/SCRAPERS.md) for sources, dedupe rules and scheduling.
 
 ### 4. Run the apps
 ```bash
@@ -219,7 +233,9 @@ Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
 | 3 | Calendar/reminders, testing, integration, deployment, docs |
 | 4 | Security hardening, monitoring, staging/production operations |
 
-Still planned: automated multi-source scrapers and optional ICS calendar
+Daily multi-source scraping ships in `apps/api/src/scrapers`
+(Devpost, Devfolio, Unstop, HackerEarth, optional search discovery) — see
+[docs/SCRAPERS.md](docs/SCRAPERS.md). Still planned: optional ICS calendar
 export. Recommendations currently expose an explainable heuristic `worthScore`;
 its scoring model still needs product validation. Calendar/reminders,
 saved-hackathon CRUD, and account settings are covered by

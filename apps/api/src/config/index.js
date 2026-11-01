@@ -30,6 +30,26 @@ const base = {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),
+  // Daily hackathon catalogue scraping. Disabled unless explicitly enabled so
+  // local servers and read-only deployments never call third-party sites.
+  scrapers: {
+    enabled: process.env.SCRAPER_ENABLED === 'true',
+    cron: process.env.SCRAPER_CRON || '30 2 * * *',
+    timezone: process.env.SCRAPER_TIMEZONE || 'Asia/Kolkata',
+    userAgent: process.env.SCRAPER_USER_AGENT
+      || 'HackHubBot/1.0 (+https://github.com/run-time-code/HackHub; hackathon catalogue aggregation)',
+    timeoutMs: Number(process.env.SCRAPER_TIMEOUT_MS || 20000),
+    maxPagesPerSource: Number(process.env.SCRAPER_MAX_PAGES || 10),
+    sources: (process.env.SCRAPER_SOURCES || '')
+      .split(',')
+      .map((source) => source.trim().toLowerCase())
+      .filter(Boolean),
+    serpApiKey: process.env.SERPAPI_KEY || '',
+    searchQueries: (process.env.SCRAPER_SEARCH_QUERIES || '')
+      .split('|')
+      .map((query) => query.trim())
+      .filter(Boolean),
+  },
 };
 
 if ((base.isProd || base.isStaging) && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'change_me')) {

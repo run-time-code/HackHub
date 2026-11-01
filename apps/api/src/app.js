@@ -33,6 +33,7 @@ const { doubleCsrfProtection } = require('../middleware/csrfMiddleware');
 const adminHackathonRoutes = require('../routes/adminHackathonRoutes');
 const adminUserRoutes = require('../routes/adminUserRoutes');
 const adminReportRoutes = require('../routes/adminReportRoutes');
+const adminScraperRoutes = require('../routes/adminScraperRoutes');
 
 // General API protection against excessive request rates.
 const apiLimiter = rateLimit({
@@ -126,6 +127,12 @@ function createApp() {
     '/api/admin/reports',
     doubleCsrfProtection,
     adminReportRoutes
+  );
+
+  app.use(
+    '/api/admin/scrapers',
+    doubleCsrfProtection,
+    adminScraperRoutes
   );
 
   if (config.sentryDsn) {

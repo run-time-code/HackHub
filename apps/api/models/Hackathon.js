@@ -51,6 +51,26 @@ const hackathonSchema = new mongoose.Schema(
             default: "",
             index: true
         },
+        // Scraper bookkeeping: one key per real-world hackathon so the same
+        // event cross-posted on several platforms stays a single catalogue row,
+        // plus every listing that confirmed it.
+        dedupeKey: {
+            type: String,
+            default: undefined,
+            index: true
+        },
+        sourceRecords: {
+            type: [mongoose.Schema.Types.Mixed],
+            default: []
+        },
+        lastScrapedAt: {
+            type: Date,
+            default: null
+        },
+        imageUrl: {
+            type: String,
+            default: ""
+        },
         skills: {
             type: [String],
             default: []
@@ -191,6 +211,8 @@ hackathonSchema.index({ registration_deadline: 1, _id: 1 });
 hackathonSchema.index({ prize: -1, _id: 1 });
 hackathonSchema.index({ prize: 1, _id: 1 });
 hackathonSchema.index({ createdAt: -1, _id: -1 });
+hackathonSchema.index({ source: 1, external_id: 1 });
+hackathonSchema.index({ lastScrapedAt: -1 });
 
 module.exports = mongoose.models.Hackathon
     || mongoose.model("Hackathon", hackathonSchema);

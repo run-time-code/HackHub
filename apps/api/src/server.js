@@ -8,6 +8,7 @@ const logger = require('./utils/logger');
 const createApp = require('./app');
 const { purgeDeletedAccounts } = require('../utils/accountPurge');
 const { processDueReminders, TIME_ZONE } = require('./services/reminderScheduler');
+const { startScraperScheduler, stopScraperScheduler } = require('./scrapers');
 
 if (config.sentryDsn) {
   Sentry.init({
@@ -37,6 +38,7 @@ async function start() {
     { timezone: TIME_ZONE }
   );
   await processDueReminders();
+  startScraperScheduler();
   const app = createApp();
   server = app.listen(config.port, () => {
     logger.info({ port: config.port, env: config.env }, 'hackhub-api listening');
@@ -71,6 +73,7 @@ cron.schedule(
 function shutdown(signal) {
   logger.info({ signal }, 'shutting down');
   if (reminderJob) reminderJob.stop();
+  stopScraperScheduler();
   if (!server) {
     mongoose.disconnect().finally(() => process.exit());
     return;
