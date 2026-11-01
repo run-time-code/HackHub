@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { withJobLock } = require('./utils/jobLock');
+const { JobLock } = require('./models/jobLock');
 const createApp = require('./app');
 const { purgeDeletedAccounts } = require('../utils/accountPurge');
 const { processDueReminders, TIME_ZONE } = require('./services/reminderScheduler');
@@ -97,6 +98,11 @@ async function start() {
     { maxPoolSize: config.mongoMaxPoolSize },
     'MongoDB connected'
   );
+
+  // Wait for the unique lock index before any cron can run. Mongoose builds
+  // indexes in the background after connect, and an unindexed lock table lets
+  // two instances acquire the same key at the same instant.
+  await JobLock.init();
 
   startBackgroundJobs();
 

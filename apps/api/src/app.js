@@ -8,6 +8,7 @@ const helmet = require('helmet');
 const passport = require('passport');
 const Sentry = require('@sentry/node');
 const rateLimit = require('express-rate-limit');
+const rateLimitIdentity = require('./middleware/rateLimitIdentity');
 
 const config = require('./config');
 const { createHttpLogger } = require('./middleware/httpLogger');
@@ -35,9 +36,19 @@ const adminReportRoutes = require('../routes/adminReportRoutes');
 const adminScraperRoutes = require('../routes/adminScraperRoutes');
 
 // General API protection against excessive request rates.
+//
+// Bucketing by IP alone means every user behind one NAT shares a bucket; with
+// 500k users that is a permanent source of false 429s. rateLimitIdentity
+// attaches the signed-in account id first, so authenticated traffic is limited
+// per user and only anonymous traffic is limited per IP.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
+  windowMs: config.apiRateLimit.windowMs,
+  limit: (req) => (req.user && req.user.id
+    ? config.apiRateLimit.perUser
+    : config.apiRateLimit.perIp),
+  keyGenerator: (req) => (req.user && req.user.id
+    ? `user:${req.user.id}`
+    : rateLimit.ipKeyGenerator(req.ip)),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -90,6 +101,9 @@ function createApp() {
   app.use(auditMiddleware);
 
   app.get('/metrics', metrics.serveMetrics);
+
+  // Identify the account (signature check only) before bucketing requests.
+  app.use(rateLimitIdentity);
 
   // Apply the global limiter once, before every API mount. Mounting it only
   // on '/api' left the duplicate root-mounted read routes (app.use('/', ...))

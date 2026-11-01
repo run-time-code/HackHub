@@ -34,6 +34,10 @@ describe('scaling', () => {
   before(async () => {
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri());
+    // The lock is enforced by a unique index; wait for it instead of racing
+    // the background index build (server.js does the same before cron starts).
+    await JobLock.init();
+    await JobLock.syncIndexes();
   });
 
   after(async () => {

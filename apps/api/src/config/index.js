@@ -31,6 +31,14 @@ const base = {
   devAutoVerify:
     env === 'development' && process.env.DEV_AUTO_VERIFY === 'true',
   maxJoinRequestsPerDay: Number(process.env.MAX_JOIN_REQUESTS_PER_DAY || 10),
+  // General API limiter. Authenticated callers are bucketed per account and
+  // anonymous callers per IP (see src/middleware/rateLimitIdentity.js); the
+  // per-user allowance is generous because one SPA page load is ~10 requests.
+  apiRateLimit: {
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000),
+    perUser: Number(process.env.RATE_LIMIT_PER_USER || 300),
+    perIp: Number(process.env.RATE_LIMIT_PER_IP || 600),
+  },
   // Ranked teammate discovery scores at most this many recent candidates so a
   // broad skill filter cannot turn one request into a full-collection scan.
   // 0 means unbounded (not recommended in production).

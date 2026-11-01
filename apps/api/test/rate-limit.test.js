@@ -5,8 +5,12 @@ process.env.LOG_LEVEL = 'fatal';
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const jwt = require('jsonwebtoken');
 
+const config = require('../src/config');
 const createApp = require('../src/app');
+
+const ANONYMOUS_LIMIT = config.apiRateLimit.perIp;
 
 describe('global API rate limiting', () => {
   let server;
@@ -33,10 +37,10 @@ describe('global API rate limiting', () => {
     });
   });
 
-  it('returns HTTP 429 after exceeding the API request limit', async () => {
+  it('returns HTTP 429 after exceeding the anonymous IP limit', async () => {
     let lastResponse;
 
-    for (let i = 0; i < 301; i += 1) {
+    for (let i = 0; i < ANONYMOUS_LIMIT + 1; i += 1) {
       lastResponse = await fetch(`${base}/api/rate-limit-test`);
     }
 
@@ -60,6 +64,22 @@ assert.ok(
     // Root-mounted duplicates must be covered by the same limiter.
     const rootResponse = await fetch(`${base}/rate-limit-test`);
     assert.equal(rootResponse.status, 429);
+  });
+
+  it('buckets authenticated callers per account, not per IP', async () => {
+    // The anonymous IP bucket above is already exhausted. A signed-in user on
+    // the same IP must still be served from its own bucket.
+    const token = jwt.sign(
+      { id: '64b7f0c2f1a2b3c4d5e6f708' },
+      config.jwtSecret,
+      { expiresIn: '5m' }
+    );
+
+    const response = await fetch(`${base}/api/rate-limit-test`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    assert.notEqual(response.status, 429);
   });
 
   it('does not rate-limit the health endpoint', async () => {
