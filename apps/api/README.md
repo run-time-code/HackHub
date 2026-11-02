@@ -121,7 +121,7 @@ Same variable names in every environment — only the values change.
 | `FRONTEND_URL` / `CORS_ORIGIN` | `http://localhost:5173` | staging frontend URL | live frontend URL (comma-separated for more) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | optional | optional | optional (enables Google sign-in) |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | optional | optional | optional (enables GitHub sign-in) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | optional | optional | optional (enables email) |
+| `EMAIL_USER` / `EMAIL_PASS` / `EMAIL_FROM` | optional | SMTP credentials | SMTP credentials (enables email) |
 | `SENTRY_DSN` | empty (disabled) | backend Sentry DSN | backend Sentry DSN |
 | `LOG_LEVEL` | `debug` | `info` | `info` |
 | `METRICS_TOKEN` | empty (`/metrics` hidden) | random scrape token | random scrape token |
@@ -210,8 +210,10 @@ existing member (the outgoing leader becomes a member).
   session cookie (`withCredentials: true` cross-origin). Delivery is
   in-process, so a multi-instance deployment needs a shared bus.
 - Email nudges for important team events (request, invitation, accepted,
-  declined, team full, leader change) are best-effort: no `RESEND_API_KEY`
-  means no email, never a failed request.
+  declined, team full, leader change) use Gmail SMTP through Nodemailer.
+  Configure `EMAIL_USER` and `EMAIL_PASS` (Gmail App Password) to enable
+  delivery. Email notifications are best-effort: SMTP failures never fail
+  the API request.
 
 ### Hackathons (`GET /hackathons`, also under `/api/...`)
 

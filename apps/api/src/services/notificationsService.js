@@ -1,3 +1,4 @@
+
 'use strict';
 
 const mongoose = require('mongoose');
@@ -16,11 +17,16 @@ function badRequest(message) {
 }
 
 function notFound() {
-  return { status: 404, code: 'NOTIFICATION_NOT_FOUND', message: 'Notification not found' };
+  return {
+    status: 404,
+    code: 'NOTIFICATION_NOT_FOUND',
+    message: 'Notification not found'
+  };
 }
 
 function serialize(notification) {
   const obj = notification.toObject ? notification.toObject() : notification;
+
   return {
     id: String(obj._id || obj.id),
     type: obj.type,
@@ -33,16 +39,22 @@ function serialize(notification) {
   };
 }
 
-// Email is best-effort: a missing provider key, unverified sender or an
-// provider outage must never fail the API call that triggered it.
+// Email is best-effort: missing SMTP credentials or an email
+// delivery failure must never fail the API call that triggered it.
 async function sendEmailBestEffort(userId, title, message) {
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    logger.debug({ userId }, 'email notification skipped (Resend not configured)');
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    logger.debug(
+      { userId },
+      'email notification skipped (Gmail SMTP not configured)'
+    );
     return;
   }
+
   try {
     const user = await User.findById(userId).select('email').lean();
+
     if (!user || !user.email) return;
+
     await sendTeamEmail(user.email, title, message);
   } catch (err) {
     logger.warn({ err, userId }, 'email notification failed');
@@ -65,20 +77,30 @@ async function createNotification({
     message,
     data,
   };
+
   if (reminder) notificationData.reminder = reminder;
+
   const notification = await Notification.create(notificationData);
   const payload = serialize(notification);
+
   publishNotification(userId, payload);
+
   if (email) {
     await sendEmailBestEffort(userId, title, message);
   }
+
   return payload;
 }
 
 async function listNotifications(userId, query = {}) {
   const pageNum = Math.max(Number(query.page) || 1, 1);
-  const limitNum = Math.min(Math.max(Number(query.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
+  const limitNum = Math.min(
+    Math.max(Number(query.limit) || DEFAULT_LIMIT, 1),
+    MAX_LIMIT
+  );
+
   const filter = { user: userId };
+
   if (String(query.unreadOnly).toLowerCase() === 'true') {
     filter.read = false;
   }
@@ -92,7 +114,13 @@ async function listNotifications(userId, query = {}) {
     Notification.countDocuments({ user: userId, read: false }),
   ]);
 
-  return { items: items.map(serialize), page: pageNum, limit: limitNum, total, unread };
+  return {
+    items: items.map(serialize),
+    page: pageNum,
+    limit: limitNum,
+    total,
+    unread
+  };
 }
 
 function assertObjectId(value) {
@@ -103,15 +131,22 @@ function assertObjectId(value) {
 
 async function markRead(userId, notificationId) {
   assertObjectId(notificationId);
-  const notification = await Notification.findOne({ _id: notificationId, user: userId });
+
+  const notification = await Notification.findOne({
+    _id: notificationId,
+    user: userId
+  });
+
   if (!notification) {
     throw notFound();
   }
+
   if (!notification.read) {
     notification.read = true;
     notification.readAt = new Date();
     await notification.save();
   }
+
   return serialize(notification);
 }
 
@@ -120,6 +155,7 @@ async function markAllRead(userId) {
     { user: userId, read: false },
     { $set: { read: true, readAt: new Date() } }
   );
+
   return { updated: result.modifiedCount || 0 };
 }
 
