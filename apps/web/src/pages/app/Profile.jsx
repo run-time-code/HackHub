@@ -96,6 +96,11 @@ function validateForm(form, skills) {
   const errors = {};
   if (form.name.trim().length < 2) errors.name = "Give us a name of at least 2 characters.";
   if (form.name.trim().length > 80) errors.name = "Keep your name under 80 characters.";
+  for (const field of ["headline", "bio", "college", "year", "location"]) {
+    if (form[field].length > 0 && !form[field].trim()) {
+      errors[field] = "This field cannot contain only spaces.";
+    }
+  }
   if (form.headline.length > 120) errors.headline = "Headlines stop at 120 characters.";
   if (form.bio.length > 500) errors.bio = "The bio has a 500 character limit.";
   for (const [key, value] of Object.entries(form.links)) {
@@ -209,7 +214,7 @@ export default function Profile() {
         lookingForTeam: form.lookingForTeam,
         discoverable: form.discoverable,
       };
-      const savedProfile = await updateMyProfile(values);
+      const savedProfile = await updateMyProfile(values) || { ...profileQuery.data, ...values };
       const savedSkills = await updateMySkills(skills);
       return { profile: savedProfile, skills: savedSkills };
     },
@@ -486,7 +491,7 @@ export default function Profile() {
                     maxLength={500}
                   />
                 </Field>
-                <Field label="College" htmlFor="profile-college" hint="Or where you are learning instead.">
+                <Field label="College" htmlFor="profile-college" hint="Or where you are learning instead." error={errors.college}>
                   <Input
                     id="profile-college"
                     value={form.college}
@@ -495,7 +500,7 @@ export default function Profile() {
                     maxLength={120}
                   />
                 </Field>
-                <Field label="Year" htmlFor="profile-year">
+                <Field label="Year" htmlFor="profile-year" error={errors.year}>
                   <Input
                     id="profile-year"
                     value={form.year}
@@ -504,14 +509,11 @@ export default function Profile() {
                     maxLength={40}
                   />
                 </Field>
-                <Field label="Location" htmlFor="profile-location" className="form-grid--full">
-                  <Input
-                    id="profile-location"
-                    value={form.location}
-                    onChange={(event) => update("location", event.target.value)}
-                    placeholder="Chennai, India"
-                    maxLength={120}
-                  />
+                <Field label="Location" htmlFor="profile-location" className="form-grid--full" error={errors.location}>
+                  <select id="profile-location" className="input" value={form.location} onChange={(event) => update("location", event.target.value)}>
+                    <option value="">Choose a location</option>
+                    {["Bengaluru, India", "Chennai, India", "Delhi, India", "Hyderabad, India", "Kolkata, India", "Mumbai, India", "Pune, India", "Remote", ...(form.location && !["Bengaluru, India", "Chennai, India", "Delhi, India", "Hyderabad, India", "Kolkata, India", "Mumbai, India", "Pune, India", "Remote"].includes(form.location) ? [form.location] : [])].map((city) => <option key={city} value={city}>{city}</option>)}
+                  </select>
                 </Field>
               </div>
             </div>

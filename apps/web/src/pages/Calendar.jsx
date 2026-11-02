@@ -274,7 +274,14 @@ export default function Calendar() {
         channel: reminderState.channel,
       });
       setReminderMessage("Reminder created.");
-      await loadReminders();
+      try {
+        const items = await getReminders();
+        setReminders(items);
+        setRemindersError("");
+      } catch (refreshError) {
+        setReminderMessage(`Reminder created, but the list could not refresh: ${refreshError.message}`);
+        setRemindersError(refreshError.message || "Could not refresh reminders.");
+      }
     } catch (requestError) {
       setReminderMessage(`Could not create reminder: ${requestError.message}`);
     } finally {

@@ -40,7 +40,6 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [query, setQuery] = useState("");
   const [pendingIds, setPendingIds] = useState([]);
 
   const isLoading = loadedVersion !== requestVersion;
@@ -71,13 +70,11 @@ export default function Dashboard() {
   ), [records]);
 
   const visibleRecords = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
     return records.filter((record) => {
       if (activeTab !== "all" && getStatus(record) !== activeTab) return false;
-      const hackathon = getHackathon(record);
-      return !normalizedQuery || `${getTitle(hackathon)} ${hackathon.organizer || ""}`.toLowerCase().includes(normalizedQuery);
+      return true;
     });
-  }, [activeTab, query, records]);
+  }, [activeTab, records]);
 
   const upcomingDeadline = getUpcomingDeadline(records);
 
@@ -182,8 +179,6 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
-              <label className="sr-only" htmlFor="dashboard-search">Search your hackathons</label>
-              <input id="dashboard-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your hackathons" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm sm:max-w-xs focus:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-100" />
             </div>
             {actionError && <p role="alert" className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{actionError}</p>}
             {isLoading ? (
@@ -192,7 +187,7 @@ export default function Dashboard() {
               <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
                 <h2 className="text-lg font-semibold text-slate-900">{records.length ? "No matches in this view" : "Your dashboard is ready when you are"}</h2>
                 <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-                  {records.length ? "Try another status tab or search term." : "Save an event you are interested in, then track your progress and deadlines here."}
+                  {records.length ? "Try another status tab." : "Save an event you are interested in, then track your progress and deadlines here."}
                 </p>
                 {!records.length && <Link to="/discover" className="mt-5 inline-flex rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Browse the open calls</Link>}
                 {!records.length && <Link to="/onboarding" className="mt-5 inline-flex rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Finish your field notes</Link>}

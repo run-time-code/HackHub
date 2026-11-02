@@ -5,6 +5,7 @@ import {
   getHackathonFacets,
   getHackathonRecommendations,
   getHackathons,
+  getSavedHackathons,
   saveHackathon,
 } from "../lib/api/hackathons";
 
@@ -49,6 +50,26 @@ function comparisonDate(value) {
   }).format(date);
 }
 
+function uniqueByValue(options = []) {
+  const seen = new Set();
+  return options.filter((option) => {
+    const key = String(option?.value ?? "").trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueHackathons(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = idFor(item) || String(item.title || item.name || "").trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export default function Discover() {
   const location = useLocation();
   return <DiscoveryPage key={location.search} />;
@@ -75,6 +96,11 @@ function DiscoveryPage() {
   const [recommendationsError, setRecommendationsError] = useState("");
   const [recommendationsVersion, setRecommendationsVersion] = useState(0);
   const [comparison, setComparison] = useState([]);
+  const listedIds = useMemo(() => new Set(items.map(idFor)), [items]);
+  const uniqueRecommendations = useMemo(
+    () => uniqueHackathons(recommendations).filter((item) => !listedIds.has(idFor(item))),
+    [recommendations, listedIds]
+  );
 
   const page = Math.max(Number(routeParams.get("page")) || 1, 1);
   const requestKey = `${queryString}:${retryVersion}`;
@@ -89,7 +115,7 @@ function DiscoveryPage() {
     getHackathons(requestFilters)
       .then((result) => {
         if (isCurrent) {
-          setItems(result.items);
+          setItems(uniqueHackathons(result.items));
           setPagination(result.pagination);
           setError("");
         }
@@ -107,7 +133,9 @@ function DiscoveryPage() {
     let isCurrent = true;
     getHackathonFacets()
       .then((result) => {
-        if (isCurrent) setFacets(result);
+        if (isCurrent) setFacets(Object.fromEntries(
+          ["domains", "skills", "modes", "sources"].map((key) => [key, uniqueByValue(result[key])])
+        ));
       })
       .catch((requestError) => {
         if (isCurrent) setFacetsError(requestError.message || "Could not load filter options.");
@@ -164,7 +192,15 @@ function DiscoveryPage() {
     setMessage("");
     setMessageIsError(false);
     try {
-      await saveHackathon(id);
+      const saved = await saveHackathon(id);
+      if (!saved) {
+        const savedItems = await getSavedHackathons();
+        const confirmed = savedItems.some((record) => {
+          const hackathon = record.hackathon || record;
+          return String(hackathon.id || hackathon._id || hackathon.slug || "") === id;
+        });
+        if (!confirmed) throw new Error("The save was not confirmed by the server. Please try again.");
+      }
       setSavedIds((current) => current.includes(id) ? current : [...current, id]);
       setMessage("Hackathon saved to your dashboard.");
     } catch (requestError) {
@@ -209,9 +245,9 @@ function DiscoveryPage() {
             <p>{recommendationsError}</p>
             <button type="button" onClick={() => setRecommendationsVersion((version) => version + 1)} className="mt-2 font-semibold underline">Try recommendations again</button>
           </div>
-        ) : recommendations.length ? (
+        ) : uniqueRecommendations.length ? (
           <div className="event-board grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {recommendations.slice(0, 3).map((hackathon) => {
+            {uniqueRecommendations.slice(0, 3).map((hackathon) => {
               const id = idFor(hackathon);
               return (
                 <HackathonCard

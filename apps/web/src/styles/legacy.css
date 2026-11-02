@@ -519,6 +519,36 @@ textarea:focus-visible {
   color: #5e665d;
 }
 
+[data-theme="dark"] .workbench-main .text-slate-500,
+[data-theme="dark"] .workbench-main .text-slate-600,
+[data-theme="dark"] .workbench-main .text-slate-700,
+[data-theme="dark"] .workbench-main .text-slate-800 {
+  color: var(--ink-2);
+}
+
+[data-theme="dark"] .workbench-main .bg-white {
+  background-color: var(--surface);
+}
+
+[data-theme="dark"] .workbench-main .border-slate-100,
+[data-theme="dark"] .workbench-main .border-slate-200,
+[data-theme="dark"] .workbench-main .border-slate-300 {
+  border-color: var(--line-strong);
+}
+
+[data-theme="dark"] .workbench-main input:not([type="checkbox"]),
+[data-theme="dark"] .workbench-main textarea,
+[data-theme="dark"] .workbench-main select {
+  border-color: var(--line-strong);
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .workbench-main input::placeholder,
+[data-theme="dark"] .workbench-main textarea::placeholder {
+  color: var(--muted);
+}
+
 .progress-ledger {
   overflow: hidden;
   border: 1px solid #c9c5b8;
