@@ -3,8 +3,15 @@ const crypto = require("crypto");
 
 // Fall back to JWT_SECRET so local dev and CI keep working; the
 // authMiddleware verifies against both secrets (mirrors it here).
-const accessTokenSecret = () =>
-    process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
+const accessTokenSecret = () => {
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+        throw new Error("JWT_SECRET is not configured");
+    }
+
+    return secret;
+};
 
 const generateAccessToken = (user) => {
     return jwt.sign(

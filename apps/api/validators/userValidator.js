@@ -46,6 +46,7 @@ const updateProfileSchema = z.object({
     location: z.string().trim().max(100).optional(),
     headline: z.string().trim().max(120).optional(),
     year: z.string().trim().max(20).optional(),
+    avatarUrl: optionalUrlSchema.optional(),
     links: linksSchema.optional(),
     pastHackathons: z.array(pastHackathonSchema).max(10).optional(),
     skillProficiency: z.record(

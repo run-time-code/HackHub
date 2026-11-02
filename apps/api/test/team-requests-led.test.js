@@ -35,14 +35,45 @@ describe('GET /team-requests/mine for team leaders', () => {
     );
   }
 
+  let csrfToken;
+  let csrfCookie;
+
+  async function refreshCsrf() {
+    const res = await fetch(`${base}/auth/csrf-token`);
+    assert.equal(res.status, 200, 'CSRF token endpoint should succeed');
+
+    const data = await res.json();
+    csrfToken = data.csrfToken;
+
+    const setCookie = res.headers.get('set-cookie') || '';
+    csrfCookie = setCookie.split(';')[0];
+
+    assert.ok(csrfToken, 'CSRF token should be returned');
+    assert.ok(csrfCookie.includes('psifi.x-csrf-token'), 'CSRF cookie should be set');
+  }
+
   async function api(method, path, token, body) {
     const headers = { 'content-type': 'application/json' };
-    if (token) headers.authorization = `Bearer ${token}`;
+
+    if (token) {
+      headers.authorization = `Bearer ${token}`;
+    }
+
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+      if (!csrfToken || !csrfCookie) {
+        await refreshCsrf();
+      }
+
+      headers['x-csrf-token'] = csrfToken;
+      headers.cookie = csrfCookie;
+    }
+
     const res = await fetch(`${base}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+
     return { res, body: await res.json() };
   }
 

@@ -590,13 +590,16 @@ const logout = async (req, res) => {
 
             // Remove refresh token
             await User.findOneAndUpdate(
-                { refreshTokenHash },
-                {
-                    $set: {
-                        refreshTokenHash: null
-                    }
-                }
-            );
+    { refreshTokenHash },
+    {
+        $set: {
+            refreshTokenHash: null
+        },
+        $inc: {
+            tokenVersion: 1
+        }
+    }
+);
         }
 
         // Clear authentication cookies
@@ -703,9 +706,6 @@ const forgotPassword = async (req, res) => {
 };
 
 
-// ==============================
-// RESET PASSWORD
-// ==============================
 // ==============================
 // RESET PASSWORD
 // ==============================

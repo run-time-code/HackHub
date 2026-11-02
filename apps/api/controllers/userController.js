@@ -214,6 +214,7 @@ const {
     location,
     headline,
     year,
+    avatarUrl,
     links,
     pastHackathons,
     skillProficiency,
@@ -255,6 +256,9 @@ const {
         if (year !== undefined) {
             user.year = year;
         }
+        if (avatarUrl !== undefined) {
+    user.avatarUrl = avatarUrl;
+}
 
         if (links !== undefined) {
             user.links = {

@@ -127,21 +127,22 @@ const completeOAuthLogin = async (req, res) => {
 
         return res.status(200).json(payload);
     } catch (error) {
-        console.error("OAuth login error:", error);
+     console.error("OAuth login error:", error);
 
-        // Concurrent first-time logins racing to create the same account.
-        if (error && error.code === 11000) {
-            return res.status(409).json({
-                message: "Unable to complete social login. Please try again."
-            });
-        }
+        // Concurrent first-time logins racing to create the same account.
+        if (error && error.code === 11000) {
+            return res.status(409).json({
+                message: "Unable to complete social login. Please try again."
+            });
+        }
 
-        return res.status(500).json({
-            message: "Social login failed"
-        });
-    }
+        return res.status(500).json({
+            message: "Social login failed"
+        });
+    }
 };
-
+    
+  
 module.exports = {
     completeOAuthLogin
 };
