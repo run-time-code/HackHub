@@ -15,7 +15,9 @@ export function forgotPassword(payload) {
 }
 
 export function resetPassword(token, payload) {
-  return request(`/auth/reset-password?token=${encodeURIComponent(token)}`, { body: payload });
+  return request("/auth/reset-password", {
+    body: { ...payload, token },
+  });
 }
 
 export function verifyEmail(token) {
