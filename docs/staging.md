@@ -66,6 +66,12 @@ after inactivity can take ~1 minute. The workflow's health-wait loop
    `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (next section).
    The workflow's frontend job skips gracefully when those secrets are absent.
 
+The staging deploy workflow derives Vercel's `connect-src` CSP allowlist from
+`STAGING_API_URL` before building, and permits Cloudinary for uploaded profile
+images. For a manual Vercel CLI build, set `VITE_API_BASE_URL` and run
+`node scripts/configure-vercel-csp.mjs` from the repository root before
+`vercel build`; the configured policy allows only that API origin.
+
 ## 5. GitHub Environment `staging` (one time)
 
 Repo Settings > Environments > New environment `staging`, add these secrets:

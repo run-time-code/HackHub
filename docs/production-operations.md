@@ -18,6 +18,12 @@ Add these secrets to the GitHub `production` environment:
 
 The workflow deploys the API, waits for `/health`, deploys the Vercel production build, then checks `/health` and `/api/health`. Render and Vercel provide HTTPS; configure the custom domain and DNS in those providers. Their edge networks serve the static frontend. Confirm the API CORS origin matches the final frontend domain.
 
+The production workflow derives the frontend `connect-src` CSP allowlist from
+`PRODUCTION_API_URL` before the Vercel build and permits Cloudinary for uploaded
+profile images. Manual Vercel CLI builds must set `VITE_API_BASE_URL` and run
+`node scripts/configure-vercel-csp.mjs` from the repository root before
+`vercel build` so the deployed browser can reach the configured API.
+
 ## Monitoring and alerts
 
 End-to-end setup (Sentry projects, scheduled uptime checks, Slack alerts,

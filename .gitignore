@@ -69,3 +69,4 @@ postman/
 # Turborepo
 turbo/
 .turbo/
+.claude/
