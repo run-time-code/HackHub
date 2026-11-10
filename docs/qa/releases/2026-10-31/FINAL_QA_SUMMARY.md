@@ -117,7 +117,7 @@ Outstanding work includes:
 - Investigate dependency vulnerabilities.
 - Verify production frontend CSP and API-origin compatibility.
 
-`audit-root.json` records an npm audit snapshot containing 12 moderate vulnerabilities, 0 high vulnerabilities and 0 critical vulnerabilities.
+`docs/security/audit-root.json` records an npm audit snapshot containing 12 moderate vulnerabilities, 0 high vulnerabilities and 0 critical vulnerabilities.
 
 This snapshot is dependency-audit evidence, not a complete application security assessment.
 

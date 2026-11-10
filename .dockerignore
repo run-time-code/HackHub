@@ -13,4 +13,3 @@ temp
 *.md
 **/dist
 .vercel
-.netlify

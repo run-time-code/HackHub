@@ -119,5 +119,5 @@ low severity: 6
 # - apps/api/src/ — All backend source files
 # - apps/web/src/ — All frontend source files
 # - .github/workflows/ — CI/CD configuration
-# - docs/OWASP_SECURITY_REPORT.md — Official audit report
+# - docs/security/OWASP_SECURITY_REPORT.md — Official audit report
 # - Git commit history: 138 commits across all refs

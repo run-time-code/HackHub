@@ -118,8 +118,7 @@ both (`id` and `slug`) so clients never guess.
 - **API**: Render web service built from `apps/api/Dockerfile` via `render.yaml`
   (staging on `develop`, production on `main`). See [staging.md](staging.md) and
   [production-operations.md](production-operations.md).
-- **Web**: Vercel builds `apps/web` from the repo root (`vercel.json`);
-  Netlify config is kept as a fallback.
+- **Web**: Vercel builds `apps/web` from the repo root (`vercel.json`).
 - **Database**: MongoDB Atlas (separate staging and production clusters).
 - **Monitoring**: [monitoring.md](monitoring.md).
 

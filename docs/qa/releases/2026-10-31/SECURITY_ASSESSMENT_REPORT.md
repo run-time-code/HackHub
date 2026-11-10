@@ -12,17 +12,17 @@ report verification).**
 
 Evidence reviewed:
 
-- `docs/OWASP_SECURITY_REPORT.md`
-- `docs/OWASP_ZAP_DAST_REPORT.md`
-- `zap_code_review_report.txt`
-- `docs/npm-audit-raw.txt`
+- `docs/security/OWASP_SECURITY_REPORT.md`
+- `docs/security/OWASP_ZAP_DAST_REPORT.md`
+- `docs/security/zap_code_review_report.txt`
+- `docs/security/npm-audit-raw.txt`
 
 The submitted reports do not establish an actual ZAP runtime scan:
 
 - The security report says OWASP ZAP/DAST was not done.
 - The DAST-named report says its method was code-review-based and explicitly
   states that actual ZAP/DAST runtime scanning was not performed.
-- `zap_code_review_report.txt` labels its method a static code-review
+- `docs/security/zap_code_review_report.txt` labels its method a static code-review
   simulation.
 - The DAST-named report gives 18 alerts (3 high, 7 medium, 6 low, 2
   informational); the static report gives 14 alerts (3 high, 5 medium, 6

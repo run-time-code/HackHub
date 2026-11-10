@@ -39,7 +39,7 @@ No automated OWASP ZAP or dynamic application security testing runs in the CI/CD
 
 **Evidence:**
 - `.github/workflows/` reviewed: no DAST/ZAP action present
-- Existing report (zap_code_review_report.txt) explicitly states: "Actual ZAP/DAST runtime scanning was not performed"
+- Existing report (`docs/security/zap_code_review_report.txt`) explicitly states: "Actual ZAP/DAST runtime scanning was not performed"
 - No integration test coverage for security headers (CSP, HSTS, X-Frame-Options)
 
 **Impact:**
@@ -383,7 +383,7 @@ Not all OWASP-recommended headers are enforced. HSTS (HTTP Strict Transport Secu
 npm audit reports 12 moderate severity vulnerabilities, primarily in the dev tooling chain (eslint, sentry, openapi-typescript). None affect runtime production code, but supply-chain risk exists.
 
 **Evidence:**
-- `npm audit --workspaces` output (docs/npm-audit-raw.txt):
+- `npm audit --workspaces` output (`docs/security/npm-audit-raw.txt`):
   - glob 3.0.0 via @sentry/bundler-plugins (GHSA-3g3m-2fjr-6pw4)
   - minimatch < 11.0.1 via eslint, nodemon (GHSA-g3hv-75wg-m249)
 - Packages do not process untrusted runtime input (dev tools, build-time only)
