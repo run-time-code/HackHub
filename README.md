@@ -5,7 +5,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Stack: MERN](https://img.shields.io/badge/Stack-MERN-0FAAFF)](https://github.com/run-time-code/HackHub)
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black)](https://vercel.com)
-[![Deploy: Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7)](https://netlify.com)
 
 **HackHub** centralizes hackathons from **Devpost, Unstop, Devfolio, HackerEarth, MLH, Hack2Skill** and more — so students never miss a deadline, find the right event by skills/interests, and build winning teams.
 
@@ -85,7 +84,7 @@ See [docs/DEMO.md](docs/DEMO.md) for the guided tour, supported interactions, an
 
 ### Full stack
 
-Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo links are placeholders: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`.
+Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo link is a placeholder: `https://hackhub.vercel.app`.
 
 ## Tech Stack
 - **Frontend:** React 19, Vite, custom CSS design system (Tailwind CSS v4 for auth/legacy surfaces), Radix UI primitives, TanStack Query, Framer Motion
@@ -205,7 +204,6 @@ HackHub/
 ├── package.json              # workspaces root + turbo scripts
 ├── package-lock.json         # single lockfile for the whole monorepo
 ├── vercel.json               # builds @hackhub/web
-├── netlify.toml
 └── README.md
 ```
 Add `--filter` to any task to run it for a single app and whatever it depends on, e.g. `npm run build -- --filter=@hackhub/web`.

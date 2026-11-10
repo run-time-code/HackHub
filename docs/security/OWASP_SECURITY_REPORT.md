@@ -3,7 +3,7 @@
 ## 1. Method
 
 - Static review of apps/api/src/app.js, apps/api/server.js, middleware (authMiddleware.js, requireAuth.js, sanitizeMiddleware.js, csrfMiddleware.js, auditMiddleware.js, rateLimitMiddleware.js), auth controller, user controller, routes, and frontend sinks.
-- Dependency audit: npm audit --workspaces (root lockfile). Raw output saved to docs/npm-audit-raw.txt.
+- Dependency audit: npm audit --workspaces (root lockfile). Raw output saved to docs/security/npm-audit-raw.txt.
 - Searched for dangerous patterns (dangerouslySetInnerHTML, eval(, innerHTML, document.write) - none in app code.
 - Reviewed CI workflows and deployment docs.
 
@@ -104,7 +104,7 @@ Evidence: npm audit --workspaces reports 12 moderate vulns, all dev-tooling chai
 
 No high/critical. None of the vulnerable packages process untrusted input at runtime in prod (eslint/openapi-typescript/nodemon are dev tools; sentry bundler plugin is build-time). Still upgrade.
 
-Raw output: docs/npm-audit-raw.txt.
+Raw output: docs/security/npm-audit-raw.txt.
 
 ### A07 - Identification and Authentication Failures
 Status: Good
@@ -173,7 +173,7 @@ Result: 12 moderate, 0 high, 0 critical.
 
 Recommendation: upgrade @sentry/node to 10.78+ in a dedicated PR and run full tests; upgrade eslint/openapi-typescript/nodemon in a separate dev-tooling PR. Do not run npm audit fix --force blindly in prod.
 
-Raw output: docs/npm-audit-raw.txt.
+Raw output: docs/security/npm-audit-raw.txt.
 
 ## 5. Findings (prioritized)
 

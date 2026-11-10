@@ -286,6 +286,6 @@
 {"record_type":"remaining","item":"Rate limits, the hackathon list cache and the scraper run lock are per instance; a multi-instance deployment needs a shared store (Redis) and a database-backed scrape lock."}
 {"record_type":"remaining","item":"No DAST, fuzzing, load, soak or failover testing was possible without staging infrastructure; F-05 no longer does unbounded work but its capacity is unmeasured."}
 {"record_type":"remaining","item":"OAuth and transactional email flows were not exercised (no provider credentials)."}
-{"record_type":"remaining","item":"Dependency advisories in the pre-existing audit-root.json were not re-verified or upgraded."}
+{"record_type":"remaining","item":"Dependency advisories in the pre-existing docs/security/audit-root.json were not re-verified or upgraded."}
 {"record_type":"remaining","item":"apps/backend-prototype, the Python importer, CI workflows beyond lint/test, and infrastructure configs remain unaudited."}
 {"record_type":"session_note","note":"Final state: 10 findings fixed and verified with regression tests. API 148 pass / 0 fail; API and web lint clean; web suite 33 pass; web build succeeds with a chunk-size warning."}
