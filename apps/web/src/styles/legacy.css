@@ -530,6 +530,15 @@ textarea:focus-visible {
   background-color: var(--surface);
 }
 
+[data-theme="dark"] .workbench-main .entry-title,
+[data-theme="dark"] .workbench-main .entry-title a {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .workbench-main .entry-organizer {
+  color: var(--moss-light, #9bc5a7);
+}
+
 [data-theme="dark"] .workbench-main .border-slate-100,
 [data-theme="dark"] .workbench-main .border-slate-200,
 [data-theme="dark"] .workbench-main .border-slate-300 {

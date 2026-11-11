@@ -22,6 +22,10 @@ export function createReminder(payload) {
   return apiRequest("/reminders", { method: "POST", body: payload });
 }
 
+export function deleteReminder(id) {
+  return apiRequest(`/reminders/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function saveReminderPreferences(payload) {
   return apiRequest("/reminders/preferences", { method: "PUT", body: payload });
 }

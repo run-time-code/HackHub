@@ -50,6 +50,19 @@ export async function listHackathons(filters = {}, { signal } = {}) {
   };
 }
 
+export async function listAllHackathons({ signal } = {}) {
+  const firstPage = await listHackathons({ page: 1, limit: 50 }, { signal });
+  const pageCount = Math.ceil(firstPage.total / Math.max(firstPage.limit, 1));
+  if (pageCount <= 1) return firstPage;
+  const remaining = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) =>
+      listHackathons({ page: index + 2, limit: 50 }, { signal })
+    )
+  );
+  const items = [...firstPage.items, ...remaining.flatMap((page) => page.items)];
+  return { ...firstPage, items };
+}
+
 export async function getHackathon(id, { signal } = {}) {
   return normalizeHackathon(await api.get(`/hackathons/${encodeURIComponent(id)}`, { signal }));
 }

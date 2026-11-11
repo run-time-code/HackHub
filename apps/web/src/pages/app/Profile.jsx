@@ -36,6 +36,16 @@ import { useDocumentTitle } from "../../lib/hooks/useDocumentTitle";
 
 const URL_PATTERN = /^https?:\/\/[^\s.]+\.[^\s]+$/i;
 
+function isValidProfileUrl(value) {
+  if (!URL_PATTERN.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname.includes(".")) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 const COMPLETION_ITEMS = [
   { key: "identity", label: "Name and headline", weight: 1 },
   { key: "portrait", label: "A portrait", weight: 1 },
@@ -104,12 +114,12 @@ function validateForm(form, skills) {
   if (form.headline.length > 120) errors.headline = "Headlines stop at 120 characters.";
   if (form.bio.length > 500) errors.bio = "The bio has a 500 character limit.";
   for (const [key, value] of Object.entries(form.links)) {
-    if (value && !URL_PATTERN.test(value)) {
+    if (value && !isValidProfileUrl(value)) {
       errors[`link-${key}`] = "Use a full URL starting with https://";
     }
   }
   form.pastHackathons.forEach((entry, index) => {
-    if (entry.projectUrl && !URL_PATTERN.test(entry.projectUrl)) {
+    if (entry.projectUrl && !isValidProfileUrl(entry.projectUrl)) {
       errors[`history-${index}`] = "Project links need a full https:// URL.";
     }
     if (entry.year && !/^\d{4}$/.test(String(entry.year))) {

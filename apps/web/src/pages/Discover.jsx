@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import HackathonCard from "../components/HackathonCard";
 import {
@@ -63,7 +63,11 @@ function uniqueByValue(options = []) {
 function uniqueHackathons(items = []) {
   const seen = new Set();
   return items.filter((item) => {
-    const key = idFor(item) || String(item.title || item.name || "").trim().toLowerCase();
+    const canonicalUrl = String(item.url || item.sourceUrl || item.source_url || "").trim().toLowerCase().replace(/\/$/, "");
+    const title = String(item.title || item.name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const organizer = String(item.organizer || "").trim().toLowerCase();
+    const eventYear = String(item.registrationDeadline || item.registration_deadline || item.eventStartDate || "").slice(0, 4);
+    const key = canonicalUrl || (title ? `${title}|${organizer}|${eventYear}` : idFor(item));
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -96,11 +100,20 @@ function DiscoveryPage() {
   const [recommendationsError, setRecommendationsError] = useState("");
   const [recommendationsVersion, setRecommendationsVersion] = useState(0);
   const [comparison, setComparison] = useState([]);
+  const comparisonRef = useRef(null);
+  const previousComparisonCount = useRef(0);
   const listedIds = useMemo(() => new Set(items.map(idFor)), [items]);
   const uniqueRecommendations = useMemo(
     () => uniqueHackathons(recommendations).filter((item) => !listedIds.has(idFor(item))),
     [recommendations, listedIds]
   );
+
+  useEffect(() => {
+    if (comparison.length >= 2 && previousComparisonCount.current < 2) {
+      window.requestAnimationFrame(() => comparisonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+    previousComparisonCount.current = comparison.length;
+  }, [comparison.length]);
 
   const page = Math.max(Number(routeParams.get("page")) || 1, 1);
   const requestKey = `${queryString}:${retryVersion}`;
@@ -327,7 +340,7 @@ function DiscoveryPage() {
         </div>
       </form>
 
-      {message && <p role={messageIsError ? "alert" : "status"} className={`rounded-lg border px-4 py-3 text-sm ${messageIsError ? "border-rose-200 bg-rose-50 text-rose-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>{message}</p>}
+      {message && <p role={messageIsError ? "alert" : "status"} className={`fixed bottom-5 left-1/2 z-50 w-[min(92vw,36rem)] -translate-x-1/2 rounded-lg border px-4 py-3 text-sm shadow-xl ${messageIsError ? "border-rose-200 bg-rose-50 text-rose-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>{message}</p>}
       {visibleError ? (
         <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
           <h2 className="font-semibold text-rose-900">Hackathons could not be loaded</h2>
@@ -375,7 +388,7 @@ function DiscoveryPage() {
         </>
       )}
       {comparison.length > 0 && (
-        <section aria-labelledby="comparison-title" className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+        <section ref={comparisonRef} aria-labelledby="comparison-title" className="scroll-mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 id="comparison-title" className="text-lg font-semibold text-slate-950">Compare hackathons</h2>

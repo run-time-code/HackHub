@@ -26,6 +26,7 @@ import PageLoading from "../../components/ui/PageLoading";
 import { useAuth } from "../../context/auth-context";
 import { useDocumentTitle } from "../../lib/hooks/useDocumentTitle";
 import { getMyProfile } from "../../lib/api/users";
+import { getSavedHackathons } from "../../lib/api/hackathons";
 import { listMyTeams, listHackathons, discoverUsers } from "../../lib/api/teams";
 import { listMyRequests } from "../../lib/api/requests";
 import { listNotifications } from "../../lib/api/notifications";
@@ -107,6 +108,10 @@ export default function Dashboard() {
     queryKey: queryKeys.stats,
     queryFn: ({ signal }) => getPlatformStats({ signal }),
   });
+  const savedHackathonsQuery = useQuery({
+    queryKey: ["saved-hackathons"],
+    queryFn: getSavedHackathons,
+  });
 
   const teams = useMemo(() => teamsQuery.data || [], [teamsQuery.data]);
   const requests = useMemo(() => requestsQuery.data?.items || [], [requestsQuery.data]);
@@ -119,6 +124,7 @@ export default function Dashboard() {
     [hackathonsQuery.data]
   );
   const stats = statsQuery.data || {};
+  const savedHackathons = savedHackathonsQuery.data || [];
   const ledTeamIds = useMemo(
     () => teams.filter((team) => team.leader === meId).map((team) => team.id),
     [teams, meId]
@@ -302,6 +308,29 @@ export default function Dashboard() {
 
       <div className="dash-columns">
         <div className="dash-column">
+          <section className="dash-panel" aria-labelledby="saved-hackathons-title">
+            <div className="dash-panel__head">
+              <h2 className="dash-panel__title" id="saved-hackathons-title">Saved hackathons <span>{String(savedHackathons.length).padStart(2, "0")}</span></h2>
+              <Link to="/discover" className="eyebrow eyebrow--plain">Discover more <ArrowUpRight size={12} aria-hidden="true" /></Link>
+            </div>
+            {savedHackathonsQuery.isLoading ? (
+              <div className="loading-block"><span className="spinner" aria-hidden="true" /> Loading saved hackathons…</div>
+            ) : savedHackathonsQuery.isError ? (
+              <div className="alert alert--warning" role="alert"><div className="alert__body"><strong>Saved hackathons did not load.</strong><p>{errorMessage(savedHackathonsQuery.error)}</p><Button size="sm" variant="ghost" onClick={() => savedHackathonsQuery.refetch()}>Try again</Button></div></div>
+            ) : savedHackathons.length ? (
+              <div className="dash-crew">
+                {savedHackathons.slice(0, 5).map((record) => {
+                  const hackathon = record.hackathon || record;
+                  const id = hackathon.id || hackathon._id || hackathon.slug || record.hackathonId;
+                  return <div className="dash-crew__row" key={record.id || record._id || id}>
+                    <div className="dash-crew__body"><Link className="dash-crew__name" to={`/discover/${encodeURIComponent(id)}`}>{hackathon.title || hackathon.name || "Hackathon"}</Link><span className="dash-crew__meta">{hackathon.organizer || "Saved for later"}</span></div>
+                    <Link to={`/discover/${encodeURIComponent(id)}`} className="icon-btn" aria-label={`Open ${hackathon.title || "saved hackathon"}`}><ArrowRight size={15} aria-hidden="true" /></Link>
+                  </div>;
+                })}
+              </div>
+            ) : <p className="dash-crew__meta">Nothing saved yet. Save a listing from Discover to keep it here.</p>}
+          </section>
+
           <section className="dash-panel" aria-labelledby="crews-title">
             <div className="dash-panel__head">
               <h2 className="dash-panel__title" id="crews-title">
