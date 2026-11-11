@@ -199,7 +199,6 @@ export default function Profile() {
   const mutation = useMutation({
     mutationFn: async () => {
       const values = {
-        ...form,
         name: form.name.trim(),
         headline: form.headline.trim(),
         bio: form.bio.trim(),
