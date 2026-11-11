@@ -59,6 +59,15 @@ cold starts.
 - `hackhub_process_uptime_seconds`
 - `hackhub_process_resident_memory_bytes`
 - `hackhub_http_requests_total{method,status}`
+- `hackhub_reminder_scheduler_runs_total`,
+  `hackhub_reminder_scheduler_last_run_timestamp_seconds`,
+  `hackhub_reminder_scheduler_last_success_timestamp_seconds`,
+  `hackhub_reminder_scheduler_last_duration_ms`, and
+  `hackhub_reminder_scheduler_running`
+- `hackhub_reminder_jobs_processed_total`, `hackhub_reminder_jobs_sent_total`,
+  `hackhub_reminder_jobs_failed_total`,
+  `hackhub_reminder_jobs_deferred_total`, and
+  `hackhub_reminder_scheduler_errors_total`
 
 The endpoint is hidden (404) unless `METRICS_TOKEN` is set, and requires
 `Authorization: Bearer <token>`. Counters are per process and reset on
@@ -71,6 +80,9 @@ deploy/restart.
    rate, 5xx ratio, process memory and uptime.
 4. Alert when the 5xx ratio stays above 1% for five minutes or memory
    exceeds 80% of the instance limit.
+5. Alert when the scheduler's last successful run is more than three minutes
+   old, or reminder delivery failures increase for five minutes. Verify these
+   alert rules and their notification routing in staging before production.
 
 ## 4. Logs
 

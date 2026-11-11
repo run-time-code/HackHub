@@ -68,6 +68,13 @@ describe('public stats and feedback', () => {
         discoverable: false,
         deletedAt: null,
       },
+      {
+        name: 'Banned Builder',
+        email: 'banned@test.com',
+        discoverable: true,
+        deletedAt: null,
+        banned: true,
+      },
     ]);
 
     teams = await Team.create([

@@ -1,7 +1,7 @@
 'use strict';
 
 const Hackathon = require('../../models/Hackathon');
-const { serialize: serializeHackathon } = require('./hackathonsService');
+const { serialize: serializeHackathon, visibleFilter } = require('./hackathonsService');
 
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,7 +64,19 @@ function buildEvent(hackathon, type, date) {
 // reminder picker.
 async function listEvents(monthValue) {
   const { month, start, end } = parseMonth(monthValue);
-  const hackathons = await Hackathon.find({ is_hidden: { $ne: true } }).lean();
+
+  // Only load hackathons that can contribute an event to this month. The
+  // previous version loaded and serialized the entire catalogue on every
+  // request, which grows linearly with the catalogue and is not viable at
+  // scale.
+  const hackathons = await Hackathon.find({
+    ...visibleFilter(),
+    $or: [
+      { registration_deadline: { $gte: start, $lt: end } },
+      { submission_deadline: { $gte: start, $lt: end } },
+      { event_start_date: { $gte: start, $lt: end } },
+    ],
+  }).lean();
   const items = [];
 
   for (const hackathon of hackathons) {

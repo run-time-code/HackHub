@@ -20,7 +20,16 @@ export default function RegisterForm() {
 
   async function onSubmit(values) {
     try {
-      await mutate(values);
+      const result = await mutate(values);
+      if (result?.autoVerified) {
+        navigate("/auth?panel=login", {
+          replace: true,
+          state: {
+            registrationSuccess: "Account created. You can log in now.",
+          },
+        });
+        return;
+      }
       navigate("/auth?panel=verify&pending=true");
     } catch {
       // error already captured by useAuthMutation

@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-
 // Structured logger (avoids console.* which bypasses pino-http).
 const logger = require("../src/utils/logger");
 
@@ -16,10 +15,13 @@ const extractToken = (req) => {
     return req.cookies?.accessToken;
 };
 
-// Single canonical issuer secret. The legacy ACCESS_TOKEN_SECRET is
-// deprecated: keeping both in the verification loop would let a token
-// minted with one validate against a different secret.
-const secrets = () => [process.env.JWT_SECRET];
+// Access tokens are currently minted with ACCESS_TOKEN_SECRET (falling back
+// to JWT_SECRET), while tests and older tokens use JWT_SECRET. Accept both
+// until the legacy secret is retired, matching src/middleware/requireAuth.js.
+const secrets = () =>
+    [process.env.JWT_SECRET, process.env.ACCESS_TOKEN_SECRET].filter(
+        (secret) => typeof secret === "string" && secret.length > 0
+    );
 
 const requireAuth = async (req, res, next) => {
     const token = extractToken(req);
@@ -87,7 +89,8 @@ if (user.banned === true) {
             });
         }
 
-        logger.error({ err: error }, "authentication error");
+        
+        logger.error({ err: error }, "Authentication error");
 
         return res.status(500).json({
             message: "Authentication error"

@@ -6,6 +6,7 @@ const User = require('../../models/User');
 const Hackathon = require('../../models/Hackathon');
 const { Reminder, EVENT_TYPES, CHANNELS } = require('../models/reminder');
 const { DAY_MS, upcomingDeadline } = require('./calendarService');
+const { isHidden } = require('./hackathonsService');
 
 const DEFAULT_PREFERENCES = Object.freeze({
   defaultDaysBefore: 1,
@@ -86,7 +87,7 @@ async function resolveHackathon(idOrSlug) {
   if (!hackathon) {
     hackathon = await Hackathon.findOne({ hackathon_id: value });
   }
-  if (!hackathon || hackathon.is_hidden) {
+  if (!hackathon || isHidden(hackathon)) {
     throw { status: 404, code: 'HACKATHON_NOT_FOUND', message: 'Hackathon not found' };
   }
   return hackathon;
@@ -110,6 +111,7 @@ function serializeReminder(reminder, hackathon) {
     eventType: source.eventType,
     daysBefore: source.daysBefore,
     channel: source.channel,
+    eventAt: source.eventAt || null,
     remindAt: source.remindAt,
     active: source.active !== false,
     createdAt: source.createdAt,
@@ -142,7 +144,9 @@ async function createReminder(userId, payload) {
   if (!CHANNELS.includes(channel)) {
     throw badRequest(`channel must be one of ${CHANNELS.join(', ')}`);
   }
-  const daysBefore = parseDaysBefore(data.daysBefore);
+  const daysBefore = data.daysBefore === undefined
+    ? (await getPreferences(userId)).defaultDaysBefore
+    : parseDaysBefore(data.daysBefore);
 
   const hackathon = await resolveHackathon(hackathonId);
   const deadline = upcomingDeadline(hackathon, eventType);
@@ -161,6 +165,7 @@ async function createReminder(userId, payload) {
       eventType,
       daysBefore,
       channel,
+      eventAt: deadline,
       remindAt,
     });
     return serializeReminder(reminder, hackathon);

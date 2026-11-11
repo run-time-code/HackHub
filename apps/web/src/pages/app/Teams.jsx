@@ -14,7 +14,7 @@ import { Input } from "../../components/ui/Field";
 import EmptyState from "../../components/ui/EmptyState";
 import TeamCard, { TeamCardSkeleton } from "../../components/teams/TeamCard";
 import TeamDialog from "../../components/teams/TeamDialog";
-import { listHackathons, listMyTeams, listTeams } from "../../lib/api/teams";
+import { listAllHackathons, listMyTeams, listTeams } from "../../lib/api/teams";
 import { queryKeys } from "../../lib/queryClient";
 import { errorMessage } from "../../lib/api/http";
 import { useAuth } from "../../context/auth-context";
@@ -48,7 +48,7 @@ export default function Teams() {
 
   const hackathonsQuery = useQuery({
     queryKey: queryKeys.hackathons({ surface: "teams" }),
-    queryFn: ({ signal }) => listHackathons({ limit: 50 }, { signal }),
+    queryFn: ({ signal }) => listAllHackathons({ signal }),
     staleTime: 10 * 60_000,
   });
   const hackathons = useMemo(

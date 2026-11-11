@@ -1,6 +1,7 @@
 'use strict';
 
 const User = require('../../models/User');
+const config = require('../config');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -89,40 +90,6 @@ function parseList(value, label) {
   return entries;
 }
 
-function matchUser(user, skills, interests) {
-  const haveSkills = new Set(
-    (user.skills || []).map((skill) => String(skill).toLowerCase())
-  );
-  const rawInterests =
-    user.preferences && Array.isArray(user.preferences.interests)
-      ? user.preferences.interests
-      : [];
-  const haveInterests = new Set(rawInterests.map((interest) => String(interest).toLowerCase()));
-
-  const matchedSkills = skills.filter((skill) => haveSkills.has(skill.toLowerCase()));
-  const matchedInterests = interests.filter((interest) =>
-    haveInterests.has(interest.toLowerCase())
-  );
-
-  let matchScore = 0;
-  if (skills.length > 0 && interests.length > 0) {
-    matchScore =
-      70 * (matchedSkills.length / skills.length) +
-      30 * (matchedInterests.length / interests.length);
-  } else if (skills.length > 0) {
-    matchScore = 100 * (matchedSkills.length / skills.length);
-  } else if (interests.length > 0) {
-    matchScore = 100 * (matchedInterests.length / interests.length);
-  }
-
-  return {
-    matchCount: matchedSkills.length,
-    matchScore: Math.round(matchScore),
-    matchedSkills,
-    matchedInterests,
-  };
-}
-
 function emptyMatch() {
   return { matchCount: 0, matchScore: 0, matchedSkills: [], matchedInterests: [] };
 }
@@ -190,31 +157,114 @@ async function searchTeammates(query) {
     };
   }
 
-  // Match scores are computed from case-insensitive overlap counts. Ranking
-  // in memory keeps the 70/30 skill/interest weighting (and name tiebreak)
-  // across the whole filtered set rather than just the current page.
+  // Rank in the database instead of loading every matching user into memory.
+  // Scores keep the 70/30 skill/interest weighting (100 when only one
+  // dimension is supplied) and the name tiebreak, but only one page of
+  // documents crosses the wire.
+  const matchedField = (field) => ({
+    $map: {
+      input: { $cond: [{ $isArray: field }, field, []] },
+      as: 'value',
+      in: { $toLower: { $toString: '$$value' } },
+    },
+  });
+
+  const scoreTerms = [];
+  if (skills.length > 0) {
+    scoreTerms.push({
+      $multiply: [
+        interests.length > 0 ? 70 : 100,
+        { $divide: [{ $size: '$matchedSkills' }, skills.length] },
+      ],
+    });
+  }
+  if (interests.length > 0) {
+    scoreTerms.push({
+      $multiply: [
+        skills.length > 0 ? 30 : 100,
+        { $divide: [{ $size: '$matchedInterests' }, interests.length] },
+      ],
+    });
+  }
+
+  // $floor(x + 0.5) mirrors Math.round for the non-negative scores here.
+  const matchScoreExpression = {
+    $floor: { $add: [...scoreTerms, 0.5] },
+  };
+
+  const projection = Object.fromEntries(
+    DISCOVERY_FIELDS.split(' ').map((field) => [field, 1])
+  );
+
+  // Even with database-side scoring, a broad filter can match hundreds of
+  // thousands of users. Score at most the newest N candidates (0 disables the
+  // cap) so one request has a bounded cost; this is reported to the client as
+  // `truncated` rather than silently pretending the page is complete.
+  const maxCandidates = Number(config.discoveryMaxCandidates) || 0;
+  const candidateStages = maxCandidates > 0
+    ? [{ $sort: { _id: -1 } }, { $limit: maxCandidates }]
+    : [];
+
   const [users, total] = await Promise.all([
-    User.find(filter).select(DISCOVERY_FIELDS).lean(),
+    User.aggregate([
+      { $match: filter },
+      ...candidateStages,
+      {
+        $addFields: {
+          matchedSkills: {
+            $setIntersection: [
+              matchedField('$skills'),
+              skills.map((skill) => skill.toLowerCase()),
+            ],
+          },
+          matchedInterests: {
+            $setIntersection: [
+              matchedField('$preferences.interests'),
+              interests.map((interest) => interest.toLowerCase()),
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          matchCount: { $size: '$matchedSkills' },
+          matchScore: matchScoreExpression,
+        },
+      },
+      { $sort: { matchScore: -1, name: 1, _id: 1 } },
+      { $skip: skip },
+      { $limit: limitNum },
+      {
+        $project: {
+          ...projection,
+          matchedSkills: 1,
+          matchedInterests: 1,
+          matchCount: 1,
+          matchScore: 1,
+        },
+      },
+    ]),
     User.countDocuments(filter),
   ]);
 
-  const ranked = users
-    .map((user) => ({
-      user,
-      match: matchUser(user, skills, interests),
-    }))
-    .sort((a, b) => {
-      if (b.match.matchScore !== a.match.matchScore) {
-        return b.match.matchScore - a.match.matchScore;
-      }
-      return String(a.user.name || '').localeCompare(String(b.user.name || ''));
-    });
-
   return {
-    items: ranked.slice(skip, skip + limitNum).map(({ user, match }) => serialize(user, match)),
+    items: users.map((user) => {
+      const haveSkills = new Set(user.matchedSkills || []);
+      const haveInterests = new Set(user.matchedInterests || []);
+
+      return serialize(user, {
+        matchCount: user.matchCount || 0,
+        matchScore: user.matchScore || 0,
+        matchedSkills: skills.filter((skill) => haveSkills.has(skill.toLowerCase())),
+        matchedInterests: interests.filter((interest) =>
+          haveInterests.has(interest.toLowerCase())
+        ),
+      });
+    }),
     page: pageNum,
     limit: limitNum,
     total,
+    truncated: maxCandidates > 0 && total > maxCandidates,
   };
 }
 

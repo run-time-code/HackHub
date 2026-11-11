@@ -82,30 +82,11 @@ textarea:focus-visible {
   line-height: 0.98;
 }
 
-.brand-mark {
-  position: relative;
-  display: grid;
+.auth-brand .logo-mark,
+.workbench-brand .logo-mark,
+.mobile-brand .logo-mark {
   width: 2.4rem;
   height: 2.4rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: #fffdf4;
-  font-family: var(--serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.brand-mark i {
-  position: absolute;
-  right: -0.22rem;
-  bottom: -0.22rem;
-  width: 0.55rem;
-  height: 0.55rem;
-  border: 2px solid var(--paper);
-  border-radius: 50%;
-  background: var(--orange);
 }
 
 .auth-page {
@@ -163,6 +144,7 @@ textarea:focus-visible {
   font-size: 0.56rem;
   font-weight: 500;
   letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 .auth-story-copy {
@@ -305,10 +287,6 @@ textarea:focus-visible {
   border-color: var(--line-strong);
   background: var(--surface-2);
   color: var(--ink);
-}
-
-[data-theme="dark"] .brand-mark {
-  color: var(--canvas);
 }
 
 [data-theme="dark"] .calendar-page .bg-white,
@@ -539,6 +517,45 @@ textarea:focus-visible {
 
 .workbench-main .text-slate-600 {
   color: #5e665d;
+}
+
+[data-theme="dark"] .workbench-main .text-slate-500,
+[data-theme="dark"] .workbench-main .text-slate-600,
+[data-theme="dark"] .workbench-main .text-slate-700,
+[data-theme="dark"] .workbench-main .text-slate-800 {
+  color: var(--ink-2);
+}
+
+[data-theme="dark"] .workbench-main .bg-white {
+  background-color: var(--surface);
+}
+
+[data-theme="dark"] .workbench-main .entry-title,
+[data-theme="dark"] .workbench-main .entry-title a {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .workbench-main .entry-organizer {
+  color: var(--moss-light, #9bc5a7);
+}
+
+[data-theme="dark"] .workbench-main .border-slate-100,
+[data-theme="dark"] .workbench-main .border-slate-200,
+[data-theme="dark"] .workbench-main .border-slate-300 {
+  border-color: var(--line-strong);
+}
+
+[data-theme="dark"] .workbench-main input:not([type="checkbox"]),
+[data-theme="dark"] .workbench-main textarea,
+[data-theme="dark"] .workbench-main select {
+  border-color: var(--line-strong);
+  background-color: var(--surface-2);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .workbench-main input::placeholder,
+[data-theme="dark"] .workbench-main textarea::placeholder {
+  color: var(--muted);
 }
 
 .progress-ledger {

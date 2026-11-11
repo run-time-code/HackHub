@@ -1,5 +1,7 @@
 const User = require("../models/User");
+const config = require("../src/config");
 const {
+    REFRESH_TOKEN_TTL_MS,
     generateAccessToken,
     generateRefreshToken,
     hashToken
@@ -48,6 +50,12 @@ const completeOAuthLogin = async (req, res) => {
             deletedAt: null
         });
 
+        if (user && user.banned) {
+            return res.status(403).json({
+                message: "Your account has been banned"
+            });
+        }
+
         if (!user) {
             user = await User.findOne({ email }).select("+password");
 
@@ -58,7 +66,26 @@ const completeOAuthLogin = async (req, res) => {
                 });
             }
 
+            if (user && user.banned) {
+                return res.status(403).json({
+                    message: "Your account has been banned"
+                });
+            }
+
             if (user) {
+                // Local development can link an existing unverified account
+                // when transactional email is unavailable. Production still
+                // requires the inbox to be verified before linking.
+                if (!user.emailVerified && config.devAutoVerify) {
+                    user.emailVerified = true;
+                    user.emailVerificationTokenHash = null;
+                    user.emailVerificationTokenExpiresAt = null;
+
+                    console.log(
+                        `Development auto-verify applied during OAuth link: ${user.email}`
+                    );
+                }
+
                 if (!user.emailVerified) {
                     return res.status(409).json({
                         message:
@@ -83,6 +110,9 @@ const completeOAuthLogin = async (req, res) => {
         const refreshToken = generateRefreshToken();
 
         user.refreshTokenHash = hashToken(refreshToken);
+        user.refreshTokenExpiresAt = new Date(
+            Date.now() + REFRESH_TOKEN_TTL_MS
+        );
         await user.save();
 
         res.cookie(

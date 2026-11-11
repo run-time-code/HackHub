@@ -48,6 +48,11 @@ export async function getHackathonRecommendations({ limit = 12 } = {}) {
   return {
     items: collectionFrom(data, ["items", "results", "hackathons"]),
     total: Number(data?.total) || 0,
+    pagination: data?.pagination || {
+      page: data?.page,
+      limit: data?.limit,
+      total: data?.total,
+    },
   };
 }
 

@@ -38,6 +38,7 @@ const banUser = async (req, res) => {
         // Revoke existing tokens/sessions that use tokenVersion.
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         user.refreshTokenHash = null;
+        user.refreshTokenExpiresAt = null;
 
         await user.save();
 

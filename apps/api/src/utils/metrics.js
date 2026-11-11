@@ -2,6 +2,7 @@
 
 const { timingSafeEqual } = require('node:crypto');
 const config = require('../config');
+const { getReminderMetrics } = require('./reminderMetrics');
 
 const requests = new Map();
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
@@ -26,6 +27,7 @@ function isAuthorized(req) {
 
 function renderMetrics() {
   const memory = process.memoryUsage();
+  const reminders = getReminderMetrics();
   const lines = [
     '# HELP hackhub_process_uptime_seconds Process uptime in seconds.',
     '# TYPE hackhub_process_uptime_seconds gauge',
@@ -42,6 +44,39 @@ function renderMetrics() {
     lines.push(`hackhub_http_requests_total{method="${method}",status="${status}"} ${count}`);
   }
 
+  lines.push(
+    '# HELP hackhub_reminder_scheduler_runs_total Reminder scheduler runs.',
+    '# TYPE hackhub_reminder_scheduler_runs_total counter',
+    `hackhub_reminder_scheduler_runs_total ${reminders.runsTotal}`,
+    '# HELP hackhub_reminder_scheduler_errors_total Reminder scheduler runs that failed.',
+    '# TYPE hackhub_reminder_scheduler_errors_total counter',
+    `hackhub_reminder_scheduler_errors_total ${reminders.schedulerErrorsTotal}`,
+    '# HELP hackhub_reminder_jobs_processed_total Reminder jobs claimed for processing.',
+    '# TYPE hackhub_reminder_jobs_processed_total counter',
+    `hackhub_reminder_jobs_processed_total ${reminders.jobsProcessedTotal}`,
+    '# HELP hackhub_reminder_jobs_sent_total Reminder jobs delivered successfully.',
+    '# TYPE hackhub_reminder_jobs_sent_total counter',
+    `hackhub_reminder_jobs_sent_total ${reminders.jobsSentTotal}`,
+    '# HELP hackhub_reminder_jobs_failed_total Reminder delivery attempts that failed.',
+    '# TYPE hackhub_reminder_jobs_failed_total counter',
+    `hackhub_reminder_jobs_failed_total ${reminders.jobsFailedTotal}`,
+    '# HELP hackhub_reminder_jobs_deferred_total Reminder jobs deferred by quiet hours.',
+    '# TYPE hackhub_reminder_jobs_deferred_total counter',
+    `hackhub_reminder_jobs_deferred_total ${reminders.jobsDeferredTotal}`,
+    '# HELP hackhub_reminder_scheduler_last_run_timestamp_seconds Unix timestamp of the last scheduler run.',
+    '# TYPE hackhub_reminder_scheduler_last_run_timestamp_seconds gauge',
+    `hackhub_reminder_scheduler_last_run_timestamp_seconds ${reminders.lastRunAt / 1000}`,
+    '# HELP hackhub_reminder_scheduler_last_success_timestamp_seconds Unix timestamp of the last successful scheduler run.',
+    '# TYPE hackhub_reminder_scheduler_last_success_timestamp_seconds gauge',
+    `hackhub_reminder_scheduler_last_success_timestamp_seconds ${reminders.lastSuccessfulRunAt / 1000}`,
+    '# HELP hackhub_reminder_scheduler_last_duration_ms Duration of the last scheduler run.',
+    '# TYPE hackhub_reminder_scheduler_last_duration_ms gauge',
+    `hackhub_reminder_scheduler_last_duration_ms ${reminders.lastRunDurationMs}`,
+    '# HELP hackhub_reminder_scheduler_running Whether a scheduler run is in progress.',
+    '# TYPE hackhub_reminder_scheduler_running gauge',
+    `hackhub_reminder_scheduler_running ${reminders.running ? 1 : 0}`
+  );
+
   return `${lines.join('\n')}\n`;
 }
 
@@ -51,4 +86,4 @@ function serveMetrics(req, res) {
   res.type('text/plain; version=0.0.4; charset=utf-8').send(renderMetrics());
 }
 
-module.exports = { recordRequest, serveMetrics };
+module.exports = { recordRequest, serveMetrics, renderMetrics };

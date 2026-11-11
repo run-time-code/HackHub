@@ -9,7 +9,10 @@ function isOptionalHttpUrl(value) {
 
     try {
         const parsed = new URL(value);
-        return parsed.protocol === "http:" || parsed.protocol === "https:";
+        return (parsed.protocol === "http:" || parsed.protocol === "https:")
+            && parsed.hostname.includes(".")
+            && !parsed.username
+            && !parsed.password;
     } catch {
         return false;
     }

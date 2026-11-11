@@ -1,0 +1,22 @@
+[
+  {
+    "_note": "Template for platforms without a public JSON feed. Copy an entry, verify the selectors against the live markup, and only enable it once you have confirmed the site's robots.txt and terms allow automated access. Values of the form 'css@attr' read an attribute.",
+    "key": "example-company",
+    "label": "Example Company",
+    "enabled": false,
+    "url": "https://example.com/hackathons",
+    "baseUrl": "https://example.com",
+    "itemSelector": ".hackathon-card",
+    "fields": {
+      "title": "h3",
+      "url": "a@href",
+      "description": ".summary",
+      "organizer": ".organizer",
+      "startDate": "time@datetime",
+      "endDate": ".dates",
+      "location": ".location",
+      "prize": ".prize",
+      "image": "img@src"
+    }
+  }
+]

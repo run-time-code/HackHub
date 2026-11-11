@@ -5,7 +5,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Stack: MERN](https://img.shields.io/badge/Stack-MERN-0FAAFF)](https://github.com/run-time-code/HackHub)
 [![Deploy: Vercel](https://img.shields.io/badge/Deploy-Vercel-black)](https://vercel.com)
-[![Deploy: Netlify](https://img.shields.io/badge/Deploy-Netlify-00C7B7)](https://netlify.com)
 
 **HackHub** centralizes hackathons from **Devpost, Unstop, Devfolio, HackerEarth, MLH, Hack2Skill** and more — so students never miss a deadline, find the right event by skills/interests, and build winning teams.
 
@@ -37,7 +36,7 @@
 
 | Feature | Description |
 |---|---|
-| **Unified Discovery** | Aggregated listings scraped/fetched from multiple sources, normalized and deduplicated |
+| **Unified Discovery** | Daily scraper pulls Devpost, Devfolio, Unstop and HackerEarth (plus opt-in search discovery), normalizes and deduplicates them into one catalogue |
 | **Smart Search & Filters** | By skills, interests, tech domain, mode, prize, deadline, organizer |
 | **Public Field Guide** | A story-led landing page, live network numbers, legal and help pages, shareable `/u/:id` builder cards |
 | **Builder Cards** | Profile editor with skills, links, hackathon history, availability and public/private visibility |
@@ -51,7 +50,15 @@
 | **Save & Track** | Save, register, mark ongoing/completed and keep private notes from the dashboard (`/saved` CRUD) |
 | **Worth Score (0-100)** | Data-driven score: skill relevance, learning value, prize pool, organizer reputation, difficulty |
 
-> **Status:** the WA3 frontend now ships the public field guide, builder cards, dashboard, finder, team hub, request wire, notifications, legal/help and consent-aware analytics. Authentication remains in place, and the previous `/app` workspace is still available during migration. Calendar/reminders, reminder preferences and the saved-hackathon dashboard list are implemented in the active API, and account settings use the `/users/me/*` routes. Remaining planned work: Worth Score, catalogue scrapers and optional ICS export. Live staging/production verification still requires the provider secrets listed in [docs/staging.md](docs/staging.md) and [docs/production-operations.md](docs/production-operations.md).
+> **Status:** the WA3 frontend ships the public field guide, builder cards,
+> dashboard, teammate finder, team hub, request inbox, notifications, legal/help,
+> and consent-aware analytics. Authentication, catalogue discovery, calendar,
+> reminders, saved-hackathon tracking, and account settings are wired to the
+> active API. Recommendations include a heuristic `worthScore`; validating a
+> production scoring model and optional ICS export remain future work. Daily
+> catalogue scraping is described in [docs/SCRAPERS.md](docs/SCRAPERS.md). Staging and production still need provider-backed
+> verification; see [docs/staging.md](docs/staging.md) and
+> [docs/production-operations.md](docs/production-operations.md).
 
 ## Demo
 
@@ -77,24 +84,25 @@ See [docs/DEMO.md](docs/DEMO.md) for the guided tour, supported interactions, an
 
 ### Full stack
 
-Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo links are placeholders: `https://hackhub.vercel.app` | `https://hackhub.netlify.app`.
+Set `VITE_API_BASE_URL` and the API environment described below. The deployed-demo link is a placeholder: `https://hackhub.vercel.app`.
 
 ## Tech Stack
 - **Frontend:** React 19, Vite, custom CSS design system (Tailwind CSS v4 for auth/legacy surfaces), Radix UI primitives, TanStack Query, Framer Motion
 - **Backend:** Node.js, Express.js, session cookies (JWT access/refresh) + CSRF, Passport (Google/GitHub OAuth)
 - **Database:** MongoDB (Mongoose)
-- **Data:** Python importer for the hackathon catalogue (`tools/data-importer`); scrapers planned
+- **Data:** multi-source scraper in the API (`apps/api/src/scrapers`, see [docs/SCRAPERS.md](docs/SCRAPERS.md)) + Python importer at `tools/data-importer`
 - **Deployment:** Render (API), Vercel (web), MongoDB Atlas
 - **Monitoring:** Sentry, Prometheus `/metrics`, scheduled uptime checks
 - **Version Control:** GitHub
 
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system diagram, data flow, and DB schema overview.
-Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md).
+Production release and recovery procedures are in [docs/production-operations.md](docs/production-operations.md); monitoring and alerting setup is in [docs/monitoring.md](docs/monitoring.md). QA status, test plans and release evidence are indexed in [docs/qa/README.md](docs/qa/README.md).
 
 ```
-[tools/data-importer] ──> [Express API /api] <──> [MongoDB Atlas]
-[scrapers (planned)] ────>        ▲
+[tools/data-importer] ──────────┐
+[scrapers: daily cron / CLI] ───┼──> [Express API /api] <──> [MongoDB Atlas]
+                                ▼            ▲
                                   │  cookies + CSRF, Google/GitHub OAuth
                      [React 19 web app (field guide)]
 ```
@@ -124,6 +132,29 @@ cp apps/web/.env.example apps/web/.env
 cp apps/api/.env.example apps/api/.env
 ```
 See each app's `.env.example` for the required keys (API: `MONGODB_URI`, `JWT_SECRET`, `ACCESS_TOKEN_SECRET`, `CSRF_SECRET`, …; web: `VITE_API_BASE_URL`, optional `VITE_USE_MOCKS`, optional `VITE_SENTRY_DSN`). OAuth is optional: set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and/or `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` (plus callback URLs) to enable the Google/GitHub sign-in buttons. To explore the UI without any services, skip this step and run the zero-service demo above.
+
+The hackathon importer needs `BRABBLE_API_KEY` and `MONGODB_URI`. Put them in
+`tools/data-importer/.env` (the importer also recognizes the older
+`data_importer/.env` location), then run this from the repository root:
+
+```bash
+python tools/data-importer/import_hackathons.py
+```
+
+Keep the `.env` file private; do not commit it.
+
+The daily catalogue scraper (Devpost, Devfolio, Unstop, HackerEarth) runs from
+the API workspace. It needs `MONGODB_URI` in `apps/api/.env`:
+
+```bash
+npm run scrape --workspace @hackhub/api                      # all enabled sources
+npm run scrape --workspace @hackhub/api -- --source=devpost --dry-run
+npm run scrape --workspace @hackhub/api -- --list
+```
+
+A GitHub Actions workflow (`.github/workflows/scrape-hackathons.yml`) runs it
+daily; set the `MONGODB_URI` repository secret. See
+[docs/SCRAPERS.md](docs/SCRAPERS.md) for sources, dedupe rules and scheduling.
 
 ### 4. Run the apps
 ```bash
@@ -168,12 +199,11 @@ HackHub/
 │   ├── data-importer/        # Python importer for the hackathon catalogue
 │   ├── loadtest/             # k6 load scenarios
 │   └── monitoring/           # Grafana dashboard JSON
-├── docs/                     # Architecture, API spec, staging, monitoring, operations
+├── docs/                     # Architecture, API spec, QA/release, staging, monitoring, operations
 ├── turbo.json                # Turborepo pipeline (build/test/lint/dev)
 ├── package.json              # workspaces root + turbo scripts
 ├── package-lock.json         # single lockfile for the whole monorepo
 ├── vercel.json               # builds @hackhub/web
-├── netlify.toml
 └── README.md
 ```
 Add `--filter` to any task to run it for a single app and whatever it depends on, e.g. `npm run build -- --filter=@hackhub/web`.
@@ -192,7 +222,7 @@ Score tiers: `90+ Must Join` | `70-89 Worth It` | `50-69 Consider` | `<50 Skip`
 
 ## Roadmap
 Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
-[docs/API_SPEC.md](docs/API_SPEC.md); open frontend assumptions are flagged there.
+[docs/API_SPEC.md](docs/API_SPEC.md); remaining planned features are marked there.
 
 | Phase | Focus |
 |---|---|
@@ -201,10 +231,14 @@ Shipped work is tracked in [CHANGELOG.md](CHANGELOG.md). The API reference is
 | 3 | Calendar/reminders, testing, integration, deployment, docs |
 | 4 | Security hardening, monitoring, staging/production operations |
 
-Still planned: hackathon scrapers, the Worth Score service and optional ICS
-calendar export. The Week 3 API gaps (calendar, reminders, saved-hackathon
-CRUD and account-settings aliases) are implemented and covered by
-`apps/api/test/calendar-reminders-saved.test.js`.
+Daily multi-source scraping ships in `apps/api/src/scrapers`
+(Devpost, Devfolio, Unstop, HackerEarth, optional search discovery) — see
+[docs/SCRAPERS.md](docs/SCRAPERS.md). Still planned: optional ICS calendar
+export. Recommendations currently expose an explainable heuristic `worthScore`;
+its scoring model still needs product validation. Calendar/reminders,
+saved-hackathon CRUD, and account settings are covered by
+`apps/api/test/calendar-reminders-saved.test.js`. The Python importer remains
+an operator-run job.
 
 ## Team
 | Role | Responsibility |

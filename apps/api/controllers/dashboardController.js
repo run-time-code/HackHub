@@ -27,11 +27,16 @@ const getDashboardSummary = async (req, res) => {
                 $unwind: "$hackathonDetails"
             },
             {
+                // registration_deadline is a Date in the current schema but
+                // some legacy rows store an ISO string. $convert handles both;
+                // $dateFromString rejected the Date values and silently
+                // pushed every registration to "completed".
                 $addFields: {
                     deadlineDate: {
-                        $dateFromString: {
-                            dateString:
+                        $convert: {
+                            input:
                                 "$hackathonDetails.registration_deadline",
+                            to: "date",
                             onError: null,
                             onNull: null
                         }

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { createReminder, getCalendarEvents, getReminders } from "../lib/api/calendar";
+import {
+  createReminder,
+  deleteReminder,
+  getCalendarEvents,
+  getReminders,
+  getReminderPreferences,
+} from "../lib/api/calendar";
 import { getEventIdentity, getHackathonId, getHackathon, getTitle } from "../lib/utils/hackathon";
 import ReminderPreferencesForm from "../components/ReminderPreferencesForm";
 import { downloadCalendarIcs } from "../lib/ics";
@@ -134,6 +140,33 @@ export default function Calendar() {
   const [reminderState, setReminderState] = useState({ leadTime: "1", customDays: "", channel: "email" });
   const [reminderMessage, setReminderMessage] = useState("");
   const [isCreatingReminder, setIsCreatingReminder] = useState(false);
+  const [deletingReminderId, setDeletingReminderId] = useState("");
+
+  useEffect(() => {
+    let isCurrent = true;
+    async function loadDefaults() {
+      try {
+        const data = await getReminderPreferences();
+        const preferences = data?.preferences || data;
+        const daysBefore = Number(preferences?.defaultDaysBefore);
+        const preferredChannel = preferences?.channels?.[0];
+        if (isCurrent && Number.isInteger(daysBefore)) {
+          setReminderState((current) => ({
+            ...current,
+            leadTime: [1, 3, 7].includes(daysBefore) ? String(daysBefore) : "custom",
+            customDays: [1, 3, 7].includes(daysBefore) ? "" : String(daysBefore),
+            channel: ["email", "in_app"].includes(preferredChannel) ? preferredChannel : current.channel,
+          }));
+        }
+      } catch (requestError) {
+        if (isCurrent) {
+          setReminderMessage(`Saved reminder defaults could not be loaded: ${requestError.message}`);
+        }
+      }
+    }
+    loadDefaults();
+    return () => { isCurrent = false; };
+  }, []);
 
   const rangeDates = useMemo(() => {
     if (view === "week") return getWeekDates(focusDate);
@@ -238,15 +271,39 @@ export default function Calendar() {
       await createReminder({
         hackathonId,
         eventType: getEventType(selectedEvent),
+        eventDate: eventDateValue(selectedEvent),
         daysBefore,
         channel: reminderState.channel,
       });
       setReminderMessage("Reminder created.");
-      await loadReminders();
+      try {
+        const items = await getReminders();
+        setReminders(items);
+        setRemindersError("");
+      } catch (refreshError) {
+        setReminderMessage(`Reminder created, but the list could not refresh: ${refreshError.message}`);
+        setRemindersError(refreshError.message || "Could not refresh reminders.");
+      }
     } catch (requestError) {
       setReminderMessage(`Could not create reminder: ${requestError.message}`);
     } finally {
       setIsCreatingReminder(false);
+    }
+  }
+
+  async function handleDeleteReminder(reminder) {
+    const id = String(reminder._id || reminder.id || "");
+    if (!id) return;
+    setDeletingReminderId(id);
+    setReminderMessage("");
+    try {
+      await deleteReminder(id);
+      setReminders((current) => current.filter((item) => String(item._id || item.id || "") !== id));
+      setReminderMessage("Reminder deleted.");
+    } catch (requestError) {
+      setReminderMessage(`Could not delete reminder: ${requestError.message}`);
+    } finally {
+      setDeletingReminderId("");
     }
   }
 
@@ -397,15 +454,17 @@ export default function Calendar() {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">Your reminders</h2>
+          {reminderMessage && <p role="status" className="mt-2 text-sm text-slate-700">{reminderMessage}</p>}
           {visibleRemindersError ? (
             <div role="alert" className="mt-3 text-sm text-rose-800">{visibleRemindersError} <button type="button" onClick={loadReminders} className="font-semibold underline">Retry</button></div>
           ) : remindersLoading ? (
             <p role="status" className="mt-3 text-sm text-slate-600">Loading reminders…</p>
           ) : reminders.length ? (
             <ul className="mt-3 divide-y divide-slate-100">
-              {reminders.map((reminder, index) => <li key={reminder._id || reminder.id || `${reminder.eventType}-${index}`} className="py-3 text-sm">
-                <p className="font-semibold text-slate-800">{reminder.title || reminder.eventType || "Hackathon reminder"}</p>
-                <p className="mt-1 text-slate-600">{reminder.daysBefore ?? reminder.days_before} day(s) before · {reminder.channel || "Channel not specified"}</p>
+              {reminders.map((reminder, index) => <li key={reminder._id || reminder.id || `${reminder.eventType}-${index}`} className="flex items-start justify-between gap-3 py-3 text-sm">
+                <div><p className="font-semibold text-slate-800">{reminder.title || reminder.eventType || "Hackathon reminder"}</p>
+                <p className="mt-1 text-slate-600">{reminder.daysBefore ?? reminder.days_before} day(s) before · {reminder.channel || "Channel not specified"}</p></div>
+                <button type="button" disabled={deletingReminderId === String(reminder._id || reminder.id || "")} onClick={() => handleDeleteReminder(reminder)} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-50" aria-label={`Delete ${reminder.title || reminder.eventType || "reminder"}`}>{deletingReminderId === String(reminder._id || reminder.id || "") ? "Deleting…" : "Delete"}</button>
               </li>)}
             </ul>
           ) : <p className="mt-3 text-sm text-slate-600">No reminders are set up yet.</p>}

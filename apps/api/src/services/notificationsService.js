@@ -6,7 +6,7 @@ const { Notification } = require('../models/notification');
 const User = require('../../models/User');
 const logger = require('../utils/logger');
 const { publishNotification } = require('../utils/eventBus');
-const { sendTeamEmail } = require('../../utils/emailUtils');
+const { sendTeamEmail, sendReminderEmail } = require('../../utils/emailUtils');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -49,6 +49,20 @@ async function sendEmailBestEffort(userId, title, message) {
   }
 }
 
+async function sendReminderEmailBestEffort(userId, reminderEmail) {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    logger.debug({ userId }, 'reminder email skipped (Resend not configured)');
+    return;
+  }
+  try {
+    const user = await User.findById(userId).select('email').lean();
+    if (!user || !user.email) return;
+    await sendReminderEmail(user.email, reminderEmail);
+  } catch (err) {
+    logger.warn({ err, userId }, 'reminder email failed');
+  }
+}
+
 async function createNotification({
   userId,
   type,
@@ -56,6 +70,7 @@ async function createNotification({
   message = '',
   data = {},
   email = true,
+  reminderEmail = null,
   reminder = null,
 }) {
   const notificationData = {
@@ -70,7 +85,11 @@ async function createNotification({
   const payload = serialize(notification);
   publishNotification(userId, payload);
   if (email) {
-    await sendEmailBestEffort(userId, title, message);
+    if (reminderEmail) {
+      await sendReminderEmailBestEffort(userId, reminderEmail);
+    } else {
+      await sendEmailBestEffort(userId, title, message);
+    }
   }
   return payload;
 }

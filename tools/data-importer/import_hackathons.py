@@ -1,5 +1,7 @@
 import os
 import re
+import math
+from pathlib import Path
 import requests
 
 from datetime import datetime, timezone
@@ -12,7 +14,10 @@ from dotenv import load_dotenv
 # ENVIRONMENT
 # =========================================================
 
-load_dotenv()
+script_env = Path(__file__).resolve().with_name(".env")
+legacy_env = Path(__file__).resolve().parents[2] / "data_importer" / ".env"
+env_file = script_env if script_env.is_file() else legacy_env
+load_dotenv(dotenv_path=env_file if env_file.is_file() else None)
 
 BRABBLE_API_KEY = os.getenv("BRABBLE_API_KEY")
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -35,12 +40,16 @@ client = MongoClient(
     socketTimeoutMS=30000
 )
 
-db = client["HackHub"]
+database_name = os.getenv("MONGODB_DATABASE")
+if not database_name:
+    database_name = client.get_default_database(default="HackHub").name
+db = client[database_name]
 
 hackathons_collection = db["Hackathons"]
 organizers_collection = db["Organizers"]
 sources_collection = db["Sources"]
 tags_collection = db["Tags"]
+quarantine_collection = db["IngestionQuarantine"]
 
 print("Connected to MongoDB")
 
@@ -100,12 +109,44 @@ def parse_date(value):
         return None
 
     try:
-        return datetime.fromisoformat(
+        parsed = datetime.fromisoformat(
             str(value).replace("Z", "+00:00")
         )
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     except Exception:
         return None
+
+
+def validate_record(item):
+    issues = []
+    if not str(item.get("id", "")).strip():
+        issues.append("Missing external ID")
+    if not str(item.get("title") or "").strip():
+        issues.append("Missing title")
+
+    for field in ("deadline", "eventStart", "eventEnd"):
+        value = item.get(field)
+        if value and parse_date(value) is None:
+            issues.append(f"Invalid date in {field}")
+
+    prize = item.get("prize")
+    if prize not in (None, ""):
+        try:
+            amount = float(prize)
+            if not math.isfinite(amount):
+                issues.append("Prize must be finite")
+            elif amount < 0:
+                issues.append("Prize must not be negative")
+        except (TypeError, ValueError):
+            issues.append("Prize must be numeric")
+
+    mode = str(item.get("mode") or "").upper()
+    if mode and mode not in {"ONLINE", "OFFLINE", "HYBRID"}:
+        issues.append("Mode must be ONLINE, OFFLINE, or HYBRID")
+    return issues
 
 
 # =========================================================
@@ -370,11 +411,23 @@ def convert_record(item):
                 external_id
             ),
 
+        "hackathon_id":
+            create_slug(
+                title,
+                external_id
+            ),
+
         "description":
             item.get(
                 "description",
                 ""
             ),
+
+        "organizerName":
+            organizer_name,
+
+        "sourceName":
+            source_name,
 
         "organizer":
             organizer_id,
@@ -387,6 +440,11 @@ def convert_record(item):
 
         "tags":
             tag_ids,
+
+        "tagNames":
+            normalize_array(
+                item.get("tags")
+            ),
 
         "skills":
             normalize_array(
@@ -410,12 +468,25 @@ def convert_record(item):
         "registrationDeadline":
             registration_deadline,
 
+        "registration_deadline":
+            registration_deadline.isoformat() if registration_deadline else None,
+
         "eventStartDate":
             parse_date(
                 item.get("eventStart")
             ),
 
+        "event_start_date":
+            parse_date(
+                item.get("eventStart")
+            ),
+
         "eventEndDate":
+            parse_date(
+                item.get("eventEnd")
+            ),
+
+        "event_end_date":
             parse_date(
                 item.get("eventEnd")
             ),
@@ -462,9 +533,6 @@ def import_hackathons():
 
     quarantined = []
 
-    current_keys = set()
-
-
     # -----------------------------------------------------
     # CONVERT RECORDS
     # -----------------------------------------------------
@@ -472,58 +540,16 @@ def import_hackathons():
     for item in records:
 
         try:
-
-            external_id = str(
-                item.get("id", "")
-            ).strip()
-
-            title = (
-                item.get("title")
-                or ""
-            ).strip()
-
-            source_name = (
-                item.get("platform")
-                or "Unknown"
-            )
-
-
-            # Missing external ID
-
-            if not external_id:
-
+            issues = validate_record(item)
+            if issues:
                 quarantined.append({
-                    "title": title,
-                    "reason":
-                        "Missing external ID"
+                    "record": item,
+                    "issues": issues,
+                    "status": "pending"
                 })
-
                 continue
-
-
-            # Missing title
-
-            if not title:
-
-                quarantined.append({
-                    "externalId":
-                        external_id,
-                    "reason":
-                        "Missing title"
-                })
-
-                continue
-
 
             record = convert_record(item)
-
-
-            current_keys.add(
-                (
-                    str(record["source"]),
-                    record["externalId"]
-                )
-            )
 
 
             operations.append(
@@ -554,14 +580,9 @@ def import_hackathons():
         except Exception as error:
 
             quarantined.append({
-                "title":
-                    item.get(
-                        "title",
-                        "Unknown"
-                    ),
-
-                "reason":
-                    str(error)
+                "record": item,
+                "issues": [str(error)],
+                "status": "failed"
             })
 
 
@@ -583,59 +604,10 @@ def import_hackathons():
         updated = result.modified_count
 
 
-    # -----------------------------------------------------
-    # MARK OLD RECORDS INACTIVE
-    # -----------------------------------------------------
-
-    existing_records = hackathons_collection.find(
-        {
-            "isActive": True
-        },
-
-        {
-            "_id": 1,
-            "source": 1,
-            "externalId": 1
-        }
-    )
-
-
-    deactivate_ids = []
-
-
-    for existing in existing_records:
-
-        key = (
-            str(existing["source"]),
-            str(existing["externalId"])
-        )
-
-
-        if key not in current_keys:
-
-            deactivate_ids.append(
-                existing["_id"]
-            )
-
-
-    if deactivate_ids:
-
-        hackathons_collection.update_many(
-            {
-                "_id": {
-                    "$in":
-                        deactivate_ids
-                }
-            },
-
-            {
-                "$set": {
-                    "isActive": False,
-                    "status": "inactive",
-                    "updatedAt": now()
-                }
-            }
-        )
+    quarantined_count = 0
+    if quarantined:
+        quarantine_result = quarantine_collection.insert_many(quarantined, ordered=False)
+        quarantined_count = len(quarantine_result.inserted_ids)
 
 
     # -----------------------------------------------------
@@ -655,12 +627,7 @@ def import_hackathons():
 
     print(
         f"Invalid records quarantined: "
-        f"{len(quarantined)}"
-    )
-
-    print(
-        f"Old records marked inactive: "
-        f"{len(deactivate_ids)}"
+        f"{quarantined_count}"
     )
 
     print(
@@ -674,8 +641,10 @@ def import_hackathons():
         print("Quarantined records:")
 
         for record in quarantined:
-
-            print(record)
+            print({
+                "title": record["record"].get("title", "Unknown"),
+                "issues": record["issues"]
+            })
 
 
 # =========================================================

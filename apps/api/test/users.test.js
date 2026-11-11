@@ -122,6 +122,23 @@ describe('teammate discovery', () => {
     assert.equal((await bad.json()).error.code, 'VALIDATION_ERROR');
   });
 
+  it('pages ranked matches with stable scores and original query casing', async () => {
+    const first = await get('/users/discover?skills=react,node&limit=1&page=1');
+    const firstBody = await first.json();
+    assert.deepEqual(firstBody.data.items.map((u) => u.name), ['Asha']);
+    assert.equal(firstBody.data.total, 2);
+    assert.deepEqual(firstBody.data.items[0].matchedSkills, ['react', 'node']);
+    assert.equal(firstBody.data.items[0].matchScore, 100);
+
+    const second = await get('/users/discover?skills=react,node&limit=1&page=2');
+    const secondBody = await second.json();
+    assert.deepEqual(secondBody.data.items.map((u) => u.name), ['Bala']);
+    assert.equal(secondBody.data.items[0].matchScore, 50);
+
+    const third = await get('/users/discover?skills=react,node&limit=1&page=3');
+    assert.equal((await third.json()).data.items.length, 0);
+  });
+
   it('exposes no sensitive fields', async () => {
     const res = await get('/users/discover?skills=react');
     const item = (await res.json()).data.items[0];

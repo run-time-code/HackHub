@@ -1,0 +1,33 @@
+$ node --test test/auth-routes.test.js test/auth-security.test.js
+◇ injected env from .env
+▶ auth routes mounted on the src entrypoint
+  ✔ GET /auth/csrf-token issues a token and sets the CSRF cookie (154.6306ms)
+Profile retrieved for user: session@example.com
+  ✔ GET /auth/me restores the session from a signed access token (125.2736ms)
+Profile retrieved for user: access-secret@example.com
+  ✔ GET /users/me accepts a token signed with ACCESS_TOKEN_SECRET (47.942ms)
+  ✔ GET /auth/me rejects requests without a token (8.1114ms)
+Refresh token rotated: persistent-session@example.com
+  ✔ POST /auth/refresh renews the session using a valid refresh token (50.5858ms)
+✔ auth routes mounted on the src entrypoint (3223.1639ms)
+
+▶ login lockout is atomic
+  ✔ locks the account after concurrent failures and clears it after expiry (1413.5433ms)
+Audit log could not be saved: Operation interrupted because client was closed
+  ✔ keeps generic 401 responses for unknown accounts (19.3523ms)
+✔ login lockout is atomic (3292.393ms)
+
+▶ OAuth state verification
+  ✔ GET /auth/google issues a signed state cookie and a state param (20.1707ms)
+  ✔ rejects callbacks with a missing or forged state before passport runs (32.5378ms)
+Audit log could not be saved: Cannot use a session that has ended
+✔ OAuth state verification (1103.954ms)
+Audit log could not be saved: Topology is closed
+ℹ tests 9
+ℹ suites 3
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12870.2084

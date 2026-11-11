@@ -41,6 +41,9 @@ joinRequestSchema.index(
   { unique: true, partialFilterExpression: { status: PENDING_STATUS } }
 );
 joinRequestSchema.index({ user: 1, type: 1, createdAt: -1 });
+// "requests I sent" also matches initiatedBy in a $or; index it so the
+// personal inbox does not scan the collection.
+joinRequestSchema.index({ initiatedBy: 1, createdAt: -1 });
 joinRequestSchema.index({ team: 1, status: 1, createdAt: -1 });
 
 joinRequestSchema.set('toJSON', { virtuals: true });

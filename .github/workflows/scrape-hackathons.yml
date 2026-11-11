@@ -1,0 +1,73 @@
+name: Scrape hackathons
+
+# Daily catalogue refresh. Runs the same CLI as a manual scrape, so this works
+# on hosts that sleep between requests (Render free tier) — the job does not
+# depend on the API process being awake.
+#
+# Required repository secret: MONGODB_URI
+# Optional: MONGODB_DATABASE (when the URI has no default db)
+# Optional: SERPAPI_KEY (enables the Google/web-search discovery source)
+
+on:
+  schedule:
+    # 03:10 IST daily (21:40 UTC the previous day).
+    - cron: '40 21 * * *'
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Comma-separated source keys (blank = all enabled)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run (fetch and normalize without writing)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: scrape-hackathons
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    name: Refresh catalogue
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Run scrapers
+        env:
+          NODE_ENV: production
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          SCRAPER_USER_AGENT: 'HackHubBot/1.0 (+https://github.com/run-time-code/HackHub)'
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-placeholder' }}
+          ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET || 'ci-placeholder' }}
+          CSRF_SECRET: ${{ secrets.CSRF_SECRET || 'ci-placeholder' }}
+          SOURCES: ${{ inputs.sources }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          # Config module requires production secrets; the scraper does not
+          # use them, these placeholders keep config validation quiet.
+        run: |
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::error::MONGODB_URI secret is not configured"
+            exit 1
+          fi
+          args=""
+          if [ -n "$SOURCES" ]; then
+            for source in $(echo "$SOURCES" | tr ',' ' '); do
+              args="$args --source=$source"
+            done
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            args="$args --dry-run"
+          fi
+          npm run scrape --workspace @hackhub/api -- $args

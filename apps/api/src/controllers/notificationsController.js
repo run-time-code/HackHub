@@ -2,6 +2,7 @@
 
 const service = require('../services/notificationsService');
 const { subscribeToUser } = require('../utils/eventBus');
+const sseLimiter = require('../utils/sseLimiter');
 
 async function list(req, res, next) {
   try {
@@ -33,13 +34,30 @@ async function markAllRead(req, res, next) {
 // Server-Sent Events stream. Clients that cannot hold a stream open should
 // poll GET /notifications?unreadOnly=true as the fallback.
 function stream(req, res) {
-  res.set({
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-  res.flushHeaders();
+  if (!sseLimiter.tryAcquire(req.user.id)) {
+    return res.status(429).json({
+      success: false,
+      error: {
+        code: 'NOTIFICATION_STREAM_LIMIT',
+        message: 'Too many open notification streams. Close another tab and retry.',
+      },
+      requestId: req.id,
+    });
+  }
+
+  try {
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders();
+  } catch (error) {
+    // Do not leak the slot if the socket died before headers were sent.
+    sseLimiter.release(req.user.id);
+    throw error;
+  }
 
   // Subscribe before announcing readiness so anything created after the
   // client sees `ready` is guaranteed to be delivered.
@@ -47,12 +65,30 @@ function stream(req, res) {
     res.write(`event: notification\ndata: ${JSON.stringify(notification)}\n\n`);
   });
   const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 25000);
+
+  let closed = false;
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    unsubscribe();
+    sseLimiter.release(req.user.id);
+  };
+
+  // A write to a socket that died between heartbeats emits an error on the
+  // response. Without a listener that becomes an unhandled EventEmitter
+  // error and can terminate the process.
+  res.on('error', cleanup);
+  res.on('close', cleanup);
+  req.on('error', cleanup);
+
   res.write(`event: ready\ndata: ${JSON.stringify({ requestId: req.id })}\n\n`);
 
   req.on('close', () => {
-    clearInterval(heartbeat);
-    unsubscribe();
-    res.end();
+    cleanup();
+    if (!res.writableEnded) {
+      res.end();
+    }
   });
 }
 

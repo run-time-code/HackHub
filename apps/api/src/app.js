@@ -6,12 +6,12 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const passport = require('passport');
-const pinoHttp = require('pino-http');
 const Sentry = require('@sentry/node');
 const rateLimit = require('express-rate-limit');
+const rateLimitIdentity = require('./middleware/rateLimitIdentity');
 
 const config = require('./config');
-const logger = require('./utils/logger');
+const { createHttpLogger } = require('./middleware/httpLogger');
 const requestId = require('./middleware/requestId');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
@@ -33,11 +33,22 @@ const { doubleCsrfProtection } = require('../middleware/csrfMiddleware');
 const adminHackathonRoutes = require('../routes/adminHackathonRoutes');
 const adminUserRoutes = require('../routes/adminUserRoutes');
 const adminReportRoutes = require('../routes/adminReportRoutes');
+const adminScraperRoutes = require('../routes/adminScraperRoutes');
 
 // General API protection against excessive request rates.
+//
+// Bucketing by IP alone means every user behind one NAT shares a bucket; with
+// 500k users that is a permanent source of false 429s. rateLimitIdentity
+// attaches the signed-in account id first, so authenticated traffic is limited
+// per user and only anonymous traffic is limited per IP.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
+  windowMs: config.apiRateLimit.windowMs,
+  limit: (req) => (req.user && req.user.id
+    ? config.apiRateLimit.perUser
+    : config.apiRateLimit.perIp),
+  keyGenerator: (req) => (req.user && req.user.id
+    ? `user:${req.user.id}`
+    : rateLimit.ipKeyGenerator(req.ip)),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -57,12 +68,7 @@ function createApp() {
 
   app.use(requestId);
 
-  app.use(
-    pinoHttp({
-      logger,
-      customProps: (req) => ({ requestId: req.id }),
-    })
-  );
+  app.use(createHttpLogger());
 
   app.use(metrics.recordRequest);
 
@@ -96,8 +102,13 @@ function createApp() {
 
   app.get('/metrics', metrics.serveMetrics);
 
-  // Apply the global limiter before mounting API routes.
-  app.use('/api', apiLimiter);
+  // Identify the account (signature check only) before bucketing requests.
+  app.use(rateLimitIdentity);
+
+  // Apply the global limiter once, before every API mount. Mounting it only
+  // on '/api' left the duplicate root-mounted read routes (app.use('/', ...))
+  // unprotected.
+  app.use(apiLimiter);
 
   // Health and other src routes are available at both paths.
   app.use('/', routes);
@@ -126,6 +137,12 @@ function createApp() {
     '/api/admin/reports',
     doubleCsrfProtection,
     adminReportRoutes
+  );
+
+  app.use(
+    '/api/admin/scrapers',
+    doubleCsrfProtection,
+    adminScraperRoutes
   );
 
   if (config.sentryDsn) {

@@ -35,7 +35,7 @@ import {
   disbandTeam,
   getHackathon,
   getTeam,
-  listHackathons,
+  listAllHackathons,
   listTeamInvitations,
   listTeamRequests,
   removeTeamMember,
@@ -194,7 +194,7 @@ export default function TeamDetail() {
   });
   const hackathonsQuery = useQuery({
     queryKey: queryKeys.hackathons({ surface: "team-edit" }),
-    queryFn: ({ signal }) => listHackathons({ limit: 50 }, { signal }),
+    queryFn: ({ signal }) => listAllHackathons({ signal }),
     enabled: editOpen,
     staleTime: 10 * 60_000,
   });

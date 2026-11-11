@@ -66,6 +66,12 @@ after inactivity can take ~1 minute. The workflow's health-wait loop
    `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (next section).
    The workflow's frontend job skips gracefully when those secrets are absent.
 
+The staging deploy workflow derives Vercel's `connect-src` CSP allowlist from
+`STAGING_API_URL` before building, and permits Cloudinary for uploaded profile
+images. For a manual Vercel CLI build, set `VITE_API_BASE_URL` and run
+`node scripts/configure-vercel-csp.mjs` from the repository root before
+`vercel build`; the configured policy allows only that API origin.
+
 ## 5. GitHub Environment `staging` (one time)
 
 Repo Settings > Environments > New environment `staging`, add these secrets:
@@ -112,9 +118,9 @@ values belong in the repository.
 2. Manual check: `STAGING_API_URL=https://<staging-api> npm run smoke:staging --prefix apps/api`.
 3. Demo flow on staging: sign up → verify email → log in (password or
    Google/GitHub) → onboarding → browse the catalogue and save events →
-   dashboard tracking → calendar/reminders → account settings. These endpoints
-   are implemented in the active API; the code-level evidence is in
-   [design/QA_REPORT.md](design/QA_REPORT.md).
+   dashboard tracking → calendar/reminders → account settings. Confirm
+   reminder delivery with configured Resend credentials and verify the reminder
+   appears in the in-app notifications feed when `in_app` is selected.
 
 ## Troubleshooting
 

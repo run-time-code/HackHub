@@ -58,9 +58,8 @@ vite.config.*.timestamp-*.mjs
 # Next.js generated files
 .next/
 
-# Vercel / Netlify
+# Vercel
 .vercel
-.netlify
 
 # Postman
 postman/
@@ -69,3 +68,4 @@ postman/
 # Turborepo
 turbo/
 .turbo/
+.claude/

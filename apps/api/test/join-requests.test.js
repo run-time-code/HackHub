@@ -620,6 +620,61 @@ describe('team collaboration', () => {
     assert.equal(fresh.res.status, 201);
   });
 
+  it('never leaves a member in a team when a concurrent cancel wins', async () => {
+    const teamId = await createTeam('Race');
+
+    const request = await api(
+      'POST',
+      `/teams/${teamId}/requests`,
+      tokens.bob,
+      {}
+    );
+
+    assert.equal(request.res.status, 201);
+
+    // Simulate the lost-update interleaving the old code allowed: an accept
+    // adds the seat and saves the request, then a concurrent cancel writes
+    // `cancelled` over the resolved row. The fix claims the row atomically
+    // before adding the seat, so no request.save() happens on accept.
+    const originalSave = JoinRequest.prototype.save;
+    const requestId = request.body.data.id;
+
+    JoinRequest.prototype.save = async function patchedSave(...args) {
+      const result = await originalSave.apply(this, args);
+
+      if (this.status === 'accepted' && String(this._id) === requestId) {
+        await JoinRequest.updateOne(
+          { _id: this._id },
+          { $set: { status: 'cancelled', respondedAt: new Date() } }
+        );
+      }
+
+      return result;
+    };
+
+    try {
+      const accepted = await api(
+        'PATCH',
+        `/team-requests/${requestId}`,
+        tokens.leader,
+        { action: 'accept' }
+      );
+
+      assert.equal(accepted.res.status, 200);
+
+      const row = await JoinRequest.findById(requestId);
+      const team = await Team.findById(teamId);
+      const hasMember = team.members.some(
+        (member) => String(member.user) === String(bob._id)
+      );
+
+      assert.equal(row.status, 'accepted');
+      assert.equal(hasMember, true);
+    } finally {
+      JoinRequest.prototype.save = originalSave;
+    }
+  });
+
   it('cleans up pending requests when a team is deleted', async () => {
     const teamId = await createTeam('Gamma');
 

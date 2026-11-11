@@ -1,7 +1,43 @@
 
+const mongoose = require("mongoose");
 const SavedHackathon = require("../models/SavedHackathon");
 const Registration = require("../models/Registration");
 const Hackathon = require("../models/Hackathon");
+const { computeStatus } = require("../src/scrapers/normalize");
+const { isHidden } = require("../src/services/hackathonsService");
+
+const MAX_HACKATHON_KEY_LENGTH = 200;
+const MAX_NOTES_LENGTH = 2000;
+
+// The legacy tracking routes accept the public hackathon id (or slug). They
+// used to upsert whatever string arrived, which produced rows that no reader
+// could resolve and let callers attach notes to hidden events. Resolve the
+// catalogue row first and store its canonical id.
+async function resolveVisibleHackathon(value) {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const key = value.trim();
+
+    if (!key || key.length > MAX_HACKATHON_KEY_LENGTH) {
+        return null;
+    }
+
+    const queries = [{ hackathon_id: key }, { slug: key }];
+
+    if (mongoose.Types.ObjectId.isValid(key)) {
+        queries.push({ _id: key });
+    }
+
+    const hackathon = await Hackathon.findOne({ $or: queries });
+
+    if (!hackathon || isHidden(hackathon)) {
+        return null;
+    }
+
+    return hackathon;
+}
 
 
 // ==============================
@@ -20,19 +56,29 @@ const saveHackathon = async (req, res) => {
             });
         }
 
+        const catalogueEntry = await resolveVisibleHackathon(hackathon);
+
+        if (!catalogueEntry) {
+            return res.status(404).json({
+                message: "Hackathon not found"
+            });
+        }
+
+        const hackathonKey = catalogueEntry.hackathon_id;
+
         const savedHackathon = await SavedHackathon.findOneAndUpdate(
             {
                 user,
-                hackathon
+                hackathon: hackathonKey
             },
             {
                 $setOnInsert: {
                     user,
-                    hackathon
+                    hackathon: hackathonKey
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }
@@ -72,9 +118,17 @@ const unsaveHackathon = async (req, res) => {
             });
         }
 
+        const catalogueEntry = await resolveVisibleHackathon(hackathon);
+
+        if (!catalogueEntry) {
+            return res.status(404).json({
+                message: "Hackathon not found"
+            });
+        }
+
         const deleted = await SavedHackathon.findOneAndDelete({
             user,
-            hackathon
+            hackathon: catalogueEntry.hackathon_id
         });
 
         if (!deleted) {
@@ -120,10 +174,20 @@ const markRegistered = async (req, res) => {
             });
         }
 
+        const catalogueEntry = await resolveVisibleHackathon(hackathon);
+
+        if (!catalogueEntry) {
+            return res.status(404).json({
+                message: "Hackathon not found"
+            });
+        }
+
+        const hackathonKey = catalogueEntry.hackathon_id;
+
         const tracking = await Registration.findOneAndUpdate(
             {
                 user,
-                hackathon
+                hackathon: hackathonKey
             },
             {
                 $set: {
@@ -131,7 +195,7 @@ const markRegistered = async (req, res) => {
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }
@@ -171,9 +235,7 @@ const getHackathonStatus = async (req, res) => {
             });
         }
 
-        const hackathonData = await Hackathon.findOne({
-            hackathon_id: hackathon
-        });
+        const hackathonData = await resolveVisibleHackathon(hackathon);
 
         if (!hackathonData) {
             console.log("Hackathon not found");
@@ -183,14 +245,30 @@ const getHackathonStatus = async (req, res) => {
             });
         }
 
-        const deadline = new Date(
-            hackathonData.registration_deadline
-        );
+        // Status follows the event lifecycle, not the registration deadline:
+        // an event that is still running is Ongoing even after registration
+        // closed, and a row without dates is Upcoming rather than Completed.
+        const statusCode = computeStatus({
+            startDate:
+                hackathonData.eventStartDate ||
+                hackathonData.event_start_date ||
+                hackathonData.event_start,
+            endDate:
+                hackathonData.eventEndDate ||
+                hackathonData.event_end_date ||
+                hackathonData.event_end,
+            registrationDeadline:
+                hackathonData.registrationDeadline ||
+                hackathonData.registration_deadline
+        });
 
-        const status =
-            new Date() < deadline
-                ? "Ongoing"
-                : "Completed";
+        const labels = {
+            upcoming: "Upcoming",
+            ongoing: "Ongoing",
+            completed: "Completed"
+        };
+
+        const status = labels[statusCode];
 
         console.log(
             `Hackathon status: ${hackathonData.title} - ${status}`
@@ -200,7 +278,8 @@ const getHackathonStatus = async (req, res) => {
             message: "Hackathon status retrieved successfully",
             hackathon: hackathonData.hackathon_id,
             title: hackathonData.title,
-            status
+            status,
+            statusCode
         });
 
     } catch (error) {
@@ -237,10 +316,32 @@ const addNotes = async (req, res) => {
             });
         }
 
+        if (typeof notes !== "string") {
+            return res.status(400).json({
+                message: "Notes must be a string"
+            });
+        }
+
+        if (notes.length > MAX_NOTES_LENGTH) {
+            return res.status(400).json({
+                message: `Notes cannot exceed ${MAX_NOTES_LENGTH} characters`
+            });
+        }
+
+        const catalogueEntry = await resolveVisibleHackathon(hackathon);
+
+        if (!catalogueEntry) {
+            return res.status(404).json({
+                message: "Hackathon not found"
+            });
+        }
+
+        const hackathonKey = catalogueEntry.hackathon_id;
+
         const tracking = await Registration.findOneAndUpdate(
             {
                 user,
-                hackathon
+                hackathon: hackathonKey
             },
             {
                 $set: {
@@ -248,7 +349,7 @@ const addNotes = async (req, res) => {
                 }
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
                 setDefaultsOnInsert: true
             }

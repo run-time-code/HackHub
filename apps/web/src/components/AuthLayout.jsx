@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import LogoMark from "./LogoMark";
 
 const PANEL_COPY = {
   login: ["BACK TO THE BUILD", "Pick up where your next idea begins."],
@@ -16,8 +17,8 @@ export default function AuthLayout({ children, panel = "login" }) {
       <div className="auth-frame">
         <section className="auth-story" aria-label="About HackHub">
           <Link to="/auth?panel=login" className="auth-brand">
-            <span className="brand-mark" aria-hidden="true"><span>H</span><i /></span>
-            <span>HackHub <small>FIELD GUIDE</small></span>
+            <LogoMark className="auth-brand__mark" />
+            <span>HackHub <small>Builder&apos;s field guide</small></span>
           </Link>
           <div className="auth-story-copy">
             <p className="field-label">{eyebrow}</p>
@@ -27,7 +28,7 @@ export default function AuthLayout({ children, panel = "login" }) {
         </section>
         <section className="auth-form-side">
           <div className="mobile-brand">
-            <span className="brand-mark" aria-hidden="true"><span>H</span><i /></span>
+            <LogoMark className="auth-brand__mark" />
             <strong>HackHub</strong>
           </div>
           <div className="auth-card">{children}</div>
