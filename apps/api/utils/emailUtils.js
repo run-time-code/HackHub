@@ -161,6 +161,9 @@ const createEmailHtml = ({
 const sendEmail = async ({ to, subject, html, text }) => {
     const result = await getClient().emails.send({
         from: process.env.EMAIL_FROM,
+        ...(process.env.EMAIL_REPLY_TO?.trim()
+            ? { replyTo: process.env.EMAIL_REPLY_TO.trim() }
+            : {}),
         to,
         subject,
         html,

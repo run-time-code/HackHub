@@ -131,7 +131,7 @@ describe('auth routes mounted on the src entrypoint', () => {
     },
   });
 
-  assert.equal(res.status, 200);
+  assert.equal(res.status, 200, await res.clone().text());
 
   const setCookie = res.headers.get('set-cookie') || '';
   assert.match(setCookie, /accessToken=/);
