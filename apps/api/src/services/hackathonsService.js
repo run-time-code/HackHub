@@ -123,8 +123,110 @@ function visibleFilter() {
   return { ...VISIBLE_FILTER };
 }
 
+function availableDeadlineFilter(now = new Date()) {
+  const deadlineFields = [
+    'registrationDeadline',
+    'registration_deadline',
+    'submissionDeadline',
+    'submission_deadline',
+  ];
+  return {
+    $or: [
+      ...deadlineFields.map((field) => ({ [field]: { $gte: now } })),
+      { $and: deadlineFields.map((field) => ({ [field]: { $in: [null] } })) },
+    ],
+  };
+}
+
 function isHidden(doc) {
   return Boolean(doc && (doc.is_hidden === true || doc.isHidden === true));
+}
+
+function catalogueKeyExpression() {
+  return {
+    $cond: [
+      { $ne: [{ $ifNull: ['$dedupeKey', ''] }, ''] },
+      '$dedupeKey',
+      {
+        $let: {
+          vars: {
+            url: {
+              $trim: {
+                input: {
+                  $toLower: {
+                    $trim: {
+                      input: {
+                        $ifNull: [
+                          '$url',
+                          { $ifNull: ['$sourceUrl', { $ifNull: ['$source_url', ''] }] },
+                        ],
+                      },
+                    },
+                  },
+                },
+                chars: '/',
+              },
+            },
+            title: {
+              $toLower: {
+                $trim: { input: { $ifNull: ['$title', '$name'] } },
+              },
+            },
+            organizer: {
+              $toLower: {
+                $trim: {
+                  input: {
+                    $cond: [
+                      { $eq: [{ $type: '$organizerName' }, 'string'] },
+                      '$organizerName',
+                      {
+                        $cond: [
+                          { $eq: [{ $type: '$organizer' }, 'string'] },
+                          '$organizer',
+                          { $ifNull: ['$organizer.name', ''] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            year: {
+              $substrCP: [
+                {
+                  $toString: {
+                    $ifNull: [
+                      {
+                        $ifNull: [
+                          '$registrationDeadline',
+                          {
+                            $ifNull: [
+                              '$registration_deadline',
+                              { $ifNull: ['$eventStartDate', { $ifNull: ['$event_start_date', '$event_start'] }] },
+                            ],
+                          },
+                        ],
+                      },
+                      '',
+                    ],
+                  },
+                },
+                0,
+                4,
+              ],
+            },
+          },
+          in: {
+            $cond: [
+              { $ne: ['$$url', ''] },
+              { $concat: ['url:', '$$url'] },
+              { $concat: ['title:', '$$title', '|', '$$organizer', '|', '$$year'] },
+            ],
+          },
+        },
+      },
+    ],
+  };
 }
 
 function addCondition(filter, condition) {
@@ -149,9 +251,26 @@ async function loadFacets(filter, filterKey) {
   const startedAt = Date.now();
   const promise = (async () => {
     const [total, grouped] = await Promise.all([
-      Hackathon.countDocuments(filter),
       Hackathon.aggregate([
         { $match: filter },
+        {
+          $addFields: {
+            _catalogueKey: catalogueKeyExpression(),
+          },
+        },
+        { $group: { _id: '$_catalogueKey' } },
+        { $count: 'total' },
+      ]),
+      Hackathon.aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            _catalogueKey: catalogueKeyExpression(),
+          },
+        },
+        { $sort: { updatedAt: -1, _id: -1 } },
+        { $group: { _id: '$_catalogueKey', document: { $first: '$$ROOT' } } },
+        { $replaceRoot: { newRoot: '$document' } },
         {
           $facet: {
             modes: [{ $group: { _id: '$mode', count: { $sum: 1 } } }],
@@ -171,7 +290,7 @@ async function loadFacets(filter, filterKey) {
       ])
     );
 
-    const value = { total, facets, tookMs: Date.now() - startedAt };
+    const value = { total: total[0]?.total || 0, facets, tookMs: Date.now() - startedAt };
     setCached(cacheKey, value, FACET_CACHE_TTL_MS);
     return value;
   })().finally(() => {
@@ -221,7 +340,7 @@ async function listHackathons(query = {}) {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const filter = visibleFilter();
+  const filter = { ...visibleFilter(), ...availableDeadlineFilter() };
   const statuses = parseList(values.status, 'status');
   if (!statuses.includes('inactive')) {
     filter.is_active = { $ne: false };
@@ -269,7 +388,8 @@ async function listHackathons(query = {}) {
     if (modes.some((mode) => !['ONLINE', 'OFFLINE', 'HYBRID'].includes(mode))) {
       throw badRequest('mode must be ONLINE, OFFLINE, or HYBRID');
     }
-    filter.mode = modes.length === 1 ? modes[0] : { $in: modes };
+    const patterns = modes.map((mode) => new RegExp(`^${escapeRegExp(mode)}$`, 'i'));
+    filter.mode = patterns.length === 1 ? patterns[0] : { $in: patterns };
   }
   if (locations.length) {
     addCondition(filter, {
@@ -361,28 +481,39 @@ async function listHackathons(query = {}) {
     throw badRequest('sort must be title, newest, deadline, prize_high, or prize_low');
   }
 
-  const listQuery = sortBy === 'deadline'
-    ? Hackathon.aggregate([
-      { $match: filter },
-      {
-        $addFields: {
-          _sortDeadline: {
-            $ifNull: [
-              '$registrationDeadline',
-              { $ifNull: ['$registration_deadline', { $ifNull: ['$submissionDeadline', '$submission_deadline'] }] },
-            ],
-          },
+  const sort = sortBy === 'deadline'
+    ? { _sortDeadline: 1, title: 1, _id: 1 }
+    : sorts[sortBy];
+  const listPipeline = [
+    { $match: filter },
+    {
+      $addFields: {
+        _catalogueKey: catalogueKeyExpression(),
+      },
+    },
+  ];
+  if (sortBy === 'deadline') {
+    listPipeline.push({
+      $addFields: {
+        _sortDeadline: {
+          $ifNull: [
+            '$registrationDeadline',
+            { $ifNull: ['$registration_deadline', { $ifNull: ['$submissionDeadline', '$submission_deadline'] }] },
+          ],
         },
       },
-      { $sort: { _sortDeadline: 1, title: 1, _id: 1 } },
-      { $skip: (pageNum - 1) * limitNum },
-      { $limit: limitNum },
-      { $project: { _sortDeadline: 0 } },
-    ])
-    : Hackathon.find(filter)
-      .sort(sorts[sortBy])
-      .skip((pageNum - 1) * limitNum)
-      .limit(limitNum);
+    });
+  }
+  listPipeline.push(
+    { $sort: sort },
+    { $group: { _id: '$_catalogueKey', document: { $first: '$$ROOT' } } },
+    { $replaceRoot: { newRoot: '$document' } },
+    { $sort: sort },
+    { $skip: (pageNum - 1) * limitNum },
+    { $limit: limitNum },
+    { $project: { _catalogueKey: 0, _sortDeadline: 0 } }
+  );
+  const listQuery = Hackathon.aggregate(listPipeline);
   const filterKey = JSON.stringify(filter);
   const [items, { total, facets }] = await Promise.all([
     listQuery,
@@ -404,6 +535,7 @@ async function getHackathonFacets() {
     ...visibleFilter(),
     is_active: { $ne: false },
     isActive: { $ne: false },
+    ...availableDeadlineFilter(),
   };
   const [domainRows, skillRows, modeRows, sourceRows] = await Promise.all([
     Hackathon.aggregate([
@@ -495,5 +627,6 @@ module.exports = {
   serialize,
   invalidateHackathonCache,
   visibleFilter,
+  availableDeadlineFilter,
   isHidden,
 };

@@ -37,13 +37,14 @@ export async function apiRequest(path, { method = "GET", body, headers = {} } = 
 
   if (!response.ok || payload?.success === false) {
     const error = new Error(
-      payload?.message ||
+      response.status >= 500
+        ? "Something went wrong. Please try again."
+        : payload?.message ||
         payload?.error ||
-        (invalidJson ? responseText : "") ||
         `Request failed with status ${response.status}`
     );
     error.status = response.status;
-    error.code = payload?.code;
+    error.code = response.status >= 500 ? "INTERNAL_ERROR" : payload?.code;
     throw error;
   }
   if (invalidJson) {

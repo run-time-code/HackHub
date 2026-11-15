@@ -74,6 +74,12 @@ function uniqueHackathons(items = []) {
   });
 }
 
+function savedHackathonMatches(record, id) {
+  const hackathon = record?.hackathon || record;
+  return [hackathon?.id, hackathon?._id, hackathon?.slug, hackathon?.hackathonId]
+    .some((value) => value != null && String(value) === id);
+}
+
 export default function Discover() {
   const location = useLocation();
   return <DiscoveryPage key={location.search} />;
@@ -206,13 +212,13 @@ function DiscoveryPage() {
     setMessageIsError(false);
     try {
       const saved = await saveHackathon(id);
-      if (!saved) {
+      const savedResponseConfirmed = savedHackathonMatches(saved, id) &&
+        Boolean(saved.id || saved.savedId || saved._id);
+      if (!savedResponseConfirmed) {
         const savedItems = await getSavedHackathons();
-        const confirmed = savedItems.some((record) => {
-          const hackathon = record.hackathon || record;
-          return String(hackathon.id || hackathon._id || hackathon.slug || "") === id;
-        });
-        if (!confirmed) throw new Error("The save was not confirmed by the server. Please try again.");
+        if (!savedItems.some((record) => savedHackathonMatches(record, id))) {
+          throw new Error("The save was not confirmed by the server. Please try again.");
+        }
       }
       setSavedIds((current) => current.includes(id) ? current : [...current, id]);
       setMessage("Hackathon saved to your dashboard.");

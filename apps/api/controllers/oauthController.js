@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const config = require("../src/config");
+const logger = require("../src/utils/logger");
 const {
     REFRESH_TOKEN_TTL_MS,
     generateAccessToken,
@@ -81,9 +82,6 @@ const completeOAuthLogin = async (req, res) => {
                     user.emailVerificationTokenHash = null;
                     user.emailVerificationTokenExpiresAt = null;
 
-                    console.log(
-                        `Development auto-verify applied during OAuth link: ${user.email}`
-                    );
                 }
 
                 if (!user.emailVerified) {
@@ -157,7 +155,10 @@ const completeOAuthLogin = async (req, res) => {
 
         return res.status(200).json(payload);
     } catch (error) {
-        console.error("OAuth login error:", error);
+        logger.error(
+            { operation: "oauth_login", errorType: error?.name || "Error" },
+            "Authentication operation failed"
+        );
 
         // Concurrent first-time logins racing to create the same account.
         if (error && error.code === 11000) {

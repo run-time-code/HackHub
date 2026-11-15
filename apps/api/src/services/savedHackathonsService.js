@@ -25,7 +25,9 @@ async function resolveHackathon(idOrSlug) {
     hackathon = await Hackathon.findById(value);
   }
   if (!hackathon) {
-    hackathon = await Hackathon.findOne({ hackathon_id: value });
+    hackathon = await Hackathon.findOne({
+      $or: [{ hackathon_id: value }, { slug: value }],
+    });
   }
   if (!hackathon || isHidden(hackathon)) {
     throw { status: 404, code: 'HACKATHON_NOT_FOUND', message: 'Hackathon not found' };
@@ -59,7 +61,12 @@ async function hydrate(rows) {
   // hackathon ObjectId as a string; resolve both so those cards do not fall
   // back to a placeholder.
   const [bySlug, byId] = await Promise.all([
-    Hackathon.find({ hackathon_id: { $in: keys } }).lean(),
+    Hackathon.find({
+      $or: [
+        { hackathon_id: { $in: keys } },
+        { slug: { $in: keys } },
+      ],
+    }).lean(),
     objectIds.length
       ? Hackathon.find({ _id: { $in: objectIds } }).lean()
       : [],
@@ -69,6 +76,9 @@ async function hydrate(rows) {
   for (const hackathon of [...bySlug, ...byId]) {
     if (hackathon.hackathon_id) {
       byKey.set(String(hackathon.hackathon_id), hackathon);
+    }
+    if (hackathon.slug) {
+      byKey.set(String(hackathon.slug), hackathon);
     }
     byKey.set(String(hackathon._id), hackathon);
   }
@@ -83,13 +93,14 @@ async function listSaved(userId) {
 
 async function save(userId, hackathonId) {
   const hackathon = await resolveHackathon(hackathonId);
+  const canonicalHackathonId = hackathon.hackathon_id || hackathon.slug || String(hackathon._id);
   try {
     const saved = await SavedHackathon.findOneAndUpdate(
-      { user: userId, hackathon: hackathon.hackathon_id },
+      { user: userId, hackathon: canonicalHackathonId },
       {
         $setOnInsert: {
           user: userId,
-          hackathon: hackathon.hackathon_id,
+          hackathon: canonicalHackathonId,
           status: 'saved',
           notes: '',
         },
@@ -103,7 +114,7 @@ async function save(userId, hackathonId) {
     if (error && error.code === 11000) {
       const saved = await SavedHackathon.findOne({
         user: userId,
-        hackathon: hackathon.hackathon_id,
+        hackathon: canonicalHackathonId,
       });
       return serializeSaved(saved, hackathon);
     }
@@ -148,7 +159,9 @@ async function resolveSavedHackathon(key) {
     const byId = await Hackathon.findById(value);
     if (byId) return byId;
   }
-  return Hackathon.findOne({ hackathon_id: value });
+  return Hackathon.findOne({
+    $or: [{ hackathon_id: value }, { slug: value }],
+  });
 }
 
 async function remove(userId, id) {
