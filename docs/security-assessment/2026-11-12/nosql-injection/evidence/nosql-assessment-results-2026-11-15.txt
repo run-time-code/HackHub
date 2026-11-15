@@ -1,0 +1,97 @@
+﻿NOSQL INJECTION ASSESSMENT
+Assessment date: 2026-11-15
+Target: Local HackHub API
+Endpoint: GET http://localhost:5000/api/hackathons
+
+1. LIVE HTTP TEST RESULTS
+
+Baseline:
+HTTP 200
+Total records: 803
+Returned records: 20
+
+Normal search:
+HTTP 200
+
+Regex metacharacters (?q=.*):
+HTTP 200
+Returned records: 0
+
+Invalid sort:
+HTTP 400
+
+Operator-shaped query (?q[$ne]=test):
+HTTP 200
+Total records: 803
+First three IDs matched baseline.
+
+Dotted query key (?q.test=value):
+HTTP 200
+Total records: 803
+First three IDs matched baseline.
+
+Literal search (?q=$ne):
+HTTP 200
+Returned records: 0
+
+Invalid upcoming value:
+HTTP 400
+
+2. EXPRESS CONFIGURATION
+
+Express version: 5.3.0
+Application middleware order:
+express.json()
+sanitizeMiddleware
+passport.initialize()
+
+Express request.js defines req.query using defineGetter.
+No query-parser override was found in apps/api/src/app.js.
+
+3. SOURCE REVIEW
+
+Reviewed:
+- hackathonsService.js
+- hackathonRankingService.js
+- joinRequestsService.js
+- notificationsService.js
+- teamsService.js
+- usersService.js
+
+Observed protections:
+- Search input escaped before RegExp construction.
+- Sort values validated against an allowlist.
+- Team hackathon IDs validated as ObjectIds.
+- Team status validated against an allowlist.
+- Join-request status validated against an allowlist.
+- Pagination values converted to bounded numbers.
+- User-specific filters constructed internally using authenticated user IDs.
+- Recommendation filters constructed internally.
+
+4. IMPLEMENTATION CONCERNS
+
+Finding NSQL-001:
+sanitizeMiddleware.js assigns to req.query.
+Express 5.3.0 exposes req.query through a getter.
+The assignment therefore does not replace the parsed query object.
+Query sanitization is not reliably applied.
+
+Finding NSQL-002:
+sanitizeMiddleware.js declares DANGEROUS_KEYS but does not use it.
+The sanitizer creates ordinary objects and assigns arbitrary property names.
+The __proto__ setter may cause object-specific prototype manipulation.
+A successful exploit or global prototype pollution has not been demonstrated.
+
+5. LIMITATIONS
+
+- Tests were read-only GET requests.
+- No database records were modified.
+- No authenticated endpoint injection tests were completed.
+- No destructive payloads were used.
+- No global prototype pollution was demonstrated.
+- No NoSQL injection vulnerability was confirmed.
+- Results do not establish that the entire application is free of NoSQL injection.
+
+OVERALL RESULT:
+No confirmed NoSQL injection in the reviewed code and tested endpoint.
+Two sanitizer implementation concerns remain open for remediation review.

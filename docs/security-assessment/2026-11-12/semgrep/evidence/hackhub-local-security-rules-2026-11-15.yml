@@ -1,0 +1,31 @@
+﻿rules:
+  - id: hackhub-dangerous-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "Review use of eval() with potentially untrusted input."
+    pattern: eval($EXPR)
+
+  - id: hackhub-dynamic-function-constructor
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Review dynamic Function constructor usage."
+    pattern: new Function(...)
+
+  - id: hackhub-dangerous-innerhtml
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Review assignment to innerHTML; ensure untrusted HTML is not inserted."
+    pattern: $EL.innerHTML = $VALUE
+
+  - id: hackhub-dangerous-document-write
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Review document.write() for unsafe HTML insertion."
+    pattern: document.write(...)
+
+  - id: hackhub-child-process-shell
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Review child_process execution with shell enabled and untrusted arguments."
+    pattern: |
+      $CP.exec($CMD, { ..., shell: true, ... }, ...)

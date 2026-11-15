@@ -1,0 +1,54 @@
+﻿MOBSF APPLICABILITY ASSESSMENT
+Assessment date: 2026-11-15
+Target: HackHub repository
+
+1. TOOL PURPOSE
+
+MobSF (Mobile Security Framework) performs static and dynamic security
+analysis of Android and iOS applications.
+
+2. MOBILE ARTIFACT SEARCH
+
+Searched for:
+- APK
+- AAB
+- IPA
+- AndroidManifest.xml
+- Info.plist
+- build.gradle
+- build.gradle.kts
+- settings.gradle
+- Podfile
+- pubspec.yaml
+- capacitor.config.*
+- app.json
+
+3. RESULTS
+
+No Android or iOS application artifacts were identified.
+No native mobile project configuration was identified.
+
+Repository directories include:
+- apps
+- backend
+- data_importer
+- tools
+- docs
+
+4. CLASSIFICATION
+
+NOT APPLICABLE TO THE IDENTIFIED REPOSITORY SCOPE.
+
+No MobSF scan was performed.
+No mobile application was uploaded or analyzed.
+No application source files were modified.
+
+5. LIMITATIONS
+
+- This result is based on the repository files searched.
+- Mobile applications maintained outside this repository were not assessed.
+- This is not a mobile security pass.
+
+6. CONCLUSION
+
+No suitable Android or iOS application artifact was identified for MobSF analysis.

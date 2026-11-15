@@ -1,0 +1,8 @@
+﻿Semgrep multi-file scan attempts
+Target 1: apps/api
+Target 2: apps/api/controllers apps/api/middleware
+Result: Both attempts were interrupted with Ctrl+C.
+Semgrep then reported:
+RPC subprocess failed: semgrep-core exited cleanly (code 0).
+RPC subprocess failed: semgrep-core exited with code 126.
+Status: Incomplete. These are not successful scans and do not establish zero findings.

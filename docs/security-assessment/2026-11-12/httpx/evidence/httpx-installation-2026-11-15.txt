@@ -1,0 +1,12 @@
+ProjectDiscovery httpx installation verification
+Date: 2026-11-15
+Go version: go1.27.4 windows/amd64
+Installation: go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+Installation exit code: 0
+Binary: C:\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\httpx\httpx.exe
+Size: 69236736 bytes
+SHA256: 4FBFFC4FE4F5AD7B1FD3357964AAB6DAFD740D8032025E71D81A5A6E382BC77D
+Authenticode status: NotSigned
+Execution: BLOCKED by Windows Application Control
+Version verification: NOT COMPLETED
+HTTP probing: NOT PERFORMED

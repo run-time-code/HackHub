@@ -1,0 +1,46 @@
+HackHub XSStrike assessment - environment check
+Checked: 2026-11-12 15:05 IST
+Repository: C:\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub
+
+Commands executed:
+- git branch --show-current
+- git --no-pager status --short
+- Get-Command python, py, pip, git
+- python --version
+- py --version
+- python -m pip --version
+- Test-Path for .security-tools\Scripts\python.exe, .venv\Scripts\python.exe,
+  venv\Scripts\python.exe, .security-tools\Scripts\xsstrike.exe, .security-tools\Scripts\arjun.exe,
+  tools\XSStrike\xsstrike.py, and ..\XSStrike\xsstrike.py
+- curl.exe -sS -o NUL -w ... --max-time 5 http://localhost:5000/api/health
+- curl.exe -sS -o NUL -w ... --max-time 5 http://localhost:5173
+- .security-tools\Scripts\python.exe --version
+- .security-tools\Scripts\python.exe -m pip --version
+- .security-tools\Scripts\python.exe -m pip show xsstrike
+- Get-Command xsstrike
+- Test-Path for XSStrike package/source paths under .security-tools, repository root, and tools
+- curl.exe -sS --max-time 5 http://localhost:5000/api/health
+
+Results:
+- Branch: wa9/deva-qa-release
+- Python on PATH: C:\Users\kanja\AppData\Local\Programs\Python\Python312\python.exe
+- Python version: 3.12.10
+- Python launcher version: 3.14.6
+- pip on PATH: C:\Users\kanja\AppData\Local\Programs\Python\Python312\Scripts\pip.exe
+- System Python pip: 25.0.1
+- Git on PATH: C:\Program Files\Git\cmd\git.exe
+- Existing .security-tools virtual environment: present and runnable
+- .security-tools Python: 3.12.10
+- .security-tools pip: 26.3
+- XSStrike package in .security-tools: not installed (pip reported "Package(s) not found: xsstrike")
+- xsstrike command on PATH: not found
+- XSStrike source at checked repository/tool locations: not found
+- Existing .security-tools Arjun executable: present
+- API health endpoint: HTTP 200; response reported success=true, status=ok, db=up
+- Frontend at http://localhost:5173: HTTP 200
+- Connectivity timings from the initial check: API 0.024470s total; frontend 0.113874s total
+- Git working tree was already dirty before this assessment. Existing changes and untracked evidence were left untouched.
+
+The health response's requestId and timestamp are omitted here. No credentials or tokens were captured.
+
+XSStrike installation and active scanning were not performed. This record contains only environment checks; it does not represent a scan result or a Windows application-control block.

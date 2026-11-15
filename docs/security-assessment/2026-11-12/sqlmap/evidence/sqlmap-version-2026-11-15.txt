@@ -1,0 +1,9 @@
+﻿SQLmap installation verification
+Date: 2026-11-15
+Python: 3.12.10
+SQLmap version: 1.10.11.88#dev
+
+Press Enter to continue...
+Source: .security-tools/sqlmap-src
+Installation status: Verified
+SQL injection scan: Not performed

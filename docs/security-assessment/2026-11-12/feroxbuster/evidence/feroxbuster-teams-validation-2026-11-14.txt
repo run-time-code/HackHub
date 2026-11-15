@@ -1,0 +1,25 @@
+﻿Feroxbuster follow-up endpoint validation
+Date: 2026-11-14
+Target: http://localhost:5000/api/teams
+Method: GET
+
+Test 1:
+Query: No hackathonId
+Result: HTTP 400
+Message: hackathonId query parameter is required
+Assessment: Expected input validation.
+
+Test 2:
+Query: hackathonId=unstop-1652247
+Result: HTTP 400
+Assessment: External Unstop ID is not a valid MongoDB ObjectId.
+
+Test 3:
+Query: hackathonId=6aae6c066f08fb6103d65642
+Result: HTTP 200
+Response: success=true; one team returned.
+Assessment: Valid MongoDB ObjectId accepted.
+
+Conclusion:
+The earlier 400 response was caused by an invalid identifier format.
+No vulnerability was confirmed by these checks.

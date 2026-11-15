@@ -1,0 +1,10 @@
+Name: arjun
+Version: 2.2.7
+Summary: HTTP parameter discovery suite
+Home-page: https://github.com/s0md3v/Arjun
+Author: Somdev Sangwan
+Author-email: s0md3v@gmail.com
+License: GNU General Public License v3 (GPLv3)
+Location: C:\Users\kanja\OneDrive\Documents\OG_REPO_RTC\Hackhub\.security-tools\Lib\site-packages
+Requires: dicttoxml, ratelimit, requests
+Required-by: 
