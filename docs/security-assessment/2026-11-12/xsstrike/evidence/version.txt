@@ -1,0 +1,4 @@
+XSStrike version: NOT AVAILABLE
+Reason: XSStrike is not installed and no local source checkout was found.
+Git commit identifier: NOT AVAILABLE
+No version was inferred or fabricated.

@@ -1,0 +1,5 @@
+XSStrike scan status: NOT EXECUTED
+
+No XSStrike command was run, so there is no scanner console output, HTTP
+response capture, scan finding, or scanner exit code. This file records the
+absence of scan output; it is not tool-generated output.

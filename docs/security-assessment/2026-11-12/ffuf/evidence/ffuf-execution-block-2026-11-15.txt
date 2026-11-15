@@ -1,0 +1,26 @@
+﻿FFUF EXECUTION BLOCK EVIDENCE
+Assessment date: 2026-11-15
+Tool requested: ffuf v2.3.0
+Executable: .security-tools\ffuf\ffuf.exe
+SHA256: 59E6BCB544D21ACC63258B9FED89310FE9286A9AA30DF21F3C730B58CEC304AC
+Digital signature: NotSigned
+Go installation exit code: 0
+Execution result: Blocked by Windows Application Control
+Fuzzing scan: NOT PERFORMED
+
+CODE INTEGRITY EVENTS
+Time: 11/15/2026 02:14:50
+Event ID: 3077
+Level: Error
+Message: Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\ffuf\ffuf.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+
+Time: 11/15/2026 02:14:49
+Event ID: 3077
+Level: Error
+Message: Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\ffuf\ffuf.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+
+Time: 11/15/2026 02:14:47
+Event ID: 3077
+Level: Error
+Message: Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\ffuf\ffuf.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+

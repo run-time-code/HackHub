@@ -1,0 +1,9 @@
+﻿Semgrep CLI: 1.185.0
+Target: /home/kanjadeva/semgrep-test/test.js
+Rules: 5 custom local rules
+Files scanned: 1
+Findings: 1
+Detected rule: hackhub-dangerous-eval
+Detected expression: eval(userInput)
+Status: Completed successfully
+Purpose: Verify that the local custom rule detects the expected test expression.

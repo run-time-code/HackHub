@@ -1,0 +1,23 @@
+﻿testssl.sh local endpoint verification
+Date: 2026-11-15
+
+Frontend HTTP:
+HTTP 200 OK
+
+API HTTP:
+HTTP 200 OK
+Service: hackhub-api
+Database: up
+
+Frontend HTTPS:
+curl error 35
+SEC_E_INVALID_TOKEN (0x80090308)
+
+API HTTPS:
+curl error 35
+SEC_E_INVALID_TOKEN (0x80090308)
+
+Conclusion:
+Neither local development endpoint completed a TLS handshake.
+testssl.sh was not run.
+TLS configuration remains unassessed.

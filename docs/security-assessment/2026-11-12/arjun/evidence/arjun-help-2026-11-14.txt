@@ -1,0 +1,36 @@
+usage: arjun.exe [-h] [-u URL] [-o JSON_FILE] [-oT TEXT_FILE]
+                 [-oB [BURP_PROXY]] [-d DELAY] [-t THREADS] [-w WORDLIST]
+                 [-m METHOD] [-i [IMPORT_FILE]] [-T TIMEOUT] [-c CHUNKS] [-q]
+                 [--rate-limit RATE_LIMIT] [--headers [HEADERS]]
+                 [--passive [PASSIVE]] [--stable] [--include INCLUDE]
+                 [--disable-redirects] [--casing CASING]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL                Target URL
+  -o JSON_FILE, -oJ JSON_FILE
+                        Path for json output file.
+  -oT TEXT_FILE         Path for text output file.
+  -oB [BURP_PROXY]      Output to Burp Suite Proxy. Default is 127.0.0.1:8080.
+  -d DELAY              Delay between requests in seconds. (default: 0)
+  -t THREADS            Number of concurrent threads. (default: 5)
+  -w WORDLIST           Wordlist file path. (default: {arjundir}/db/large.txt)
+  -m METHOD             Request method to use: GET/POST/XML/JSON. (default:
+                        GET)
+  -i [IMPORT_FILE]      Import target URLs from file.
+  -T TIMEOUT            HTTP request timeout in seconds. (default: 15)
+  -c CHUNKS             Chunk size. The number of parameters to be sent at
+                        once
+  -q                    Quiet mode. No output.
+  --rate-limit RATE_LIMIT
+                        Max number of requests to be sent out per second
+                        (default: 9999)
+  --headers [HEADERS]   Add headers. Separate multiple headers with a new
+                        line.
+  --passive [PASSIVE]   Collect parameter names from passive sources like
+                        wayback, commoncrawl and otx.
+  --stable              Prefer stability over speed.
+  --include INCLUDE     Include this data in every request.
+  --disable-redirects   disable redirects
+  --casing CASING       casing style for params e.g. like_this, likeThis,
+                        likethis
