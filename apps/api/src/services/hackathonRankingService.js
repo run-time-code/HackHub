@@ -2,7 +2,7 @@
 
 const Hackathon = require('../../models/Hackathon');
 const User = require('../../models/User');
-const { serialize } = require('./hackathonsService');
+const { availableDeadlineFilter, serialize } = require('./hackathonsService');
 
 const CANDIDATE_LIMIT = 500;
 const DEFAULT_RECOMMENDATION_LIMIT = 12;
@@ -30,8 +30,11 @@ function matchingValues(values, candidates) {
 
 function getDates(hackathon) {
   return [
+    hackathon.registrationDeadline,
     hackathon.registration_deadline,
+    hackathon.submissionDeadline,
     hackathon.submission_deadline,
+    hackathon.eventStartDate,
     hackathon.event_start_date,
     hackathon.event_start,
   ].filter((value) => value && !Number.isNaN(new Date(value).getTime()));
@@ -151,7 +154,11 @@ async function getRecommendations(userId, query = {}, now = new Date()) {
     throw error;
   }
 
-  const filter = { is_hidden: { $ne: true }, is_active: { $ne: false } };
+  const filter = {
+    is_hidden: { $ne: true },
+    is_active: { $ne: false },
+    ...availableDeadlineFilter(now),
+  };
   const candidates = await Hackathon.find(filter)
     .sort({ updatedAt: -1 })
     .limit(CANDIDATE_LIMIT)

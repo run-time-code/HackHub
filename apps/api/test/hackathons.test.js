@@ -187,6 +187,68 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
     assert.ok(body.data.items[0].id);
   });
 
+  it('excludes expired deadlines and deduplicates listings before pagination', async () => {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await Hackathon.create([
+      {
+        hackathon_id: 'expired-deadline-regression',
+        title: 'Deadline Regression Expired',
+        registration_deadline: yesterday,
+      },
+      {
+        hackathon_id: 'active-deadline-regression',
+        title: 'Deadline Regression Active',
+        registration_deadline: tomorrow,
+        submission_deadline: yesterday,
+      },
+      {
+        hackathon_id: 'duplicate-regression-one',
+        title: 'Duplicate Listing Regression',
+        dedupeKey: 'duplicate-listing-regression|2026-11',
+        registration_deadline: tomorrow,
+      },
+      {
+        hackathon_id: 'duplicate-regression-two',
+        title: 'Duplicate Listing Regression',
+        dedupeKey: 'duplicate-listing-regression|2026-11',
+        registration_deadline: tomorrow,
+      },
+      {
+        hackathon_id: 'legacy-duplicate-regression-one',
+        title: 'Legacy Crosspost Regression',
+        organizerName: 'Legacy Labs',
+        registration_deadline: tomorrow,
+      },
+      {
+        hackathon_id: 'legacy-duplicate-regression-two',
+        title: 'Legacy Crosspost Regression',
+        organizerName: 'Legacy Labs',
+        registration_deadline: tomorrow,
+      },
+    ]);
+
+    const deadlineResults = await fetch(`${base}/hackathons?q=Deadline%20Regression`);
+    const deadlineBody = await deadlineResults.json();
+    assert.equal(deadlineBody.data.total, 1);
+    assert.equal(deadlineBody.data.items[0].slug, 'active-deadline-regression');
+
+    const duplicateResults = await fetch(
+      `${base}/hackathons?q=Duplicate%20Listing%20Regression&page=1&limit=1`
+    );
+    const duplicateBody = await duplicateResults.json();
+    assert.equal(duplicateBody.data.total, 1);
+    assert.equal(duplicateBody.data.items.length, 1);
+
+    const legacyDuplicates = await fetch(
+      `${base}/hackathons?q=Legacy%20Crosspost%20Regression`
+    );
+    const legacyDuplicateBody = await legacyDuplicates.json();
+    assert.equal(legacyDuplicateBody.data.total, 1);
+    assert.equal(legacyDuplicateBody.data.items.length, 1);
+  });
+
   it('GET /hackathons/:id accepts ObjectId or slug, hides hidden rows', async () => {
     const byId = await fetch(`${base}/hackathons/${hackathon._id}`);
 
@@ -208,7 +270,7 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
 
   it('filters catalogue fields, sorts deadlines and returns counted facets', async () => {
     const filtered = await fetch(
-      `${base}/hackathons?domain=AI&skill=React&source=official&location=Online&hasPrize=true&upcoming=true&sort=deadline`
+      `${base}/hackathons?domain=AI&skill=React&mode=online&source=official&location=Online&hasPrize=true&upcoming=true&sort=deadline`
     );
 
     assert.equal(filtered.status, 200);
@@ -236,6 +298,18 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
       )
     );
 
+    assert.ok(
+      facetBody.data.skills.some(
+        (facet) => facet.value === 'React'
+      )
+    );
+
+    assert.ok(
+      facetBody.data.modes.some(
+        (facet) => facet.value.toLowerCase() === 'online'
+      )
+    );
+
     const invalidSort = await fetch(`${base}/hackathons?sort=untrusted`);
 
     assert.equal(invalidSort.status, 400);
@@ -251,6 +325,11 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
     };
 
     await member.save();
+    const expiredRecommendation = await Hackathon.create({
+      hackathon_id: 'expired-recommendation',
+      title: 'Expired Recommendation',
+      registration_deadline: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    });
 
     const { res, body } = await api(
       'GET',
@@ -271,6 +350,9 @@ describe('hackathons catalogue + membership (QA fixes)', () => {
     assert.match(
       body.data.items[0].scoreBreakdown.methodology,
       /heuristic/
+    );
+    assert.ok(
+      body.data.items.every((item) => item.id !== String(expiredRecommendation._id))
     );
 
     const unauthorized = await fetch(

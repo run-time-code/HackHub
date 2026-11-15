@@ -13,6 +13,20 @@ const Hackathon = require("../models/Hackathon");
 const { suspendUserSideEffects } = require("../utils/accountErasure");
 const logger = require("../src/utils/logger");
 
+function logUserOperationFailure(operation, error) {
+    logger.error(
+        { operation, errorType: error?.name || "Error" },
+        "User operation failed"
+    );
+}
+
+function hasControlCharacters(value) {
+    return [...value].some((character) => {
+        const code = character.charCodeAt(0);
+        return code <= 31 || code === 127;
+    });
+}
+
 function cloudinaryConfigured() {
     const config = cloudinary.config();
     return Boolean(config.cloud_name && config.api_key && config.api_secret);
@@ -136,14 +150,10 @@ const getMyProfile = async (req, res) => {
         );
 
         if (!user) {
-            console.log("User not found");
-
             return res.status(404).json({
                 message: "User not found"
             });
         }
-
-        console.log(`Profile retrieved for user: ${user.email}`);
 
         return res.status(200).json({
             message: "Profile retrieved successfully",
@@ -151,7 +161,7 @@ const getMyProfile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Get profile error:", error);
+        logUserOperationFailure("get_profile", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -165,11 +175,24 @@ const saveOnboarding = async (req, res) => {
 
     if (
         !Array.isArray(skills) || skills.length === 0 || skills.length > 10 ||
-        skills.some(skill => typeof skill !== "string" || !skill.trim()) ||
+        skills.some(skill =>
+            typeof skill !== "string" ||
+            !skill.trim() ||
+            skill.trim().length > 80 ||
+            hasControlCharacters(skill)
+        ) ||
         !Array.isArray(interests) || interests.length === 0 || interests.length > 10 ||
-        interests.some(interest => typeof interest !== "string" || !interest.trim()) ||
+        interests.some(interest =>
+            typeof interest !== "string" ||
+            !interest.trim() ||
+            interest.trim().length > 80 ||
+            hasControlCharacters(interest)
+        ) ||
         !validModes.includes(preferredMode) ||
-        typeof location !== "string" || location.trim().length < 2 || location.trim().length > 100
+        typeof location !== "string" ||
+        location.trim().length < 2 ||
+        location.trim().length > 100 ||
+        hasControlCharacters(location)
     ) {
         return res.status(400).json({ message: "Invalid onboarding data" });
     }
@@ -192,7 +215,7 @@ const saveOnboarding = async (req, res) => {
 
         return res.status(200).json({ message: "Onboarding saved successfully" });
     } catch (error) {
-        console.error("Save onboarding error:", error);
+        logUserOperationFailure("save_onboarding", error);
         return res.status(500).json({ message: "Unable to save onboarding" });
     }
 };
@@ -227,8 +250,6 @@ const {
         const user = await User.findById(req.user.id);
 
         if (!user) {
-            console.log("User not found");
-
             return res.status(404).json({
                 message: "User not found"
             });
@@ -301,15 +322,13 @@ const {
 
         await user.save();
 
-        console.log(`Profile updated for user: ${user.email}`);
-
         return res.status(200).json({
             message: "Profile updated successfully",
             user: serializeOwnProfile(user)
         });
 
     } catch (error) {
-        console.error("Update profile error:", error);
+        logUserOperationFailure("update_profile", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -332,14 +351,10 @@ const getPublicProfile = async (req, res) => {
         );
 
         if (!user) {
-            console.log("User not found");
-
             return res.status(404).json({
                 message: "User not found"
             });
         }
-
-        console.log(`Public profile retrieved for user: ${user._id}`);
 
         return res.status(200).json({
             message: "Public profile retrieved successfully",
@@ -347,7 +362,7 @@ const getPublicProfile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Get public profile error:", error);
+        logUserOperationFailure("get_public_profile", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -396,17 +411,13 @@ const updateMySkills = async (req, res) => {
 
         await user.save();
 
-        console.log(
-    `Skills updated for user: ${user.email} | Skills: ${user.skills.join(", ")}`
-);
-
         return res.status(200).json({
             message: "Skills updated successfully",
             skills: user.skills
         });
 
     } catch (error) {
-        console.error("Update skills error:", error);
+        logUserOperationFailure("update_skills", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -471,7 +482,7 @@ const uploadAvatar = async (req, res) => {
             try {
                 await cloudinary.uploader.destroy(previousPublicId, { resource_type: "image" });
             } catch (cleanupError) {
-                console.warn("Previous avatar cleanup failed:", cleanupError.message);
+                logUserOperationFailure("previous_avatar_cleanup", cleanupError);
             }
         }
 
@@ -481,7 +492,7 @@ const uploadAvatar = async (req, res) => {
         });
 
     } catch (error) {
-    console.error("Avatar upload error:", error.message);
+    logUserOperationFailure("avatar_upload", error);
 
     return res.status(500).json({
         message: "Avatar upload failed"
@@ -517,7 +528,7 @@ const removeAvatar = async (req, res) => {
         await user.save();
         return res.status(200).json({ message: "Avatar removed", avatarUrl: "" });
     } catch (error) {
-        console.error("Avatar removal error:", error.message);
+        logUserOperationFailure("avatar_removal", error);
         return res.status(502).json({ message: "Avatar could not be removed. Please try again." });
     }
 };
@@ -525,21 +536,29 @@ const removeAvatar = async (req, res) => {
 
 const changePassword = async (req, res) => {
     try {
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword, newPassword } = req.body || {};
 
-        if (!currentPassword || !newPassword) {
+        if (
+            typeof currentPassword !== "string" ||
+            currentPassword.length > 1024 ||
+            typeof newPassword !== "string"
+        ) {
             return res.status(400).json({
                 message: "Current password and new password are required"
             });
         }
 
         const passwordRegex =
-            /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+            /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
 
-        if (!passwordRegex.test(newPassword)) {
+        if (
+            typeof newPassword !== "string" ||
+            Buffer.byteLength(newPassword, "utf8") > 72 ||
+            !passwordRegex.test(newPassword)
+        ) {
             return res.status(400).json({
                 message:
-                    "New password must be at least 8 characters long and contain at least one uppercase letter and one special character"
+                    "New password must be 8 to 72 bytes and contain an uppercase letter, a number, and a special character"
             });
         }
 
@@ -599,7 +618,7 @@ const changePassword = async (req, res) => {
                 "Password changed successfully. Please log in again."
         });
     } catch (error) {
-        console.error("Change password error:", error);
+        logUserOperationFailure("change_password", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -634,7 +653,7 @@ const revokeAllSessions = async (req, res) => {
             message: "All sessions have been revoked. Please log in again."
         });
     } catch (error) {
-        console.error("Revoke sessions error:", error);
+        logUserOperationFailure("revoke_sessions", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -690,7 +709,7 @@ const deleteMyAccount = async (req, res) => {
                 "Account deleted successfully. Your account has been deactivated."
         });
     } catch (error) {
-        console.error("Account deletion error:", error);
+        logUserOperationFailure("delete_account", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -781,7 +800,7 @@ const exportMyData = async (req, res) => {
 
         return res.status(200).json(exportData);
     } catch (error) {
-        console.error("Data export error:", error);
+        logUserOperationFailure("export_data", error);
 
         return res.status(500).json({
             message: "Unable to export user data"

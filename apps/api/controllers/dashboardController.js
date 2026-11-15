@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Registration = require("../models/Registration");
+const logger = require("../src/utils/logger");
 
 const getDashboardSummary = async (req, res) => {
     try {
@@ -132,10 +133,6 @@ const getDashboardSummary = async (req, res) => {
             }
         ]);
 
-        console.log(
-            `Dashboard summary retrieved for user: ${req.user.id}`
-        );
-
         return res.status(200).json({
             message: "Dashboard summary retrieved successfully",
             statusCounts: result[0].statusCounts,
@@ -143,7 +140,10 @@ const getDashboardSummary = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Dashboard summary error:", error);
+        logger.error(
+            { operation: "dashboard_summary", errorType: error?.name || "Error" },
+            "User operation failed"
+        );
 
         return res.status(500).json({
             message: "Server error"

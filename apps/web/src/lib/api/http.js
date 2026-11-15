@@ -48,7 +48,7 @@ async function parsePayload(response) {
   try {
     return JSON.parse(text);
   } catch {
-    return { message: text };
+    return null;
   }
 }
 
@@ -138,10 +138,17 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new ApiError(messageFromPayload(payload) || `Request failed (${response.status})`, {
+    const message = response.status >= 500
+      ? "Something went wrong. Please try again."
+      : messageFromPayload(payload) || `Request failed (${response.status})`;
+    throw new ApiError(message, {
       status: response.status,
-      code: payload?.error?.code || payload?.code || null,
-      details: payload?.errors || payload?.error?.details || null,
+      code: response.status >= 500
+        ? "INTERNAL_ERROR"
+        : payload?.error?.code || payload?.code || null,
+      details: response.status >= 500
+        ? null
+        : payload?.errors || payload?.error?.details || null,
       requestId: payload?.requestId || null,
     });
   }

@@ -24,8 +24,16 @@ export default function Settings() {
       setPasswordError("Your new password must be at least 8 characters.");
       return;
     }
-    if (!/[A-Z]/.test(passwords.newPassword) || !/[0-9]/.test(passwords.newPassword)) {
-      setPasswordError("Your new password must include at least one uppercase letter and one number.");
+    if (
+      !/[A-Z]/.test(passwords.newPassword) ||
+      !/[0-9]/.test(passwords.newPassword) ||
+      !/[^A-Za-z0-9]/.test(passwords.newPassword)
+    ) {
+      setPasswordError("Your new password must include an uppercase letter, a number, and a special character.");
+      return;
+    }
+    if (new TextEncoder().encode(passwords.newPassword).length > 72) {
+      setPasswordError("Your new password must be 72 bytes or fewer.");
       return;
     }
     if (passwords.newPassword !== passwords.confirmPassword) {

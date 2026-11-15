@@ -535,6 +535,16 @@ textarea:focus-visible {
   color: var(--ink);
 }
 
+[data-theme="dark"] .hackathon-entry {
+  border-color: var(--line-strong);
+  background-color: var(--surface);
+}
+
+[data-theme="dark"] .hackathon-entry .entry-title,
+[data-theme="dark"] .hackathon-entry .entry-title a {
+  color: var(--ink);
+}
+
 [data-theme="dark"] .workbench-main .entry-organizer {
   color: var(--moss-light, #9bc5a7);
 }

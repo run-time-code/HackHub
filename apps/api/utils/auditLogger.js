@@ -1,4 +1,5 @@
 const AuditLog = require("../models/AuditLog");
+const logger = require("../src/utils/logger");
 
 const logAuditEvent = async ({
     event,
@@ -22,10 +23,9 @@ const logAuditEvent = async ({
             details
         });
     } catch (error) {
-        // Audit logging failure must not crash the main API request.
-        console.error(
-            "Audit log could not be saved:",
-            error.message
+        logger.error(
+            { errorType: error?.name || "Error" },
+            "Audit log could not be saved"
         );
     }
 };

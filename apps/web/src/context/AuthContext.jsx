@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { getCurrentUser, logoutUser as logoutApi } from "../lib/api/auth";
 import { setAccessToken } from "../lib/api/client";
 import { AuthContext } from "./auth-context";
@@ -27,6 +28,7 @@ async function fetchCurrentUser() {
 }
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // true while we check for an existing session
   const [authError, setAuthError] = useState(null);
@@ -61,13 +63,14 @@ export function AuthProvider({ children }) {
       });
     function handleUnauthorized() {
       setUser(null);
+      queryClient.clear();
     }
     window.addEventListener("auth:unauthorized", handleUnauthorized);
     return () => {
       isMounted = false;
       window.removeEventListener("auth:unauthorized", handleUnauthorized);
     };
-  }, []);
+  }, [queryClient]);
 
   function login(userData) {
     setUser(userData?.user || userData);
@@ -82,12 +85,13 @@ export function AuthProvider({ children }) {
     try {
       await logoutApi();
     } catch (error) {
-      setAccessToken(null);
       if (error.status !== 401) {
-        setAuthError(new Error(`The server did not confirm logout: ${error.message}`));
+        setAuthError(new Error("The server could not confirm logout. Please try again."));
       }
     } finally {
+      setAccessToken(null);
       setUser(null);
+      queryClient.clear();
     }
   }
 

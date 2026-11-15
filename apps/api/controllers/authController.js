@@ -1,9 +1,12 @@
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 const User = require("../models/User");
 const config = require("../src/config");
+const logger = require("../src/utils/logger");
 
 const {
     sendVerificationEmail,
@@ -23,6 +26,19 @@ const {
     refreshCookieOptions
 } = require("../utils/cookieUtils");
 
+function logAuthFailure(operation, error) {
+    logger.error(
+        { operation, errorType: error?.name || "Error" },
+        "Authentication operation failed"
+    );
+}
+
+function hasControlCharacters(value) {
+    return [...value].some((character) => {
+        const code = character.charCodeAt(0);
+        return code <= 31 || code === 127;
+    });
+}
 
 // ==============================
 // REGISTER
@@ -30,41 +46,57 @@ const {
 
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const body = req.body && typeof req.body === "object" && !Array.isArray(req.body)
+            ? req.body
+            : {};
+        const { name, email, password } = body;
 
         const normalizedEmail =
             typeof email === "string"
                 ? email.trim().toLowerCase()
                 : "";
+        const normalizedName =
+            typeof name === "string"
+                ? name.trim()
+                : "";
 
-        if (!name || !normalizedEmail || !password) {
+        if (!normalizedName || !normalizedEmail || typeof password !== "string") {
             return res.status(400).json({
                 message: "All fields are required"
             });
         }
 
-        const passwordRegex = /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+        if (
+            normalizedName.length < 2 ||
+            normalizedName.length > 80 ||
+            hasControlCharacters(normalizedName)
+        ) {
+            return res.status(400).json({
+                message: "Name must be 2 to 80 characters and contain no control characters"
+            });
+        }
 
-        if (!passwordRegex.test(password)) {
+        if (normalizedEmail.length > 254) {
+            return res.status(400).json({
+                message: "Email address is too long"
+            });
+        }
+
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
+
+        if (
+            Buffer.byteLength(password, "utf8") > 72 ||
+            !passwordRegex.test(password)
+        ) {
             return res.status(400).json({
                 message:
-                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
+                    "Password must be 8 to 72 bytes and contain an uppercase letter, a number, and a special character"
             });
         }
 
-        if (!validator.isEmail(normalizedEmail)) {
-            console.log("Invalid email format");
-
+        if (normalizedEmail.length > 254 || !validator.isEmail(normalizedEmail)) {
             return res.status(400).json({
                 message: "Invalid email format"
-            });
-        }
-
-        if (password.length < 8) {
-            console.log("Password must be at least 8 characters");
-
-            return res.status(400).json({
-                message: "Password must be at least 8 characters"
             });
         }
 
@@ -73,8 +105,6 @@ const register = async (req, res) => {
         });
 
         if (existingUser) {
-            console.log("User already exists");
-
             return res.status(409).json({
                 message: "User already exists"
             });
@@ -97,7 +127,7 @@ const register = async (req, res) => {
 
         try {
             user = await User.create({
-                name: name.trim(),
+                name: normalizedName,
                 email: normalizedEmail,
                 password: hashedPassword,
                 emailVerified: false,
@@ -125,10 +155,6 @@ const register = async (req, res) => {
             user.emailVerificationTokenExpiresAt = null;
             await user.save();
 
-            console.log(
-                `Development auto-verify enabled for: ${user.email}`
-            );
-
             return res.status(200).json({
                 message:
                     "Account created. Email verification is disabled in development; you can log in now.",
@@ -143,10 +169,7 @@ const register = async (req, res) => {
                 verificationToken
             );
         } catch (emailError) {
-            console.error(
-                "Verification email failed:",
-                emailError
-            );
+            logAuthFailure("registration_verification_email", emailError);
 
             // Remove account if verification email could not be sent
             await User.findByIdAndDelete(user._id);
@@ -157,10 +180,6 @@ const register = async (req, res) => {
             });
         }
 
-        console.log(
-            `Verification email sent for registration: ${user.email}`
-        );
-
         // Registration is NOT completed yet
         return res.status(200).json({
             message:
@@ -169,7 +188,7 @@ const register = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Registration error:", error);
+        logAuthFailure("registration", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -219,20 +238,13 @@ const verifyEmail = async (req, res) => {
             });
         }
 
-        console.log(
-            `Email verified successfully: ${user.email}`
-        );
-
         return res.status(200).json({
             message:
                 "Email verified successfully. Registration completed. You can now log in."
         });
 
     } catch (error) {
-        console.error(
-            "Email verification error:",
-            error
-        );
+        logAuthFailure("email_verification", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -246,7 +258,7 @@ const verifyEmail = async (req, res) => {
 
 const resendVerification = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email } = req.body || {};
 
         const normalizedEmail =
             typeof email === "string"
@@ -259,7 +271,7 @@ const resendVerification = async (req, res) => {
             });
         }
 
-        if (!validator.isEmail(normalizedEmail)) {
+        if (normalizedEmail.length > 254 || !validator.isEmail(normalizedEmail)) {
             return res.status(400).json({
                 message: "Invalid email format"
             });
@@ -300,10 +312,7 @@ const resendVerification = async (req, res) => {
                 verificationToken
             );
         } catch (emailError) {
-            console.error(
-                "Verification email resend failed:",
-                emailError
-            );
+            logAuthFailure("resend_verification_email", emailError);
 
             return res.status(500).json({
                 message:
@@ -311,20 +320,13 @@ const resendVerification = async (req, res) => {
             });
         }
 
-        console.log(
-            `Verification email resent: ${user.email}`
-        );
-
         return res.status(200).json({
             message:
                 "If the account exists, a verification email has been sent"
         });
 
     } catch (error) {
-        console.error(
-            "Resend verification error:",
-            error
-        );
+        logAuthFailure("resend_verification", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -358,16 +360,25 @@ const lockoutResponse = (res, lockUntil) => {
 
 const login = async (req, res) => {
     try {
+        const body = req.body && typeof req.body === "object" && !Array.isArray(req.body)
+            ? req.body
+            : {};
         const email =
-            typeof req.body.email === "string"
-                ? req.body.email.trim().toLowerCase()
+            typeof body.email === "string"
+                ? body.email.trim().toLowerCase()
                 : "";
 
-        const { password } = req.body;
+        const { password } = body;
 
-        if (!email || !password) {
+        if (!email || typeof password !== "string" || password.length > 1024) {
             return res.status(400).json({
                 message: "Email and password are required"
+            });
+        }
+
+        if (email.length > 254) {
+            return res.status(400).json({
+                message: "Invalid email format"
             });
         }
 
@@ -469,9 +480,6 @@ const login = async (req, res) => {
             user.emailVerificationTokenHash = null;
             user.emailVerificationTokenExpiresAt = null;
 
-            console.log(
-                `Development auto-verify applied at login: ${user.email}`
-            );
         }
 
         // Require verified email before completing login.
@@ -523,7 +531,7 @@ const login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Login error:", error);
+        logAuthFailure("login", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -541,10 +549,6 @@ const refreshToken = async (req, res) => {
         const token = req.cookies.refreshToken;
 
         if (!token) {
-            console.log(
-                "Refresh token not provided"
-            );
-
             return res.status(401).json({
                 message:
                     "Refresh token not provided"
@@ -563,10 +567,6 @@ const refreshToken = async (req, res) => {
         });
 
         if (!user) {
-            console.log(
-                "Invalid refresh token"
-            );
-
             return res.status(401).json({
                 message:
                     "Invalid refresh token"
@@ -663,20 +663,13 @@ const refreshToken = async (req, res) => {
             refreshCookieOptions
         );
 
-        console.log(
-            `Refresh token rotated: ${user.email}`
-        );
-
         return res.status(200).json({
             message:
                 "Token refreshed successfully"
         });
 
     } catch (error) {
-        console.error(
-            "Refresh token error:",
-            error
-        );
+        logAuthFailure("refresh_token", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -692,7 +685,7 @@ const refreshToken = async (req, res) => {
 const logout = async (req, res) => {
     try {
         const refreshToken =
-            req.cookies.refreshToken;
+            req.cookies?.refreshToken;
 
         if (refreshToken) {
             const refreshTokenHash = crypto
@@ -700,9 +693,6 @@ const logout = async (req, res) => {
                 .update(refreshToken)
                 .digest("hex");
 
-            // Remove the refresh token and revoke access tokens minted for
-            // this session. Without the tokenVersion bump the 15-minute
-            // access token kept working after logout.
             await User.findOneAndUpdate(
                 { refreshTokenHash },
                 {
@@ -717,6 +707,44 @@ const logout = async (req, res) => {
             );
         }
 
+        if (typeof req.cookies?.accessToken === "string") {
+            const secrets = [
+                process.env.ACCESS_TOKEN_SECRET,
+                process.env.JWT_SECRET
+            ].filter((secret, index, values) =>
+                typeof secret === "string" && secret.length > 0 && values.indexOf(secret) === index
+            );
+
+            for (const secret of secrets) {
+                let payload;
+                try {
+                    payload = jwt.verify(req.cookies.accessToken, secret);
+                } catch {
+                    continue;
+                }
+
+                const userId = String(payload.id || payload.sub || "");
+                if (!mongoose.Types.ObjectId.isValid(userId)) break;
+
+                // Revoke a still-valid access token even if its refresh cookie
+                // is missing, stale, or cannot be matched.
+                await User.findOneAndUpdate(
+                    {
+                        _id: userId,
+                        tokenVersion: payload.tokenVersion ?? 0
+                    },
+                    {
+                        $set: {
+                            refreshTokenHash: null,
+                            refreshTokenExpiresAt: null
+                        },
+                        $inc: { tokenVersion: 1 }
+                    }
+                );
+                break;
+            }
+        }
+
         // Clear authentication cookies
         res.clearCookie(
             "accessToken",
@@ -728,17 +756,12 @@ const logout = async (req, res) => {
             refreshCookieOptions
         );
 
-        console.log("Logout successful");
-
         return res.status(200).json({
             message: "Logout successful"
         });
 
     } catch (error) {
-        console.error(
-            "Logout error:",
-            error
-        );
+        logAuthFailure("logout", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -753,7 +776,7 @@ const logout = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email } = req.body || {};
 
         const normalizedEmail =
             typeof email === "string"
@@ -766,7 +789,7 @@ const forgotPassword = async (req, res) => {
             });
         }
 
-        if (!validator.isEmail(normalizedEmail)) {
+        if (normalizedEmail.length > 254 || !validator.isEmail(normalizedEmail)) {
             return res.status(400).json({
                 message: "Invalid email format"
             });
@@ -804,20 +827,13 @@ const forgotPassword = async (req, res) => {
             resetToken
         );
 
-        console.log(
-            `Password reset email sent: ${user.email}`
-        );
-
         return res.status(200).json({
             message:
                 "If the account exists, a password reset email has been sent"
         });
 
     } catch (error) {
-        console.error(
-            "Forgot password error:",
-            error
-        );
+        logAuthFailure("forgot_password", error);
 
         return res.status(500).json({
             message: "Server error"
@@ -857,12 +873,15 @@ const resetPassword = async (req, res) => {
         // Require at least 8 characters, one uppercase letter,
         // and one special character.
         const passwordRegex =
-            /^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+            /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
 
-        if (!passwordRegex.test(password)) {
+        if (
+            Buffer.byteLength(password, "utf8") > 72 ||
+            !passwordRegex.test(password)
+        ) {
             return res.status(400).json({
                 message:
-                    "Password must be at least 8 characters long and contain at least one uppercase letter and one special character"
+                    "Password must be 8 to 72 bytes and contain an uppercase letter, a number, and a special character"
             });
         }
 
@@ -905,19 +924,12 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        console.log(
-            `Password reset successful: ${user.email}`
-        );
-
         return res.status(200).json({
             message: "Password reset successful"
         });
 
     } catch (error) {
-        console.error(
-            "Reset password error:",
-            error
-        );
+        logAuthFailure("reset_password", error);
 
         return res.status(500).json({
             message: "Server error"
