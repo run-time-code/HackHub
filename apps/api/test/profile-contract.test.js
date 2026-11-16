@@ -216,6 +216,18 @@ describe('profile contract', () => {
     assert.equal(unsafe.res.status, 400);
     assert.equal(unsafe.body.message, 'Invalid profile data');
 
+    for (const github of [
+      'https://example..com',
+      'https://.example.com',
+      'https:///example.com',
+      'https://example.com\\@evil.com',
+      'https://@example.com',
+      `https://example.com/${'a'.repeat(300)}`,
+    ]) {
+      const invalidUrl = await put('/users/me', { links: { github } });
+      assert.equal(invalidUrl.res.status, 400, github);
+    }
+
     const badLevel = await put('/users/me', {
       skillProficiency: { React: 'wizard' },
     });

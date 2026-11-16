@@ -127,6 +127,30 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     assert.match(invalid.body.error.message, /YYYY-MM/);
   });
 
+  it('GET /calendar includes hackathons stored with camelCase date fields', async () => {
+    const camelCaseHackathon = await Hackathon.create({
+      hackathon_id: 'calendar-camel-case',
+      title: 'Camel Case Calendar Hack',
+      registrationDeadline: '2030-05-10T12:00:00.000Z',
+      submissionDeadline: '2030-05-20T12:00:00.000Z',
+      eventStartDate: '2030-05-15T09:00:00.000Z',
+    });
+
+    const { res, body } = await api('GET', '/calendar?month=2030-05', undefined, {
+      csrf: false,
+    });
+    assert.equal(res.status, 200);
+    const items = body.data.items.filter(
+      (item) => item.hackathonId === String(camelCaseHackathon._id)
+    );
+    assert.equal(items.length, 3);
+    assert.ok(items.every(
+      (item) => item.hackathon.title === 'Camel Case Calendar Hack'
+    ));
+
+    await Hackathon.deleteOne({ _id: camelCaseHackathon._id });
+  });
+
   it('catalogue filters compose across domain, mode, skill and organizer search', async () => {
     const second = await Hackathon.create({
       hackathon_id: 'civic-hack',

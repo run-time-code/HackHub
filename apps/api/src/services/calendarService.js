@@ -73,24 +73,32 @@ async function listEvents(monthValue) {
     ...visibleFilter(),
     $or: [
       { registration_deadline: { $gte: start, $lt: end } },
+      { registrationDeadline: { $gte: start, $lt: end } },
       { submission_deadline: { $gte: start, $lt: end } },
+      { submissionDeadline: { $gte: start, $lt: end } },
       { event_start_date: { $gte: start, $lt: end } },
+      { eventStartDate: { $gte: start, $lt: end } },
+      { event_start: { $gte: start, $lt: end } },
     ],
   }).lean();
   const items = [];
 
   for (const hackathon of hackathons) {
-    const registration = parseDate(hackathon.registration_deadline);
+    const registration = parseDate(hackathon.registrationDeadline)
+      || parseDate(hackathon.registration_deadline);
     if (registration && inRange(registration, start, end)) {
       items.push(buildEvent(hackathon, 'registration', registration));
     }
 
-    const submission = parseDate(hackathon.submission_deadline);
+    const submission = parseDate(hackathon.submissionDeadline)
+      || parseDate(hackathon.submission_deadline);
     if (submission && inRange(submission, start, end)) {
       items.push(buildEvent(hackathon, 'submission', submission));
     }
 
-    const startDate = parseDate(hackathon.event_start_date);
+    const startDate = parseDate(hackathon.eventStartDate)
+      || parseDate(hackathon.event_start_date)
+      || parseDate(hackathon.event_start);
     if (startDate && inRange(startDate, start, end)) {
       items.push(buildEvent(hackathon, 'event', startDate));
     }

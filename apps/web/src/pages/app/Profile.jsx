@@ -34,17 +34,54 @@ import { useToast } from "../../providers/ToastProvider";
 import { track } from "../../lib/analytics";
 import { useDocumentTitle } from "../../lib/hooks/useDocumentTitle";
 
-const URL_PATTERN = /^https?:\/\/[^\s.]+\.[^\s]+$/i;
-
 function isValidProfileUrl(value) {
-  if (!URL_PATTERN.test(value)) return false;
+  const trimmedValue = value.trim();
+  const authority = trimmedValue.match(/^https?:\/\/([^/?#]+)(?:[/?#]|$)/i);
+  if (
+    trimmedValue.length > 300
+    || /\s|\\/.test(trimmedValue)
+    || !authority
+    || authority[1].includes("@")
+  ) {
+    return false;
+  }
   try {
-    const url = new URL(value);
-    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname.includes(".")) && !url.username && !url.password;
+    const url = new URL(trimmedValue);
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+    const labels = hostname.split(".");
+    return ["http:", "https:"].includes(url.protocol)
+      && hostname.length <= 253
+      && labels.length > 1
+      && labels.every((label) => (
+        label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+      ))
+      && !url.username
+      && !url.password;
   } catch {
     return false;
   }
 }
+
+function isValidSocialProfileUrl(value, hostname, pathnamePattern) {
+  const trimmedValue = value.trim();
+  if (trimmedValue.length > 300 || /[\s\\?#]/.test(trimmedValue)) return false;
+  try {
+    const url = new URL(trimmedValue);
+    return url.protocol === "https:"
+      && url.hostname.toLowerCase() === hostname
+      && !url.port
+      && !url.username
+      && !url.password
+      && pathnamePattern.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+const SOCIAL_PROFILE_PATHS = {
+  github: /^\/[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?\/?$/i,
+  linkedin: /^\/in\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/?$/i,
+};
 
 const COMPLETION_ITEMS = [
   { key: "identity", label: "Name and headline", weight: 1 },
@@ -91,7 +128,7 @@ function completenessOf(form, skills) {
     portrait: Boolean(form.avatarUrl),
     story: form.bio.trim().length >= 40,
     skills: skills.length >= 3,
-    links: Object.values(form.links).some((value) => URL_PATTERN.test(value || "")),
+    links: Object.values(form.links).some((value) => isValidProfileUrl(value || "")),
     history: form.pastHackathons.some((entry) => entry.name?.trim()),
   };
   const total = COMPLETION_ITEMS.reduce((sum, item) => sum + item.weight, 0);
@@ -114,13 +151,23 @@ function validateForm(form, skills) {
   if (form.headline.length > 120) errors.headline = "Headlines stop at 120 characters.";
   if (form.bio.length > 500) errors.bio = "The bio has a 500 character limit.";
   for (const [key, value] of Object.entries(form.links)) {
-    if (value && !isValidProfileUrl(value)) {
-      errors[`link-${key}`] = "Use a full URL starting with https://";
+    if (!value) continue;
+    const isValid = key === "github"
+      ? isValidSocialProfileUrl(value, "github.com", SOCIAL_PROFILE_PATHS.github)
+      : key === "linkedin"
+        ? isValidSocialProfileUrl(value, "www.linkedin.com", SOCIAL_PROFILE_PATHS.linkedin)
+        : isValidProfileUrl(value);
+    if (!isValid) {
+      errors[`link-${key}`] = key === "github"
+        ? "Use a GitHub profile URL like https://github.com/username."
+        : key === "linkedin"
+          ? "Use a LinkedIn profile URL like https://www.linkedin.com/in/username."
+          : "Use a full http:// or https:// URL.";
     }
   }
   form.pastHackathons.forEach((entry, index) => {
     if (entry.projectUrl && !isValidProfileUrl(entry.projectUrl)) {
-      errors[`history-${index}`] = "Project links need a full https:// URL.";
+      errors[`history-${index}`] = "Project links need a full http:// or https:// URL.";
     }
     if (entry.year && !/^\d{4}$/.test(String(entry.year))) {
       errors[`history-year-${index}`] = "Use a four-digit year.";
@@ -597,7 +644,7 @@ export default function Profile() {
                       id="profile-linkedin"
                       value={form.links.linkedin}
                       onChange={(event) => updateLink("linkedin", event.target.value)}
-                      placeholder="https://linkedin.com/in/aarav"
+                      placeholder="https://www.linkedin.com/in/aarav"
                       inputMode="url"
                     />
                   </div>
