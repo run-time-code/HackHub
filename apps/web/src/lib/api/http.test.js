@@ -48,4 +48,20 @@ describe("http apiRequest session refresh", () => {
     expect(calls.some((call) => call.target.endsWith("/auth/refresh"))).toBe(true);
     expect(calls.filter((call) => call.target.endsWith("/users/me"))).toHaveLength(2);
   });
+
+  it("uses a generic message for server and non-JSON failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(textResponse(500, { message: "MongoServerError: private detail" }))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 502,
+          text: async () => "<html>private proxy diagnostics</html>",
+        })
+    );
+
+    await expect(apiRequest("/users/me")).rejects.toThrow("Something went wrong. Please try again.");
+    await expect(apiRequest("/users/me")).rejects.toThrow("Something went wrong. Please try again.");
+  });
 });

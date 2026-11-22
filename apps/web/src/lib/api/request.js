@@ -89,9 +89,14 @@ export async function apiRequest(path, { method = "GET", body } = {}) {
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || data?.error?.message || "Something went wrong");
+    const message = response.status >= 500
+      ? "Something went wrong. Please try again."
+      : data?.message || data?.error?.message || "Something went wrong";
+    const error = new Error(message);
     error.status = response.status;
-    error.code = data?.code || data?.error?.code;
+    error.code = response.status >= 500
+      ? "INTERNAL_ERROR"
+      : data?.code || data?.error?.code;
     throw error;
   }
 

@@ -81,11 +81,6 @@ const auditMiddleware = (req, res, next) => {
         const success =
             statusCode >= 200 && statusCode < 300;
 
-        const submittedEmail =
-            typeof req.body?.email === "string"
-                ? req.body.email.trim().toLowerCase().slice(0, 254)
-                : null;
-
         // OAuth callbacks leave the raw provider profile on req.user; use
         // the application user id stashed by the controller when present,
         // and ignore any value that is not a valid ObjectId (a failed
@@ -122,7 +117,6 @@ const auditMiddleware = (req, res, next) => {
         void logAuditEvent({
             event: eventDefinition.event,
             userId: authenticatedUserId,
-            email: submittedEmail,
             success,
             statusCode,
             ip: req.ip,

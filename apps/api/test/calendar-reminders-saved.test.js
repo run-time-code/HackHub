@@ -428,6 +428,30 @@ describe('calendar, reminders, saved hackathons and account settings', () => {
     assert.equal(empty.body.data.items.length, 0);
   });
 
+  it('saves and hydrates a catalogue record that only has a slug', async () => {
+    const slugOnly = await Hackathon.create({
+      slug: 'slug-only-saved-hack',
+      title: 'Slug Only Saved Hack',
+      registration_deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    const created = await api('POST', '/saved', {
+      hackathonId: slugOnly.slug,
+    });
+    assert.equal(created.res.status, 201);
+    assert.equal(created.body.data.hackathon.title, 'Slug Only Saved Hack');
+
+    const list = await api('GET', '/saved', undefined, { csrf: false });
+    const saved = list.body.data.items.find(
+      (item) => item.hackathon.slug === slugOnly.slug
+    );
+    assert.ok(saved);
+    assert.equal(saved.hackathon.title, 'Slug Only Saved Hack');
+
+    await api('DELETE', `/saved/${saved.id}`);
+    await Hackathon.deleteOne({ _id: slugOnly._id });
+  });
+
   it('hydrates legacy saved rows keyed by hackathon ObjectId', async () => {
     const legacy = await SavedHackathon.create({
       user: user._id,
