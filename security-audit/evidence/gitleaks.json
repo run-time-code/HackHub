@@ -1,0 +1,23 @@
+[
+  {
+    "RuleID": "generic-api-key",
+    "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "StartLine": 1,
+    "EndLine": 1,
+    "StartColumn": 1,
+    "EndColumn": 85,
+    "Match": "BRABBLE_API_KEY=REDACTED",
+    "Secret": "REDACTED",
+    "File": "data_importer/.env",
+    "SymlinkFile": "",
+    "Commit": "REDACTED",
+    "Link": "REDACTED",
+    "Entropy": 3.98973,
+    "Author": "Nandhini V",
+    "Email": "nandhini24506@gmail.com",
+    "Date": "2026-09-26T10:46:52Z",
+    "Message": "Add backend and database work",
+    "Tags": [],
+    "Fingerprint": "REDACTED:data_importer/.env:generic-api-key:1"
+  }
+]

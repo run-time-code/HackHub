@@ -1,0 +1,11 @@
+http://127.0.0.1:5000/api/hackathons?search=devpost&skills=python&mode=ONLINE&status=upcoming&domain=AI&page=1&limit=20&sort=deadline&organizer=acme
+http://127.0.0.1:5000/api/hackathons/facets
+http://127.0.0.1:5000/api/hackathons/recommendations?page=1&limit=10&skills=python
+http://127.0.0.1:5000/api/stats
+http://127.0.0.1:5000/api/users/skills
+http://127.0.0.1:5000/api/users/discover?skills=python&interests=ai&limit=10&sort=score
+http://127.0.0.1:5000/api/health
+http://127.0.0.1:5000/api/calendar?from=2026-01-01&to=2026-12-31&view=month
+http://127.0.0.1:5000/api/teams?page=1&limit=20&status=open&hackathon=6b0292f4d9fe5ce36bd23a16&skills=design
+http://127.0.0.1:5000/api/notifications?limit=50&cursor=x
+http://127.0.0.1:5000/api/team-requests/mine?status=pending

@@ -1,0 +1,8 @@
+# Downloaded tooling and runtime data (re-downloadable, not source)
+tools/
+.mongo-data/
+.output/
+logs/
+
+# Large generated CodeQL database (recreate with codeql)
+evidence/codeql-db/

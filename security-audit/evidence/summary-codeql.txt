@@ -1,0 +1,19 @@
+$ codeql database analyze codeql-db \
+    codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
+
+374 JS/TS files + 5 GitHub Actions files analysed
+raw results 72, first-party results 42
+
+   17  js/missing-rate-limiting
+   14  js/sql-injection
+    4  js/log-injection
+    2  js/missing-token-validation
+    1  js/incomplete-url-substring-sanitization
+    1  js/missing-origin-check
+    1  js/samesite-none-cookie
+    1  js/remote-property-injection
+    1  js/user-controlled-bypass
+
+Triage: Mongo 'sql-injection' hits are typed filters (ObjectIds, dates);
+'missing-token-validation'/'missing-rate-limiting' hits are global
+middleware CodeQL does not model. See report for the 3 accepted items.

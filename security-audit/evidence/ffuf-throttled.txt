@@ -1,0 +1,6 @@
+dns-query?name=google.com&type=A
+sse
+mcp
+mcp/transport
+mcp/message
+FFUF1_DONE

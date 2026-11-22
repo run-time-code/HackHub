@@ -1,0 +1,14 @@
+127.0.0.1:40924: GET http://127.0.0.1:5000/api/health
+              << 200 OK 198b
+127.0.0.1:40934: GET http://127.0.0.1:5000/api/hackathons?search=x
+              << 200 OK 1.2k
+127.0.0.1:40950: GET http://127.0.0.1:5000/api/users/me
+              << 401 Unauthorized 37b
+127.0.0.1:40958: GET http://127.0.0.1:5000/api/saved
+              << 401 Unauthorized 139b
+127.0.0.1:40962: GET http://127.0.0.1:5000/api/admin/users
+              << 401 Unauthorized 37b
+127.0.0.1:40976: POST http://127.0.0.1:5000/api/auth/login
+              << 403 Forbidden 948b
+127.0.0.1:40984: POST http://127.0.0.1:5000/api/feedback
+              << 413 Payload Too Large 1.2k

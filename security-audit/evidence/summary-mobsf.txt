@@ -1,0 +1,12 @@
+MobSF applicability check
+
+MobSF applicability check
+date: Sun Nov 22 07:32:53 AM UTC 2026
+
+--- mobile artifacts in repo ---
+(end)
+
+Result: NOT APPLICABLE. The product ships a React web client and an
+Express API only - there is no Android/iOS app, APK, IPA or mobile
+framework in the repository, and no container runtime is available for
+MobSF's required Docker deployment.

@@ -1,0 +1,26 @@
+[12:44:26] [INFO] testing 'Informix AND time-based blind (heavy query)'
+[12:44:26] [INFO] testing 'MySQL >= 5.1 time-based blind (heavy query) - PROCEDURE ANALYSE (EXTRACTVALUE)'
+[12:44:26] [INFO] testing 'MySQL >= 5.0.12 time-based blind - Parameter replace'
+[12:44:26] [INFO] testing 'MySQL >= 5.0.12 time-based blind - Parameter replace (substraction)'
+[12:44:26] [INFO] testing 'PostgreSQL > 8.1 time-based blind - Parameter replace'
+[12:44:26] [INFO] testing 'Oracle time-based blind - Parameter replace (DBMS_SESSION.SLEEP)'
+[12:44:26] [INFO] testing 'Oracle time-based blind - Parameter replace (DBMS_LOCK.SLEEP)'
+[12:44:26] [INFO] testing 'Oracle time-based blind - Parameter replace (DBMS_PIPE.RECEIVE_MESSAGE)'
+[12:44:26] [INFO] testing 'MySQL >= 5.0.12 time-based blind - ORDER BY, GROUP BY clause'
+[12:44:26] [INFO] testing 'PostgreSQL > 8.1 time-based blind - ORDER BY, GROUP BY clause'
+[12:44:26] [INFO] testing 'Oracle time-based blind - ORDER BY, GROUP BY clause (DBMS_SESSION.SLEEP)'
+[12:44:26] [INFO] testing 'Oracle time-based blind - ORDER BY, GROUP BY clause (DBMS_LOCK.SLEEP)'
+[12:44:26] [INFO] testing 'Oracle time-based blind - ORDER BY, GROUP BY clause (DBMS_PIPE.RECEIVE_MESSAGE)'
+[12:44:26] [INFO] testing 'SAP HANA AND time-based blind (heavy query)'
+[12:44:26] [INFO] testing 'Generic UNION query (NULL) - 1 to 10 columns'
+[12:44:26] [INFO] testing 'Generic UNION query (random number) - 1 to 10 columns'
+[12:44:26] [INFO] testing 'MySQL UNION query (NULL) - 1 to 10 columns'
+[12:44:27] [INFO] testing 'MySQL UNION query (random number) - 1 to 10 columns'
+[12:44:27] [WARNING] parameter 'Referer' does not seem to be injectable
+[12:44:27] [CRITICAL] all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk' options if you wish to perform more tests. If you suspect that there is some kind of protection mechanism involved (e.g. WAF) maybe you could try to use option '--tamper' (e.g. '--tamper=space2comment') and/or switch '--random-agent'
+[12:44:27] [WARNING] HTTP error codes detected during run:
+400 (Bad Request) - 4090 times
+
+[*] ending @ 12:44:27 /2026-11-22/
+
+SQLMAP_DONE

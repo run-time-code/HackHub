@@ -1,0 +1,18 @@
+$ sqlmap -u '.../api/hackathons?search=test&limit=20&page=1' \
+    --batch --level=3 --risk=2
+
+[12:44:26] [INFO] testing 'Oracle time-based blind - ORDER BY, GROUP BY clause (DBMS_PIPE.RECEIVE_MESSAGE)'
+[12:44:26] [INFO] testing 'SAP HANA AND time-based blind (heavy query)'
+[12:44:26] [INFO] testing 'Generic UNION query (NULL) - 1 to 10 columns'
+[12:44:26] [INFO] testing 'Generic UNION query (random number) - 1 to 10 columns'
+[12:44:26] [INFO] testing 'MySQL UNION query (NULL) - 1 to 10 columns'
+[12:44:27] [INFO] testing 'MySQL UNION query (random number) - 1 to 10 columns'
+[12:44:27] [WARNING] parameter 'Referer' does not seem to be injectable
+[12:44:27] [CRITICAL] all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk' options if you wish to perform more tests. If you suspect that there is some kind of protection mechanism involved (e.g. WAF) maybe you could try to use option '--tamper' (e.g. '--tamper=space2comment') and/or switch '--random-agent'
+[12:44:27] [WARNING] HTTP error codes detected during run:
+400 (Bad Request) - 4090 times
+[*] ending @ 12:44:27 /2026-11-22/
+SQLMAP_DONE
+
+No SQL injectable parameters (the datastore is MongoDB; queries are
+typed Mongoose filters).

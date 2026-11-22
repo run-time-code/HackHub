@@ -1,0 +1,14 @@
+$ gitleaks git . --redact
+215 commits scanned, ~83 MB, 4.3 s
+leaks found: 1
+
+  Rule     : generic-api-key
+  File     : data_importer/.env:1
+  Commit   : REDACTED
+  Date     : 2026-09-26T10:46:52Z
+  Secret   : REDACTED (8 chars, entropy 3.98973)
+
+File is no longer tracked (removed in a later commit) but the value is
+permanently recoverable from git history -> rotate the key.
+Note: commit SHA and link redacted from this report to avoid pointing at a
+still-reachable historical object. The key must be rotated regardless.

@@ -1,0 +1,11 @@
+$ kr brute http://127.0.0.1:5000/api/ -w api-endpoints.txt
+
+found:
+  GET 200  /api//health
+  GET 200  /api//Health
+  GET 200  /api//stats
+  GET 200  /api//Stats
+
+Only the public health/stats routes answered 200; all authenticated routes
+correctly returned 401. Express routing is case-insensitive by default,
+hence the /Health and /Stats duplicates.

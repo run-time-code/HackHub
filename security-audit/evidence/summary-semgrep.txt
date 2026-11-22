@@ -1,0 +1,9 @@
+$ semgrep scan --config=p/owasp-top-ten --config=p/nodejs \
+      --config=p/javascript --config=p/secrets .
+Ran 288 rules on 465 files: 0 findings
+
+$ semgrep scan --config=p/security-audit --config=p/express \
+      --config=p/default .
+findings: 0
+
+No injection sinks, hardcoded secrets or unsafe deserialization detected.

@@ -1,0 +1,10 @@
+$ feroxbuster -u http://127.0.0.1:5173 -w common.txt
+
+  200    1460b  http://127.0.0.1:5173/.gitignore
+  200    1940b  http://127.0.0.1:5173/package.json
+  200   10862b  http://127.0.0.1:5173/package
+  200    1655b  http://127.0.0.1:5173/vite.config.js
+
+Findings are Vite dev-server artefacts (package.json, vite.config.js,
+.gitignore served from the project root). They must never be reachable in
+production; the deployed build is static and served by Vercel.

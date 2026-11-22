@@ -1,0 +1,17 @@
+$ wapiti -u <each parameterised API endpoint> \
+    -m xss,sql,exec,ssrf,file,redirect,crlf,ldap,xxe,csrf,...
+
+  http://127.0.0.1:5000/api/hackathons?search=devpost&skills=python&mode=ONLINE&status=upcoming&do
+      vulnerabilities: 0
+  http://127.0.0.1:5000/api/users/discover?skills=python&interests=ai&limit=10&sort=score
+      vulnerabilities: 0
+  http://127.0.0.1:5000/api/calendar?from=2026-01-01&to=2026-12-31&view=month
+      vulnerabilities: 0
+  http://127.0.0.1:5000/api/teams?page=1&limit=20&status=open&skills=design
+      vulnerabilities: 0
+
+Total findings: 0
+
+Attacked: search/skills/mode/status/domain/page/limit/sort/organizer,
+discover, calendar, teams. No XSS/SQLi/command-injection/SSRF/path
+traversal/CRLF/open-redirect confirmed.

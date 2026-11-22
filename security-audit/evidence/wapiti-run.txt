@@ -1,0 +1,17 @@
+=== scan 1: http://127.0.0.1:5000/api/hackathons
+
+[*] Generating report...
+A report has been generated in the file evidence/wapiti-ep1.json
+=== scan 2: http://127.0.0.1:5000/api/users/discover
+
+[*] Generating report...
+A report has been generated in the file evidence/wapiti-ep2.json
+=== scan 3: http://127.0.0.1:5000/api/calendar
+
+[*] Generating report...
+A report has been generated in the file evidence/wapiti-ep3.json
+=== scan 4: http://127.0.0.1:5000/api/teams
+
+[*] Generating report...
+A report has been generated in the file evidence/wapiti-ep4.json
+WAPITI_EPS_DONE

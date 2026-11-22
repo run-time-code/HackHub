@@ -1,0 +1,11 @@
+$ arjun -u '.../api/hackathons' -m GET -c 10
+
+Parameters found: mode, active, sort, status
+Verified behaviour:
+  ?active=false      -> 0 results (filter honoured)
+  ?active=true       -> 2 results
+  ?includeHidden=true -> 2 results (hidden hackathon still excluded)
+  ?isHidden=true      -> 2 results (excluded)
+  ?admin=true         -> 2 results (ignored)
+
+No undocumented parameter exposes hidden or unauthorised records.

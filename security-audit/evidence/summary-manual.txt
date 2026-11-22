@@ -1,0 +1,9 @@
+Deep authenticated API suite: 43 checks
+  PASS 40, NOTE 2, FAIL 1
+
+[FAIL] RATE-01 IP rate limit not bypassable via spoofed X-Forwarded-For
+   14 logins for distinct unknown accounts with rotating X-Forwarded-For (CSRF handled per session) -> statuses=[401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401]. app.set('trust proxy', 1) makes the leftmost XFF the client
+
+Covered: authn/authz, JWT forgery, CSRF, CORS, IDOR/BOLA, mass
+assignment, NoSQL injection, prototype pollution, headers, rate
+limits, account enumeration, session revocation, admin gating, XSS.

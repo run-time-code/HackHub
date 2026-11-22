@@ -1,0 +1,1 @@
+http://127.0.0.1:5000/api/hackathons?search=test&limit=20&page=1 (GET)  # tools/sqlmap/sqlmap.py -u http://127.0.0.1:5000/api/hackathons?search=test&limit=20&page=1 --batch --level=3 --risk=2 --threads=4 --output-dir=evidence/sqlmap --flush-session

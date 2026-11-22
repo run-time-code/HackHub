@@ -1,0 +1,10 @@
+$ npm audit --workspaces
+found 0 vulnerabilities
+  info 0  low 0  moderate 0  high 0  critical 0
+
+$ npm audit --omit=dev
+found 0 vulnerabilities
+
+Registry advisories: none for the committed lockfile (root + workspaces).
+Note: npm audit only covers npm-registry advisories; it is not an SCA of
+transitive code quality and does not cover non-npm assets.

@@ -1,0 +1,128 @@
+[PASS] AUTH-01 (info) Protected endpoint rejects anonymous access
+    GET /users/me unauthenticated -> 401
+
+[PASS] AUTH-02 (info) Saved list rejects anonymous access
+    GET /saved unauthenticated -> 401
+
+[PASS] AUTH-03 (info) Admin API rejects anonymous access
+    GET /admin/users unauthenticated -> 401
+
+[PASS] JWT-01 (info) Malformed bearer token rejected
+    -> 401
+
+[PASS] JWT-02 (critical) alg=none JWT forgery rejected
+    -> 401
+
+[PASS] JWT-03 (critical) JWT signed with documented default secret 'change_me' rejected
+    -> 401
+
+[PASS] JWT-04 (info) Expired JWT rejected
+    -> 401
+
+[PASS] CORS-01 (high) CORS does not reflect arbitrary origins
+    Origin: http://evil.example -> ACAO=None, ACAC='true'
+
+[PASS] CORS-02 (high) CORS rejects 'null' origin
+    Origin: null -> ACAO=None
+
+[PASS] CSRF-01 (high) Cookie-authenticated mutation without CSRF token rejected
+    POST /saved with no X-CSRF-Token -> 403 {"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenError: invalid csrf to
+
+[PASS] CSRF-02 (high) CSRF token without matching cookie rejected
+    POST /saved with token but no cookie -> 401
+
+[PASS] CSRF-03 (low) CSRF token is bound to the authenticated session
+    token from an unrelated anonymous session (same IP) used with Alice's cookies -> 403. Binding is req.ip only (csrfMiddleware getSessionIdentifier), not the session/user.
+
+[PASS] COOKIE-01 (info) Auth cookies are HttpOnly
+    login -> 200; Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MyIsImVtYWlsIjoiYm9iQGF1ZGl0LmxvY2FsIiwicm9sZSI6InN0dWRlbnQiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMTUyOSwiZXhwIjoxNzk1MzMyNDI5fQ.dYup9Y5zhv5jwQjPMcHcvDv9Lyjtcfd9YQisZcxzMQE; Max-Age=900; Path=/; Expires=Sun, 2
+
+[PASS] INFO-01 (info) Alice saved items visible to Alice
+    GET /saved -> 200, first id=6b0292f5fed591be77e86702
+
+[PASS] IDOR-01 (high) Cross-account saved-hackathon read/update/delete blocked
+    As Bob against Alice's saved id 6b0292f5fed591be77e86702: GET=404, PATCH=404, DELETE=404
+
+[PASS] IDOR-03 (high) Non-member cannot list a team's join requests
+    As Bob (not a member) GET /teams/6b0292f53467d682420bdf8a/requests -> 403 {"success":false,"error":{"code":"FORBIDDEN","message":"Only the team leader can view requests"},"requestId":"f3b203c5-c
+
+[PASS] IDOR-04 (high) Non-member cannot list a team's invitations
+    As Bob GET /teams/6b0292f53467d682420bdf8a/invitations -> 403
+
+[PASS] IDOR-05 (critical) Non-member cannot edit a team
+    As Bob PATCH /teams/6b0292f53467d682420bdf8a -> 403
+
+[PASS] IDOR-06 (critical) Non-leader cannot transfer team leadership
+    As Bob PATCH /teams/6b0292f53467d682420bdf8a/leader -> 400
+
+[PASS] IDOR-07 (critical) Non-leader cannot delete a team
+    As Bob DELETE /teams/6b0292f53467d682420bdf8a -> 403
+
+[PASS] DATA-01 (high) Public profile does not expose private account fields
+    GET /users/public/6b0292f43467d682420bdf80 -> 200, leaked keys=none
+
+[PASS] DATA-02 (medium) Hidden hackathon is not retrievable by id
+    GET /hackathons/6b0292f4d9fe5ce36bd23a18 (isHidden=true) -> 404
+
+[PASS] DATA-03 (medium) Hidden hackathon absent from catalogue listing
+    GET /hackathons -> titles=['AUDIT Hackathon Alpha', 'AUDIT Hackathon Beta']
+
+[PASS] MASS-01 (critical) Profile update cannot escalate role or account flags
+    PUT /users/me with role=admin -> 400; resulting role=None, emailVerified=None
+
+[NOTE] MASS-02 (medium) Skill update rejects prototype-pollution keys
+    PUT /users/me/skills with '__proto__' -> 404 {"success":false,"error":{"code":"NOT_FOUND","message":"Route PUT /api/users/me/skills not found"},"
+
+[PASS] MASS-03 (high) JSON __proto__ payload does not pollute responses
+    body __proto__.isAdmin sent -> PUT 400; later GET /hackathons contains isAdmin=False
+
+[PASS] INJ-01 (info) SQL/NoSQL metacharacters in search handled safely
+    search=' OR 1=1 -- -> 200, returned 0 items
+
+[PASS] INJ-02 (critical) Mongo operator injection via query keys blocked
+    search[$ne]=x -> 200; body starts {"success":true,"data":{"items":[{"id":"6b0292f4d9fe5ce36bd23a16","_id":"6b0292f4d9fe5ce36bd23a16","
+
+[PASS] INJ-03 (critical) NoSQL operator injection in login rejected
+    {"email":{"$ne":null}} -> 403 {"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenError: invalid csrf to
+
+[PASS] ERR-01 (low) Invalid ObjectId does not leak a stack trace
+    GET /hackathons/not-an-object-id -> 404 {"success":false,"error":{"code":"HACKATHON_NOT_FOUND","message":"Hackathon not found"},"requestId":"7463caa4-c91d-4aee-b27f-2142e036b5c1"}
+
+[PASS] LIMIT-01 (low) Oversized JSON body rejected
+    200 KB body -> 413
+
+[PASS] ENUM-01 (medium) Registration does not disclose existing accounts
+    register existing alice@audit.local -> 403 {"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenError: invalid csrf to
+
+[PASS] ENUM-02 (medium) Password reset response identical for existing/non-existing accounts
+    nonexistent -> 403; existing -> 403 ({"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenEr)
+
+[PASS] ENUM-03 (low) Login failure response identical for unknown accounts
+    unknown account -> 401 {"message":"Invalid email or password"}
+
+[PASS] METRICS-01 (medium) /metrics is not exposed when no METRICS_TOKEN is configured
+    GET /metrics without METRICS_TOKEN -> 404 (implementation returns 404 to avoid confirming the path)
+
+[PASS] HDR-01 (info) Security headers present on API responses
+    {'X-Content-Type-Options': True, 'X-Frame-Options': True, 'Content-Security-Policy': True, 'Referrer-Policy': True}
+
+[NOTE] HDR-02 (medium) Frontend responses set CSP/XCTO/Referrer-Policy
+    CSP=None, XCTO=None, Referrer-Policy=None (Vite dev server; production CSP is set by configure-vercel-csp.mjs)
+
+[FAIL] RATE-01 (medium) IP rate limit not bypassable via spoofed X-Forwarded-For
+    14 logins for distinct unknown accounts with rotating X-Forwarded-For (CSRF handled per session) -> statuses=[401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401]. app.set('trust proxy', 1) makes the leftmost XFF the client IP when the app is reachable directly.
+
+[PASS] SESS-01 (high) Access token is revoked server-side on logout
+    logout -> 200; reuse of pre-logout token -> 401
+
+[PASS] AUTHZ-01 (critical) Non-admin cannot reach admin endpoints
+    Alice -> GET /admin/users 403
+
+[PASS] AUTHZ-02 (high) Non-admin cannot trigger scraper jobs
+    Alice -> POST /admin/scrapers/run 403
+
+[PASS] AUTHZ-03 (info) Admin can reach admin endpoints
+    Admin -> GET /admin/users 404
+
+[PASS] XSS-01 (medium) Search payload not reflected unescaped in HTML context
+    content-type=application/json; charset=utf-8, reflected=False

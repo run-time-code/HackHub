@@ -1,0 +1,11 @@
+$ trivy fs --scanners vuln,misconfig --skip-dirs node_modules .
+
+Report Summary
+ target                     type        vulns  misconfig
+ backend/package-lock.json  npm             0          -
+ package-lock.json          npm             0          -
+ apps/api/Dockerfile        dockerfile      -          0
+
+No vulnerable dependencies and no Dockerfile misconfigurations.
+(secret scanning was also run; only false positives inside local tool
+virtualenv/node_modules were reported.)

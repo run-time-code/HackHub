@@ -1,0 +1,21 @@
+$ java -jar burpsuite_community.jar --use-defaults
+
+
+The Licence, its subject matter or its formation (including non-contractual disputes or claims) shall be governed by and construed in accordance with English law and submitted to the exclusive jurisdiction of the English courts.
+Do you accept the terms and conditions? (y/n)
+
+Burp Suite Community Edition 2025.10.3 installed (bundled JRE).
+Headless run: prints the licence, then exits (exit 11) because the GUI is
+required; with DISPLAY=:0 it starts but blocks on the interactive project
+dialog and never opens the proxy listener.
+Community edition also has no automated scanner (Pro-only).
+
+Proxy-level testing was therefore performed with mitmproxy (same class of
+intercepting proxy) - see proxy-flows:
+  GET  /api/health        200
+  GET  /api/hackathons   200
+  GET  /api/users/me     401
+  GET  /api/saved        401
+  GET  /api/admin/users  401
+  POST /api/auth/login   403 (CSRF token missing)
+  POST /api/feedback     413 (200 KB body)

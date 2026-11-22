@@ -1,0 +1,18 @@
+$ checkov -d . --framework dockerfile,github_actions,secrets
+
+CKV_GHA_3    /.github/workflows/deploy-staging.yml:[37, 47]
+    Suspicious use of curl with secrets
+CKV_GHA_3    /.github/workflows/deploy-staging.yml:[46, 65]
+    Suspicious use of curl with secrets
+CKV_GHA_7    /.github/workflows/scrape-hackathons.yml:[17, 28]
+    The build output cannot be affected by user parameters other than the build entry point and the top-level sour
+CKV2_GHA_1   /.github/workflows/ci.yml:[53, 54]
+    Ensure top-level permissions are not set to write-all
+CKV2_GHA_1   /.github/workflows/deploy-staging.yml:[0, 1]
+    Ensure top-level permissions are not set to write-all
+CKV2_GHA_1   /.github/workflows/scrape-hackathons.yml:[0, 1]
+    Ensure top-level permissions are not set to write-all
+CKV2_GHA_1   /.github/workflows/deploy-production.yml:[0, 1]
+    Ensure top-level permissions are not set to write-all
+
+passed 289 / failed 7

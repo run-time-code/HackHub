@@ -1,0 +1,303 @@
+[
+  {
+    "id": "AUTH-01",
+    "title": "Protected endpoint rejects anonymous access",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "GET /users/me unauthenticated -> 401"
+  },
+  {
+    "id": "AUTH-02",
+    "title": "Saved list rejects anonymous access",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "GET /saved unauthenticated -> 401"
+  },
+  {
+    "id": "AUTH-03",
+    "title": "Admin API rejects anonymous access",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "GET /admin/users unauthenticated -> 401"
+  },
+  {
+    "id": "JWT-01",
+    "title": "Malformed bearer token rejected",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "-> 401"
+  },
+  {
+    "id": "JWT-02",
+    "title": "alg=none JWT forgery rejected",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "-> 401"
+  },
+  {
+    "id": "JWT-03",
+    "title": "JWT signed with documented default secret 'change_me' rejected",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "-> 401"
+  },
+  {
+    "id": "JWT-04",
+    "title": "Expired JWT rejected",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "-> 401"
+  },
+  {
+    "id": "CORS-01",
+    "title": "CORS does not reflect arbitrary origins",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "Origin: http://evil.example -> ACAO=None, ACAC='true'"
+  },
+  {
+    "id": "CORS-02",
+    "title": "CORS rejects 'null' origin",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "Origin: null -> ACAO=None"
+  },
+  {
+    "id": "CSRF-01",
+    "title": "Cookie-authenticated mutation without CSRF token rejected",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "POST /saved with no X-CSRF-Token -> 403 {\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenError: invalid csrf to"
+  },
+  {
+    "id": "CSRF-02",
+    "title": "CSRF token without matching cookie rejected",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "POST /saved with token but no cookie -> 401"
+  },
+  {
+    "id": "CSRF-03",
+    "title": "CSRF token is bound to the authenticated session",
+    "severity": "low",
+    "verdict": "PASS",
+    "detail": "token from an unrelated anonymous session (same IP) used with Alice's cookies -> 403. Binding is req.ip only (csrfMiddleware getSessionIdentifier), not the session/user."
+  },
+  {
+    "id": "COOKIE-01",
+    "title": "Auth cookies are HttpOnly",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "login -> 200; Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MyIsImVtYWlsIjoiYm9iQGF1ZGl0LmxvY2FsIiwicm9sZSI6InN0dWRlbnQiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMTUyOSwiZXhwIjoxNzk1MzMyNDI5fQ.dYup9Y5zhv5jwQjPMcHcvDv9Lyjtcfd9YQisZcxzMQE; Max-Age=900; Path=/; Expires=Sun, 2"
+  },
+  {
+    "id": "INFO-01",
+    "title": "Alice saved items visible to Alice",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "GET /saved -> 200, first id=6b0292f5fed591be77e86702"
+  },
+  {
+    "id": "IDOR-01",
+    "title": "Cross-account saved-hackathon read/update/delete blocked",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "As Bob against Alice's saved id 6b0292f5fed591be77e86702: GET=404, PATCH=404, DELETE=404"
+  },
+  {
+    "id": "IDOR-03",
+    "title": "Non-member cannot list a team's join requests",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "As Bob (not a member) GET /teams/6b0292f53467d682420bdf8a/requests -> 403 {\"success\":false,\"error\":{\"code\":\"FORBIDDEN\",\"message\":\"Only the team leader can view requests\"},\"requestId\":\"f3b203c5-c"
+  },
+  {
+    "id": "IDOR-04",
+    "title": "Non-member cannot list a team's invitations",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "As Bob GET /teams/6b0292f53467d682420bdf8a/invitations -> 403"
+  },
+  {
+    "id": "IDOR-05",
+    "title": "Non-member cannot edit a team",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "As Bob PATCH /teams/6b0292f53467d682420bdf8a -> 403"
+  },
+  {
+    "id": "IDOR-06",
+    "title": "Non-leader cannot transfer team leadership",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "As Bob PATCH /teams/6b0292f53467d682420bdf8a/leader -> 400"
+  },
+  {
+    "id": "IDOR-07",
+    "title": "Non-leader cannot delete a team",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "As Bob DELETE /teams/6b0292f53467d682420bdf8a -> 403"
+  },
+  {
+    "id": "DATA-01",
+    "title": "Public profile does not expose private account fields",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "GET /users/public/6b0292f43467d682420bdf80 -> 200, leaked keys=none"
+  },
+  {
+    "id": "DATA-02",
+    "title": "Hidden hackathon is not retrievable by id",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "GET /hackathons/6b0292f4d9fe5ce36bd23a18 (isHidden=true) -> 404"
+  },
+  {
+    "id": "DATA-03",
+    "title": "Hidden hackathon absent from catalogue listing",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "GET /hackathons -> titles=['AUDIT Hackathon Alpha', 'AUDIT Hackathon Beta']"
+  },
+  {
+    "id": "MASS-01",
+    "title": "Profile update cannot escalate role or account flags",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "PUT /users/me with role=admin -> 400; resulting role=None, emailVerified=None"
+  },
+  {
+    "id": "MASS-02",
+    "title": "Skill update rejects prototype-pollution keys",
+    "severity": "medium",
+    "verdict": "NOTE",
+    "detail": "PUT /users/me/skills with '__proto__' -> 404 {\"success\":false,\"error\":{\"code\":\"NOT_FOUND\",\"message\":\"Route PUT /api/users/me/skills not found\"},\""
+  },
+  {
+    "id": "MASS-03",
+    "title": "JSON __proto__ payload does not pollute responses",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "body __proto__.isAdmin sent -> PUT 400; later GET /hackathons contains isAdmin=False"
+  },
+  {
+    "id": "INJ-01",
+    "title": "SQL/NoSQL metacharacters in search handled safely",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "search=' OR 1=1 -- -> 200, returned 0 items"
+  },
+  {
+    "id": "INJ-02",
+    "title": "Mongo operator injection via query keys blocked",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "search[$ne]=x -> 200; body starts {\"success\":true,\"data\":{\"items\":[{\"id\":\"6b0292f4d9fe5ce36bd23a16\",\"_id\":\"6b0292f4d9fe5ce36bd23a16\",\""
+  },
+  {
+    "id": "INJ-03",
+    "title": "NoSQL operator injection in login rejected",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "{\"email\":{\"$ne\":null}} -> 403 {\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenError: invalid csrf to"
+  },
+  {
+    "id": "ERR-01",
+    "title": "Invalid ObjectId does not leak a stack trace",
+    "severity": "low",
+    "verdict": "PASS",
+    "detail": "GET /hackathons/not-an-object-id -> 404 {\"success\":false,\"error\":{\"code\":\"HACKATHON_NOT_FOUND\",\"message\":\"Hackathon not found\"},\"requestId\":\"7463caa4-c91d-4aee-b27f-2142e036b5c1\"}"
+  },
+  {
+    "id": "LIMIT-01",
+    "title": "Oversized JSON body rejected",
+    "severity": "low",
+    "verdict": "PASS",
+    "detail": "200 KB body -> 413"
+  },
+  {
+    "id": "ENUM-01",
+    "title": "Registration does not disclose existing accounts",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "register existing alice@audit.local -> 403 {\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenError: invalid csrf to"
+  },
+  {
+    "id": "ENUM-02",
+    "title": "Password reset response identical for existing/non-existing accounts",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "nonexistent -> 403; existing -> 403 ({\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenEr)"
+  },
+  {
+    "id": "ENUM-03",
+    "title": "Login failure response identical for unknown accounts",
+    "severity": "low",
+    "verdict": "PASS",
+    "detail": "unknown account -> 401 {\"message\":\"Invalid email or password\"}"
+  },
+  {
+    "id": "METRICS-01",
+    "title": "/metrics is not exposed when no METRICS_TOKEN is configured",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "GET /metrics without METRICS_TOKEN -> 404 (implementation returns 404 to avoid confirming the path)"
+  },
+  {
+    "id": "HDR-01",
+    "title": "Security headers present on API responses",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "{'X-Content-Type-Options': True, 'X-Frame-Options': True, 'Content-Security-Policy': True, 'Referrer-Policy': True}"
+  },
+  {
+    "id": "HDR-02",
+    "title": "Frontend responses set CSP/XCTO/Referrer-Policy",
+    "severity": "medium",
+    "verdict": "NOTE",
+    "detail": "CSP=None, XCTO=None, Referrer-Policy=None (Vite dev server; production CSP is set by configure-vercel-csp.mjs)"
+  },
+  {
+    "id": "RATE-01",
+    "title": "IP rate limit not bypassable via spoofed X-Forwarded-For",
+    "severity": "medium",
+    "verdict": "FAIL",
+    "detail": "14 logins for distinct unknown accounts with rotating X-Forwarded-For (CSRF handled per session) -> statuses=[401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401]. app.set('trust proxy', 1) makes the leftmost XFF the client IP when the app is reachable directly."
+  },
+  {
+    "id": "SESS-01",
+    "title": "Access token is revoked server-side on logout",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "logout -> 200; reuse of pre-logout token -> 401"
+  },
+  {
+    "id": "AUTHZ-01",
+    "title": "Non-admin cannot reach admin endpoints",
+    "severity": "critical",
+    "verdict": "PASS",
+    "detail": "Alice -> GET /admin/users 403"
+  },
+  {
+    "id": "AUTHZ-02",
+    "title": "Non-admin cannot trigger scraper jobs",
+    "severity": "high",
+    "verdict": "PASS",
+    "detail": "Alice -> POST /admin/scrapers/run 403"
+  },
+  {
+    "id": "AUTHZ-03",
+    "title": "Admin can reach admin endpoints",
+    "severity": "info",
+    "verdict": "PASS",
+    "detail": "Admin -> GET /admin/users 404"
+  },
+  {
+    "id": "XSS-01",
+    "title": "Search payload not reflected unescaped in HTML context",
+    "severity": "medium",
+    "verdict": "PASS",
+    "detail": "content-type=application/json; charset=utf-8, reflected=False"
+  }
+]

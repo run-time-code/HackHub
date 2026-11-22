@@ -1,0 +1,12 @@
+$ python xsstrike.py -u '.../api/hackathons?search=test' --skip
+
+XSStrike v3.1.5
+
+[~] Checking for DOM vulnerabilities 
+[+] WAF Status: Offline 
+[!] Testing parameter: search 
+[-] No reflection found 
+XSSTRIKE2_DONE
+
+No reflection of the parameter in the response body -> no reflected XSS.
+Frontend renders via React (no dangerouslySetInnerHTML in app code).

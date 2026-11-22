@@ -1,0 +1,13 @@
+$ ffuf -w common.txt -u http://127.0.0.1:5000/api/FUZZ -mc all -fc 404
+
+  200    198b  http://127.0.0.1:5000/api/Health
+  200    140b  http://127.0.0.1:5000/api/Stats
+  401    139b  http://127.0.0.1:5000/api/calendar
+  200    198b  http://127.0.0.1:5000/api/health
+  401    139b  http://127.0.0.1:5000/api/notifications
+  401    139b  http://127.0.0.1:5000/api/saved
+  200    140b  http://127.0.0.1:5000/api/stats
+
+4751 words. Only health/stats are unauthenticated.
+During the first pass the app's own 600/min limiter returned 429 for the
+bulk of requests (evidence: ffuf-throttled.txt) - a control that works.

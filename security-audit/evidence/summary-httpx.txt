@@ -1,0 +1,17 @@
+$ httpx -status-code -tech-detect -web-server -json
+
+[200] http://127.0.0.1:5000/api/health  ()
+      content_security_policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-a
+      strict_transport_security: max-age=31536000; includeSubDomains
+      x_frame_options: SAMEORIGIN
+      x_content_type_options: nosniff
+      referrer_policy: no-referrer
+
+[200] http://127.0.0.1:5000/api/hackathons  ()
+      content_security_policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-a
+      strict_transport_security: max-age=31536000; includeSubDomains
+      x_frame_options: SAMEORIGIN
+      x_content_type_options: nosniff
+      referrer_policy: no-referrer
+
+[200] http://127.0.0.1:5173  (HackHub — Discover. Team Up. Compete.)

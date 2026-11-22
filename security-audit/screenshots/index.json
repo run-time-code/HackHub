@@ -1,0 +1,67 @@
+[
+  {
+    "name": "01-landing",
+    "url": "/",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/01-landing.png"
+  },
+  {
+    "name": "02-auth-login",
+    "url": "/auth?panel=login",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/02-auth-login.png"
+  },
+  {
+    "name": "03-auth-register",
+    "url": "/auth?panel=register",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/03-auth-register.png"
+  },
+  {
+    "name": "04-faq",
+    "url": "/faq",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/04-faq.png"
+  },
+  {
+    "name": "05-privacy",
+    "url": "/legal/privacy",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/05-privacy.png"
+  },
+  {
+    "name": "06-dashboard",
+    "url": "/dashboard",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/06-dashboard.png"
+  },
+  {
+    "name": "07-discover",
+    "url": "/discover",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/07-discover.png"
+  },
+  {
+    "name": "08-teammates",
+    "url": "/teammates",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/08-teammates.png"
+  },
+  {
+    "name": "09-teams",
+    "url": "/teams",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/09-teams.png"
+  },
+  {
+    "name": "10-requests",
+    "url": "/requests",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/10-requests.png"
+  },
+  {
+    "name": "11-calendar",
+    "url": "/calendar",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/11-calendar.png"
+  },
+  {
+    "name": "12-profile",
+    "url": "/profile",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/12-profile.png"
+  },
+  {
+    "name": "13-settings",
+    "url": "/settings",
+    "file": "/home/senthil/Downloads/OpenSource/HackHub/security-audit/screenshots/13-settings.png"
+  }
+]
