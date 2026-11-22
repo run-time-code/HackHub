@@ -4,10 +4,10 @@
 > **Audit package reviewed:** `security-audit/`  
 > **Target reviewed:** HackHub local audit environment (`apps/api`, `apps/web`)  
 > **Report type:** Independent consolidation of the existing audit package, plus validation of selected findings against the running local app.  
-> **Status:** Final consolidated report. This is the first report in `security-audit/reports/`; the directory was empty before this file was created.  
-> **Secret handling:** **No secret values are reproduced in this report.** Some referenced evidence files contain live test passwords, cookies, CSRF tokens, JWTs, or an access-token secret. Those files must be handled as sensitive and must not be published or shared as-is.
+> **Status:** Final consolidated report; updated 22 November 2026 with the environment-assisted validation in Appendix H. Still **not approved**.  
+> **Secret handling:** **No secret values are reproduced in this report.** Some referenced evidence files contain live test passwords, cookies, CSRF tokens, JWTs, or an access-token secret. Those files must be handled as sensitive and must not be published or shared as-is. The supplied environment values were used only for the checks in Appendix H and were never written into this report.
 
-> **Bottom line:** The audit package contains useful raw evidence, but it does **not** support a “0 vulnerabilities” or “clean” conclusion. It found real issues, missed or invalidated several important tests, and contains its own credential leaks. The most important assurance finding is that the summary layer is materially unreliable. The most important operational findings are the historical secret leak, the credentials embedded in the audit folder and exposed local services, and a confirmed rate-limit bypass.
+> **Bottom line:** The audit package contains useful raw evidence, but it does **not** support a “0 vulnerabilities” or “clean” conclusion. It found real issues, missed or invalidated several important tests, and contains its own credential leaks. The most important assurance finding is that the summary layer is materially unreliable. The most important operational findings are the historical secret leak, the credentials embedded in the audit folder and exposed local services, and a confirmed rate-limit bypass. The 22 November environment-assisted pass also confirmed that the supplied remote Atlas and Cloudinary credentials are live, that the current evidence tree contains 13 redacted secret matches, and that password-reset responses become enumerable when email delivery fails. Those results strengthen the P0 rotation/containment case; they do not close it.
 
 ---
 
@@ -44,7 +44,7 @@ The review covered the whole `security-audit/` folder:
 - the tool binaries, Python virtual environment, logs, wordlists, and `.gitignore`;
 - the Git/GitHub handling of the historical secret, as reflected in the evidence and repository state.
 
-Selected findings were validated against the local app with read-only or low-impact checks. No production system, production credentials, or third-party provider was tested. No destructive exploitation was performed.
+Selected findings were validated against the local app with read-only or low-impact checks. The 22 November environment-assisted pass also used the supplied remote Atlas and Cloudinary credentials for **read-only authentication/metadata checks only**: no production documents were read, no uploads were performed, and no email was sent. No production HackHub deployment was tested, and no destructive exploitation was performed.
 
 ### 1.2 The short version
 
@@ -53,6 +53,9 @@ The folder is **large, mixed-quality, and internally inconsistent**:
 - It contains **real raw evidence** (CodeQL SARIF, Trivy/Checkov/Wapiti JSON, ffuf JSON, Mongo data) and some genuine findings.
 - It also contains **synthetic screenshots**, **hardcoded summary text**, **false passes**, **invalid tool runs**, and **misleading claims** that are not supported by the raw output.
 - It contains **live test credentials and tokens in tracked files**, including a running access-token secret in a tracked script, while the API and Vite servers were bound to `0.0.0.0`.
+- The supplied environment values include **live remote Atlas and Cloudinary credentials**; read-only authentication succeeded. They must be rotated and were not used to read documents or upload data.
+- A current-tree secret scan found **13 redacted matches in 6 evidence files** (9 in tracked evidence plus 4 in the CodeQL database). This is a P0 containment issue, not just a historical one.
+- New environment-assisted tests confirmed **password-reset account enumeration when email delivery fails**, **auto-verification under `DEV_AUTO_VERIFY=true`**, and **partial upload validation**. The seeded stored-XSS payload was escaped in Chromium, and production-mode OAuth state/cookie checks passed.
 - It does **not** contain a final report, a README, a methodology, a findings register, a coverage matrix, checksums, or a tool manifest.
 
 The correct conclusion is **not** “the app is clean.” The correct conclusion is:
@@ -73,11 +76,14 @@ The correct conclusion is **not** “the app is clean.” The correct conclusion
 | Manual checks | **43** | 40 PASS, 2 NOTE, 1 FAIL — but several are invalid or weak |
 | CodeQL raw results | **72** | 42 first-party, 30 in audit tools/venv |
 | CodeQL first-party active API hits | **23** | 17 legacy, 1 build script, 1 web dev artifact |
-| Semgrep deep-scan conclusion | **Invalid** | 0 files scanned, 2 config errors |
+| Semgrep re-run (22 Nov) | **0 findings** | 280 files and 173 rules across API/web; 0 errors; supersedes the invalid deep run |
+| npm audit (22 Nov) | **0 vulnerabilities** | 833 npm dependencies |
 | Wapiti findings | **0 vulns** | But 1 unhandled 500 anomaly was ignored |
-| Checkov failed checks | **7** | GitHub Actions hardening |
-| Trivy app results | **0** | App lockfiles/Dockerfile clean; third-party tooling noise |
-| Gitleaks historical findings | **1** | One secret-bearing historical `.env`; remediation incomplete |
+| Checkov failed checks | **7** | 241 passed, 7 failed, 0 parsing errors; GitHub Actions hardening |
+| Trivy app results | **0** | 2 npm lockfiles; 0 known vulnerabilities; not a full image/SBOM scan |
+| Gitleaks historical finding | **1** | One secret-bearing historical `.env`; remediation incomplete |
+| Gitleaks current evidence | **13 matches** | 6 files: 9 in tracked evidence, 4 in CodeQL DB page dumps; all redacted |
+| Gitleaks Git history | **9 matches** | 4 tracked evidence files; values redacted |
 | Live services observed | **3** | API `0.0.0.0:5000`, Vite `0.0.0.0:5173`, Mongo `127.0.0.1:27017` |
 
 ### 1.4 Top findings
@@ -85,17 +91,19 @@ The correct conclusion is **not** “the app is clean.” The correct conclusion
 | ID | Finding | Severity | Status |
 |---|---|---|---|
 | `SEC-01` | Historical secret exposure in Git/GitHub; rotation and purge not verified | **Critical** (until rotated) | Confirmed from gitleaks evidence; operational remediation pending |
-| `SEC-02` | Audit artifacts and live local services expose credentials/tokens; API/Vite on `0.0.0.0` | **High** | Confirmed in the audit environment |
+| `SEC-02` | Audit artifacts and live local services expose credentials/tokens; supplied remote Atlas/Cloudinary credentials are live; API/Vite on `0.0.0.0` | **High** | Confirmed; remote read-only authentication succeeded; rotation pending |
 | `RATE-01` | IP rate-limit bypass via spoofed `X-Forwarded-For`; 14 login attempts produced no 429 | **High** | Confirmed live |
-| `EVID-01` | Evidence package is unreliable: synthetic screenshots, hardcoded summaries, false passes, invalid tools, no report | **High** (assurance) | Confirmed by comparison with raw evidence |
-| `ERR-01` | Error-stack leakage on CSRF 403 and oversized-body 413 responses | **Medium** | Confirmed live/proxy evidence |
-| `SAN-01` | Sanitizer copies `__proto__`; prototype-inherited properties are visible; exploitation not demonstrated | **Medium** | Confirmed code behavior |
-| `ADMIN-01` | `GET /api/admin/users` does not exist; admin authorization and ban/unban are untested | **Medium** (assurance) | Confirmed incompletion |
-| `DB-01` | Local MongoDB runs without authentication | **Medium** (local audit environment) | Confirmed live |
-| `VITE-01` | Vite dev server on `0.0.0.0:5173` serves project files | **Low/Medium** | Confirmed live |
-| `CI-01` | GitHub Actions use `write-all` and curl-with-secrets patterns | **Low/Medium** | Confirmed by Checkov |
+| `EVID-01` | Evidence package is unreliable: synthetic screenshots, hardcoded summaries, false passes, invalid tools, no report | **High** (assurance) | Confirmed by comparison with raw evidence; some tool claims now re-run |
+| `ERR-01` | Error-stack leakage on CSRF 403, oversized-body 413, and malformed-JSON 400 responses | **Medium** | Confirmed in development; production-mode 403/413 did not leak stacks |
+| `SAN-01` | Sanitizer copies `__proto__`; request-body inheritance demonstrated; global prototype not polluted | **Medium** | Confirmed code behavior |
+| `ADMIN-01` | `GET /api/admin/users` does not exist; ban/unban and admin authorization now tested | **Medium** (assurance) | Admin list 404; reports/scrapers/ban-unban matrix passes |
+| `DB-01` | Local MongoDB runs without authentication; supplied remote Atlas credential accepted read-only | **Medium** (local audit environment) | Confirmed live/read-only |
+| `VITE-01` | Vite dev server on `0.0.0.0:5173` serves project files; frontend headers absent | **Low/Medium** | Confirmed live |
+| `CI-01` | GitHub Actions use `write-all` and curl-with-secrets patterns | **Low/Medium** | Confirmed by Checkov: 241 passed, 7 failed |
 | `LOG-01` | Four user-controlled log-injection candidates in an active controller | **Low** | Static only |
-| `OAUTH-01` | OAuth state cookie uses `SameSite=None` in production; end-to-end OAuth untested | **Low** | Needs review |
+| `OAUTH-01` | OAuth state cookie uses `SameSite=None` in production; start/state/cookie tested, full provider login untested | **Low** | Production-mode checks pass; full provider blocked |
+| `RESET-01` | Password-reset response differs (known email 500 vs unknown 200) when email delivery fails | **Medium** | Confirmed under provider-failure condition |
+| `EMAIL-01` | `DEV_AUTO_VERIFY=true` auto-verifies registration | **Medium** (config) | Confirmed in running development config |
 | `LEGACY-01` | Legacy/duplicate backend has static SQLi and missing-rate-limit hits | **Medium** (needs review) | Static only |
 | `SUPPLY-01` | Audit tooling has no checksums/SBOM, dev versions, duplicate archives, and fake DNS shims | **Medium** (assurance) | Confirmed |
 | `PRIV-01` | Test credentials/PII-like data and absolute local paths in tracked artifacts | **Medium** (privacy) | Partly confirmed |
@@ -104,29 +112,40 @@ The correct conclusion is **not** “the app is clean.” The correct conclusion
 
 **Confirmed in the local environment:**
 
-- The rate-limit bypass via `X-Forwarded-For`.
-- Error-stack leakage on at least two error paths (403 CSRF and 413 body-too-large).
-- The sanitizer’s `__proto__` handling weakness, with inherited properties visible in the sanitized object.
-- The local MongoDB has no authentication.
-- The Vite dev server exposes project files on `0.0.0.0:5173`.
-- The admin user-list GET route is absent; the recorded “admin can reach admin endpoints” test passed on a 404.
-- The audit folder contains live test credentials/tokens and a running access-token secret in a tracked script.
+- The rate-limit bypass via `X-Forwarded-For`: 14 unique spoofed values produced zero 429s; repeated attempts on one value produced 429s.
+- Error-stack leakage in development on 403 CSRF, 413 body-too-large, and malformed-JSON 400 paths. Production-mode 403/413 responses did not contain stack-like content.
+- The sanitizer’s `__proto__` handling weakness: request-body inherited properties are visible; the global `Object.prototype` was not polluted.
+- The local MongoDB has no authentication; the supplied remote Atlas credential was accepted for a read-only ping/metadata check, with no documents read.
+- The Vite dev server exposes project files on `0.0.0.0:5173`; the frontend response lacks CSP, XCTO, Referrer-Policy, HSTS, and X-Frame-Options.
+- The admin user-list GET route is absent (404). Ban/unban, reports, and scrapers authorization checks returned the expected 200/403/401/403 matrix.
+- The audit folder contains live test credentials/tokens and a running access-token secret in a tracked script. A current-tree scan found 13 redacted matches in 6 evidence files, including 4 in the CodeQL database.
 - The historical secret finding is real; the old secret must be treated as compromised until rotation is verified.
+- NoSQL operator login attempts were rejected (400, no access cookie); the hidden hackathon was not exposed.
+- `IDOR-02` and additional saved-item, notification, team-request, and invitation checks passed for the tested objects.
+- Profile/skills mass-assignment attempts did not change `role` or sensitive fields.
+- The seeded stored-XSS payload was rendered as text in Chromium: zero raw `<img src=x>` elements and zero dialogs.
+- Password-reset responses were enumerable when email delivery failed (known email 500 vs unknown 200); a random reset token was rejected. Registration auto-verified under `DEV_AUTO_VERIFY=true`.
+- Upload validation rejected missing files, wrong MIME types, and oversized files; the bad-magic-byte path reached the unconfigured storage layer (503) instead of a validation rejection.
+- OAuth start redirects and state-cookie flags passed in a production-mode local process; mismatched state was rejected without a stack. Full provider login was not completed.
+- Semgrep, npm audit, Trivy, Checkov, and gitleaks re-runs completed with the counts in Appendix H.
 
 **Not confirmed / not demonstrated by the available evidence:**
 
 - SQL injection in the active API (CodeQL flags typed Mongoose filters; no exploit was demonstrated).
 - SQL injection in legacy code (static only; deployment status unclear).
-- NoSQL operator injection (the relevant tests were blocked by CSRF and are invalid).
-- Stored or DOM XSS (only reflected search was tested; the seeded stored payload was not exercised).
-- IDOR/BOLA beyond the specific cases that passed; `IDOR-02` is missing entirely.
-- Mass assignment (the tests used weak assertions or the wrong endpoint).
-- Authentication bypass or admin bypass.
-- File-upload, SSRF, OAuth login-CSRF, password-reset, or email-verification vulnerabilities.
-- Production TLS/header/redirect weaknesses (production was not tested).
-- Remote code execution, command injection, or server-side template injection.
+- DOM or reflected XSS beyond the one stored-payload browser test.
+- A complete IDOR/BOLA object/role matrix beyond the tested saved, notification, team-request, invitation, and reminder objects.
+- SSRF via scraper/links or remote avatar URLs.
+- End-to-end file upload, image processing/EXIF, signed-URL exposure, deletion, and Cloudinary write behavior.
+- Full OAuth provider login, callback, account-linking, redirect-URI allowlist, replay, and expiry behavior.
+- Production TLS/header/redirect weaknesses (production was not tested; testssl had no TLS endpoint).
+- Rate limits beyond login/global and CSRF coverage beyond selected routes.
+- Resend send capability; the read-only `/domains` check returned 401 and no email was sent.
+- Python/Go/Docker SCA, image scanning, and a full SBOM.
+- Remediation of any P0/P1 finding; no fix was implemented or independently verified.
+- Background jobs, scraper execution, and mobile behavior.
 
-This distinction is central: the folder contains many claims, but most of the “not found” statements are **absence of evidence**, not evidence of absence.
+This distinction is central: the folder contains many claims, but most of the “not found” statements are **absence of evidence**, not evidence of absence. The 22 November pass reduces the number of untested areas but does not turn the package into a clean result.
 
 ### 1.6 What the audit got right
 
@@ -146,14 +165,14 @@ The problem is the **summary and evidence-handling layer**, not the existence of
 
 | Dimension | Rating | Reason |
 |---|---|---|
-| Application security | **Amber/Red** | Real rate-limit, error-leak, and sanitizer issues; many important areas untested |
-| Evidence quality | **Red** | Synthetic tool images, hardcoded summaries, invalid Semgrep, wrong kiterunner count, false ffuf citation |
-| Secret handling | **Red** | Historical leak unresolved; live test credentials/tokens in tracked files; access secret in a script |
-| Coverage | **Red** | No authenticated proxy, no production, no file upload/OAuth/reset/admin ban, no stored XSS, no Python/Go/Docker SCA |
-| Reproducibility | **Red** | No README/methodology/manifest/checksums; tools ignored; fake DNS; no environment snapshot |
+| Application security | **Amber/Red** | Real rate-limit, error-leak, sanitizer, reset-enumeration, and config issues; some important areas are now tested but many remain |
+| Evidence quality | **Amber** | Synthetic tool images and invalid claims remain, but valid Semgrep/SCA/secret re-runs and a browser XSS test now exist |
+| Secret handling | **Red** | Historical leak unresolved; live test credentials/tokens in tracked files; 13 current-tree matches; live remote credentials confirmed |
+| Coverage | **Amber** | New NoSQL, IDOR, mass-assignment, admin, reset/email, upload, OAuth-state, stored-XSS, SCA, and secret checks; no production, SSRF, or full provider login |
+| Reproducibility | **Red/Amber** | Commands and counts are recorded, but there is still no README/methodology/manifest/checksums and tools are ignored |
 | Tooling | **Amber** | Many tools available, but versions are mixed/dev, no checksums, duplicates, and some are not usable |
 | Production readiness | **Unknown** | No production target, no TLS test, no deployment test |
-| Documentation | **Red** | No final report, no README, no findings register, no remediation tracking |
+| Documentation | **Amber** | The report and assignment now exist; evidence still needs redaction and a reproducible index |
 | Overall | **Not approved** | The audit package cannot be signed off as complete or clean |
 
 ---
@@ -170,8 +189,8 @@ The problem is the **summary and evidence-handling layer**, not the existence of
 
 ### 2.2 Out of scope
 
-- Production HackHub deployments, production databases, and production credentials.
-- Third-party services: Google/GitHub OAuth, Cloudinary, Sentry, Vercel, Render, email providers, and any external API.
+- Production HackHub deployments and production application data. The supplied remote Atlas and Cloudinary credentials were used only for read-only authentication/metadata checks; no documents were read and no uploads were performed.
+- Third-party services beyond that read-only check: full Google/GitHub OAuth login, Resend email delivery, Sentry, Vercel, Render, and any other external API.
 - Mobile applications; no mobile artifact was present.
 - Network-level testing beyond the local host, DNS infrastructure, firewalls, and ISP.
 - Physical security, social engineering, supply-chain compromise of upstream projects, and zero-day research.
@@ -185,7 +204,7 @@ The problem is the **summary and evidence-handling layer**, not the existence of
 | API | `0.0.0.0:5000`, Node/Express, `NODE_ENV=development` | Reachable from the local network; development error behavior |
 | Web | `0.0.0.0:5173`, Vite dev server | Project files reachable from the local network |
 | MongoDB | `127.0.0.1:27017`, no authentication, database `hackhub` | Any local user/process can read/write the test DB |
-| API database | Local loopback MongoDB; no credentials | No remote/production DB was used by the API |
+| API database | Local loopback MongoDB; no credentials | No remote/production DB was used by the API; the remote Atlas credential was checked separately, read-only |
 | API auto-verification | `DEV_AUTO_VERIFY=true` | Registration email verification is bypassed in this environment |
 | Background jobs | `RUN_BACKGROUND_JOBS=false` | Scraper/background behavior was not exercised |
 | Global rate limits | `RATE_LIMIT_PER_IP=100000`, `RATE_LIMIT_PER_USER=100000` | The global limiter is effectively disabled |
@@ -195,6 +214,13 @@ The problem is the **summary and evidence-handling layer**, not the existence of
 | CORS | `CORS_ORIGIN=http://localhost:5173` | Browser CORS restriction only; not an authentication control |
 | TLS | None on the local target | TLS/headers/redirect behavior unverified |
 | Admin test account | Seeded; login returned 200 | Known test credentials exist in tracked evidence |
+| Remote Atlas | Supplied credential accepted for a read-only ping/metadata check | Live remote credential exposure; treat as compromised; no documents read |
+| Cloudinary | Supplied credential accepted by the read-only resources API | Live remote credential exposure; no upload performed; treat as compromised |
+| Resend | Read-only `/domains` returned 401; send capability not verified | No email was sent; key status remains unconfirmed |
+| OAuth providers | Google/GitHub start redirects and state/cookie checks passed in a production-mode local process | Full provider callback/login not completed; callbacks are configured as HTTP localhost |
+| Environment file | `COOKIE_SECRET` absent; `METRICS_TOKEN` empty; `SENTRY_DSN` empty; `EMAIL_FROM` uses the Resend test domain | Secret reuse, no metrics auth token, no error reporting, email deliverability risk |
+| CodeQL database | 560 MB ignored DB; 4 redacted generic-api-key matches in 2 page-dump files | Must be deleted/quarantined; do not publish |
+| Current evidence tree | 13 redacted matches in 6 files | P0 redaction/rotation issue (`SEC-02`) |
 
 The API’s database connection was local. That is important: the local audit database is **not** evidence of production data exposure. The historical leaked MongoDB URI is a separate issue and may have pointed at a different database.
 
@@ -230,8 +256,15 @@ No production user data was observed in this local database. The audit logs and 
    - 14 login attempts with rotating `X-Forwarded-For` (dummy accounts, no real credentials);
    - CSRF error response inspection (no token values reproduced);
    - sanitizer behavior at the middleware/object level;
-   - admin route existence and response codes;
-   - Vite file exposure;
+   - admin route existence, ban/unban, reports/scrapers authorization, and response codes;
+   - Vite file exposure and frontend security headers;
+   - NoSQL operator login, hidden-resource access, IDOR/saved/notification/team checks, and mass-assignment fields;
+   - password-reset and email-verification behavior, including provider-failure paths;
+   - file-upload validation (type, size, magic bytes, storage boundary);
+   - production-mode OAuth start, state-cookie flags, and mismatched-state rejection;
+   - a real Chromium render of the seeded stored-XSS payload;
+   - valid Semgrep scans, npm audit, Trivy, Checkov, and gitleaks current-tree/history/CodeQL-DB scans;
+   - read-only remote Atlas and Cloudinary credential checks;
    - screenshot and console evidence.
 5. Classify each claim as confirmed, static, unverified, invalid, or not applicable.
 6. Produce this report without reproducing any secret value, token, cookie, password, or old commit coordinate.
@@ -239,15 +272,19 @@ No production user data was observed in this local database. The audit logs and 
 ### 2.6 Limitations of this review
 
 - The review is local and time-bounded.
-- No production deployment, production database, or production credentials were available.
+- No production HackHub deployment was available. Remote Atlas and Cloudinary were checked read-only; no production documents were read and no upload was performed.
 - No authenticated proxy/Burp scan was performed.
-- No file-upload, OAuth, password-reset, email-verification, admin-ban, or background-job test was performed.
+- File-upload validation was tested only through the API boundary; end-to-end storage, image processing, signed URLs, deletion, and Cloudinary writes were not tested.
+- OAuth start/state/cookie checks were tested; full provider login, callback, account linking, redirect-URI allowlist, replay, and expiry were not completed.
+- Password reset and email verification were tested with email delivery unavailable; Resend send capability remains unverified.
+- Admin ban/unban and selected reports/scrapers authorization were tested; full admin CRUD and UI coverage remain.
+- Background jobs, scraper execution, and mobile behavior were not tested.
 - No full manual review of every route/controller was performed.
-- No Python/Go/Docker image SCA was performed.
-- The CodeQL database was not inspected for copies of the historical secret.
-- The historical secret’s current validity was not re-tested; it is treated as compromised.
-- No remediation was implemented or verified.
-- This report is a review of the existing audit, not a guarantee that the app is secure.
+- No Python/Go/Docker image SCA was performed; npm audit and app-scope Trivy only.
+- The CodeQL database was scanned for secrets and contains 4 redacted matches; it was not used for a new CodeQL analysis.
+- The historical secret’s current validity was not re-tested; it is treated as compromised. The supplied remote Atlas/Cloudinary credentials were accepted read-only and are treated as compromised.
+- No remediation was implemented or independently verified.
+- This report is a review of the existing audit plus the 22 November validation pass, not a guarantee that the app is secure.
 
 ---
 
@@ -391,7 +428,7 @@ As a result, sensitive test credentials, tokens, cookies, a proxy capture contai
 |---|---|---|
 | Kiterunner found four routes (`/health`, `/Health`, `/stats`, `/Stats`) | Raw kiterunner output contains **one** result: `GET 200 /api//health` | **Unsupported**; summary overstates |
 | ffuf 429 evidence is in `ffuf-throttled.txt` | That file is the tail of `common.txt` (`dns-query`, `sse`, `mcp`, `mcp/transport`, `mcp/message`, `FFUF1_DONE`), not 429 output | **False citation**; raw ffuf JSON does show 3552×429, but the cited file does not |
-| Semgrep deep scan found 0 issues | Deep scan scanned **0 files** and had 2 config errors; first run had 4 partial-parse errors | **Invalid conclusion** |
+| Semgrep deep scan found 0 issues | Deep scan scanned **0 files** and had 2 config errors; first run had 4 partial-parse errors | **Invalid conclusion**; a later valid 280-file re-run also found 0, but does not validate the original claim |
 | Wapiti found 0 findings | Raw `wapiti-ep1.json` contains one **unhandled 500 anomaly** on a null-byte search payload | **Omission** |
 | Trivy found no misconfigurations/secrets | App targets are clean, but a third-party `sqlmap` Dockerfile has 2 misconfigurations; secret hits are third-party tool noise | **Overbroad claim** |
 | Gitleaks secret is 8 characters with entropy 3.98973 | That is the redacted placeholder, not the original secret | **Misleading measurement** |
@@ -466,7 +503,11 @@ The following should not be relied on without re-running:
 
 The findings below are the ones supported by code review, raw evidence, or live local validation. Each includes impact, root cause, and remediation. Secret values are deliberately omitted.
 
+> **22 November 2026 update:** Appendix H records the environment-assisted checks run after the original consolidation. It adds evidence for the findings below and adds two new confirmed findings (`RESET-01`, `EMAIL-01`). Where an original subsection says a test was not performed, the Appendix H result is the later status.
+
 ### 5.1 `SEC-01` — Historical secret exposure and incomplete remediation
+
+**Post-validation update (22 Nov 2026):** No rotation or GitHub purge evidence was produced. The current evidence tree contains 13 redacted secret matches in 6 files, including 4 in the CodeQL database, so the containment side of this finding remains open.
 
 **Severity:** Critical until rotation and purge are verified  
 **Status:** Confirmed from gitleaks evidence; operational remediation pending  
@@ -528,6 +569,8 @@ A historical `.env` file for the data importer contained a Brabble API key and a
 ---
 
 ### 5.2 `SEC-02` — Audit artifacts and live local services expose credentials/tokens
+
+**Post-validation update (22 Nov 2026):** The supplied remote Atlas credential was accepted for a read-only ping/metadata check, and the Cloudinary credential was accepted by the read-only resources API. The current evidence tree has 13 redacted matches in 6 files; the CodeQL database alone has 4. Treat all supplied values as compromised and rotate before any further use.
 
 **Severity:** High (audit environment; not evidence of production compromise)  
 **Status:** Confirmed  
@@ -614,6 +657,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 
 ### 5.3 `RATE-01` — IP rate-limit bypass via spoofed `X-Forwarded-For`
 
+**Post-validation update (22 Nov 2026):** Re-tested with a per-run spoofed address: 14 unique `X-Forwarded-For` login attempts returned 401 with **zero 429s**. The same address produced two 429s after ten 401s. The bypass is reproducible; the limiter itself works when the address is stable.
+
 **Severity:** High  
 **Status:** Confirmed live; the manual suite recorded it as a FAIL, which is a false negative  
 **Affected assets:** `POST /api/auth/login`, the login limiter, global API limiter, admin account, local network exposure
@@ -666,6 +711,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 
 ### 5.4 `ERR-01` — Error-stack leakage on CSRF 403 and oversized-body 413
 
+**Post-validation update (22 Nov 2026):** Development-mode 403 CSRF, 413 oversized-body, and 400 malformed-JSON responses contained stack-like content. A production-mode local process returned 403 and 413 responses without stack-like content, so the leak is confirmed as a development/error-handler configuration problem rather than an unconditional production leak.
+
 **Severity:** Medium (information disclosure)  
 **Status:** Confirmed live and in proxy evidence  
 **Affected assets:** `POST /api/saved` without a CSRF token; `POST /api/feedback` with an oversized body; error-handling middleware
@@ -712,6 +759,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 ---
 
 ### 5.5 `SAN-01` — Prototype-copy weakness in the sanitizer
+
+**Post-validation update (22 Nov 2026):** A request-body test confirmed that the sanitized result inherits a planted property from its prototype. The global `Object.prototype` remained clean, so this is request-object prototype inheritance rather than global prototype pollution. It is still a validation-bypass primitive and should be fixed with key rejection and null-prototype objects.
 
 **Severity:** Medium (defense-in-depth; exploitation not demonstrated)  
 **Status:** Confirmed code behavior  
@@ -761,6 +810,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 ---
 
 ### 5.6 `ADMIN-01` — Admin API is incomplete and its authorization is untested
+
+**Post-validation update (22 Nov 2026):** `GET /api/admin/users` still returns 404. Admin reports and scrapers returned 200; non-admin access returned 403; anonymous access returned 401 (CSRF 403 on the ban mutation). Ban/unban worked (200), banned access became 403, unban restored login, and non-admin/anonymous ban attempts returned 403. The missing list route remains an incompletion, not an authorization pass.
 
 **Severity:** Medium (assurance/incompletion)  
 **Status:** Confirmed absence and test gap  
@@ -813,6 +864,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 
 ### 5.7 `DB-01` — Local MongoDB runs without authentication
 
+**Post-validation update (22 Nov 2026):** The local MongoDB accepted an unauthenticated connection (12 collections, 3 users). The supplied remote Atlas credential was also accepted for a read-only ping/metadata check; no remote documents were read. Treat the remote credential as compromised and rotate it; the local DB still needs auth or deletion.
+
 **Severity:** Medium (local audit environment)  
 **Status:** Confirmed live  
 **Affected assets:** Local MongoDB `hackhub` database, `.mongo-data`, API database connection
@@ -862,6 +915,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 
 ### 5.8 `VITE-01` — Vite dev server exposes project files on `0.0.0.0:5173`
 
+**Post-validation update (22 Nov 2026):** `/.gitignore`, `/package.json`, `/vite.config.js`, and `/src/main.jsx` returned non-HTML 200 responses. The frontend response also lacked CSP, XCTO, Referrer-Policy, HSTS, and X-Frame-Options. This is a development-only exposure, but it is live on the network.
+
 **Severity:** Low/Medium (development exposure)  
 **Status:** Confirmed live  
 **Affected assets:** Vite dev server, project root files, local network
@@ -908,6 +963,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 ---
 
 ### 5.9 `CI-01` — GitHub Actions hardening gaps
+
+**Post-validation update (22 Nov 2026):** A fresh Checkov run over `.github/workflows` reported 241 passed, 7 failed, and 0 parsing errors. The failed checks are 2× `CKV_GHA_3`, 1× `CKV_GHA_7`, and 4× `CKV2_GHA_1`; no new rule families appeared.
 
 **Severity:** Low/Medium  
 **Status:** Confirmed static (Checkov)  
@@ -1000,6 +1057,8 @@ CodeQL reports four `js/log-injection` results in an active controller. The exac
 ---
 
 ### 5.11 `OAUTH-01` — OAuth state cookie uses `SameSite=None` in production
+
+**Post-validation update (22 Nov 2026):** In a production-mode local process, Google and GitHub start routes returned 302 to the provider with state. The state cookie was `HttpOnly`, `Secure`, `SameSite=None`, path `/api/auth`, and max-age 600 seconds. A mismatched-state callback returned 403 with no stack-like content. The CSRF cookie was also `HttpOnly`/`Secure`/`SameSite=None`. Full provider login, account linking, redirect-URI allowlisting, replay, and expiry were not completed; the configured callbacks are still HTTP localhost.
 
 **Severity:** Low (needs end-to-end review)  
 **Status:** Static; code review suggests the design is intentional but untested  
@@ -1094,6 +1153,8 @@ CodeQL reports four `js/log-injection` results in an active controller. The exac
 
 ### 5.13 `EVID-01` — The audit evidence package is not reliable enough for a clean conclusion
 
+**Post-validation update (22 Nov 2026):** Some tool gaps are now closed: Semgrep ran on 280 API/web files with 0 findings and 0 errors; npm audit and Trivy reported 0 known vulnerabilities; Checkov reproduced the 7 CI failures; gitleaks found 0 in `apps/` but 13 redacted matches in the current evidence tree. The synthetic screenshots, false manual passes, invalid kiterunner/ffuf claims, Burp claim, and testssl limitation remain. The package is still not clean or reproducible.
+
 **Severity:** High (assurance; not a CVE)  
 **Status:** Confirmed  
 **Affected assets:** Entire `security-audit/` evidence and summary layer
@@ -1165,6 +1226,8 @@ This is the central folder-level finding. The package has raw evidence, but the 
 ---
 
 ### 5.14 `SUPPLY-01` — Audit tooling supply-chain and provenance gaps
+
+**Post-validation update (22 Nov 2026):** The CodeQL database was scanned: 4 redacted generic-api-key matches in 2 page-dump files. It must be deleted or quarantined, not published. No checksum manifest, SBOM, or Python/Go/Docker SCA was added, and testssl remains blocked by the absence of a TLS endpoint and a real DNS client.
 
 **Severity:** Medium (assurance/security)  
 **Status:** Confirmed  
@@ -1281,6 +1344,8 @@ This is the central folder-level finding. The package has raw evidence, but the 
 
 ### 5.16 `CONFIG-01` — Weak development configuration on an exposed API
 
+**Post-validation update (22 Nov 2026):** The supplied environment confirms `NODE_ENV=development`, `DEV_AUTO_VERIFY=true`, empty `METRICS_TOKEN` and `SENTRY_DSN`, no `COOKIE_SECRET`, a Resend test-domain sender, HTTP localhost OAuth callbacks, and running API rate limits of 100000 per IP/user. The API’s `/metrics` endpoint returned 404 rather than exposing metrics. These are configuration findings, not proof of production behavior; production must be verified separately.
+
 **Severity:** High in the audit environment; production impact unknown  
 **Status:** Confirmed live configuration  
 **Affected assets:** Local API process, cookies, rate limits, email verification, CORS, secrets
@@ -1338,7 +1403,96 @@ This is the central folder-level finding. The package has raw evidence, but the 
 
 ---
 
+### 5.17 `RESET-01` — Password-reset account enumeration when email delivery fails
+
+**Severity:** Medium  
+**Status:** Confirmed under the provider-failure condition  
+**Affected assets:** `apps/api/controllers/authController.js` (`forgotPassword`), `apps/api/utils/emailUtils.js`, Resend configuration  
+**Evidence:** Appendix H; status/body-only results, no email address, token, or provider value reproduced
+
+**What was found**
+
+- For an unknown but syntactically valid email, `POST /api/auth/forgot-password` returns the generic 200 message.
+- For a known seeded account, the controller saves a reset-token hash and then awaits the email send. When the email provider is unavailable or misconfigured, the exception is caught by the outer handler and the response is 500.
+- The live test produced **known email 500, unknown email 200**, with different bodies.
+- The reset token remains stored after the failed send, but the user receives no email.
+- This is an enumeration oracle only when email delivery fails; with a working provider, both branches return 200.
+
+**Impact**
+
+- An unauthenticated attacker can distinguish registered accounts when the mail provider is down or misconfigured.
+- The difference can support targeted phishing, credential stuffing, and privacy loss.
+- A 500 on a valid account also signals an operational failure and may encourage retries that write more reset tokens.
+
+**Root cause**
+
+- Email delivery is awaited inside the known-user branch, and provider failures propagate to the generic 500 handler.
+- The response is not normalized across account-existence and provider-failure paths.
+- There is no queue/best-effort boundary or provider-down test.
+
+**Remediation**
+
+1. Always return the same generic 200 response for syntactically valid email addresses, regardless of account existence or provider outcome.
+2. Catch and log email-provider errors separately; do not let them change the public response.
+3. Move email sending to a queue/worker or a best-effort path with bounded retries.
+4. Decide whether a failed send should invalidate the just-saved token; document the retry behavior.
+5. Rate-limit and monitor forgot-password requests and provider failures.
+6. Add a provider-down test that asserts identical status, body, and observable timing for known and unknown accounts.
+
+**Verification**
+
+- With the provider disabled, known and unknown emails return the same status and body.
+- No account-existence signal is present in status, body, headers, or timing.
+- Reset tokens are not logged and are invalidated/rotated correctly.
+- Rate limiting and alerting are active.
+
+---
+
+### 5.18 `EMAIL-01` — Email verification is bypassed by `DEV_AUTO_VERIFY=true`
+
+**Severity:** Medium in the audit environment; High if enabled in production  
+**Status:** Confirmed in the running development configuration  
+**Affected assets:** Registration/verification flow, `DEV_AUTO_VERIFY`, email-ownership control  
+**Evidence:** Appendix H; response flag only, no credentials or tokens reproduced
+
+**What was found**
+
+- Registration returned `autoVerified: true` under `DEV_AUTO_VERIFY=true`.
+- The account can be used without proving control of the email address.
+- No verification email is required in this configuration.
+- The API is network-exposed, so the development convenience flag is not contained to a developer workstation.
+
+**Impact**
+
+- Attackers can register accounts with addresses they do not own.
+- This weakens abuse controls, account recovery assumptions, notification integrity, and any feature that treats email ownership as trust.
+- If the flag reaches production, the impact is High.
+
+**Root cause**
+
+- A development convenience flag is enabled on a network-exposed API.
+- There is no startup guard that refuses `DEV_AUTO_VERIFY=true` outside development/test.
+
+**Remediation**
+
+1. Set `DEV_AUTO_VERIFY=false` for staging and production.
+2. Fail startup if the flag is true when `NODE_ENV` is production or staging.
+3. Require verification before privileged actions and before treating email as owned.
+4. Add tests for the flag-off path and for resend/expiry/reuse.
+5. Document the flag as development-only and remove it from shared environments.
+
+**Verification**
+
+- A production-like process returns `autoVerified: false`.
+- Registration requires a valid verification token before the account is treated as verified.
+- The startup guard rejects the unsafe flag combination.
+- Tests cover verify, resend, expiry, and reuse.
+
+---
+
 ## 6. Unconfirmed, weak, or untested areas
+
+> **22 November 2026 status:** The table below is the original package-review baseline. Appendix H and §6.10 record which rows were subsequently tested. Rows marked “tested” in §6.10 are no longer untested; the residual gap is stated there.
 
 These are not confirmed vulnerabilities. They are areas where the audit’s evidence is insufficient, invalid, or absent. They should not be reported as “clean.”
 
@@ -1430,6 +1584,28 @@ The local target is plain HTTP. Testssl did not test TLS. The API sets Helmet he
 
 ---
 
+### 6.10 Post-validation status (22 November 2026)
+
+| Area | New result | Residual gap |
+|---|---|---|
+| NoSQL operator injection | Login operator payload rejected with 400 and no access cookie; hidden hackathon not exposed | Code-path review of all query filters; no exhaustive operator matrix |
+| Stored XSS | Seeded hackathon payload rendered as text in Chromium; 0 raw `<img src=x>`, 0 dialogs | Reflected/DOM contexts and other stored fields |
+| IDOR/BOLA | `IDOR-02` reminder delete returned 404 for a non-owner; saved-item delete 404; team request/invitation 403; notification update 404 | Full object/role matrix and proxy replay |
+| Mass assignment | Profile/skills sensitive-field attempts rejected/ignored; role stayed `student` | Other models/endpoints and nested fields |
+| Admin authorization | Admin list 404; reports/scrapers 200/403/401; ban/unban 200/403; non-admin/anonymous ban 403 | Full admin CRUD, UI, audit log, CSRF matrix |
+| OAuth login CSRF | Start 302; state cookie `HttpOnly`/`Secure`/`SameSite=None`; mismatched state 403 with no stack; CSRF cookie flags pass | Full provider login, callback, account linking, redirect allowlist, replay/expiry |
+| Password reset/email verification | Enumeration under provider failure (`RESET-01`); auto-verify (`EMAIL-01`); random reset token rejected | Working-provider send, expiry/reuse, delivery, rate limits |
+| File upload/SSRF | Missing file/wrong MIME/oversized file 400; bad magic reached storage 503 | Magic-byte rejection before storage; end-to-end upload, image processing, signed URLs, SSRF |
+| Production TLS/headers | API Helmet headers present; frontend headers absent; production-mode 403/413 no stack | Production TLS/redirect/CSP; testssl blocked by no TLS endpoint and no DNS client |
+| SCA/static/secret | Semgrep 280 files/0 findings; npm 833 deps/0; Trivy 2 lockfiles/0; Checkov 241 pass/7 fail; gitleaks 13 current-evidence matches | Python/Go/Docker SCA, SBOM, testssl, CodeQL re-analysis |
+| Rate limits beyond login | Login/global only | Register/reset/upload/search/admin |
+| CSRF beyond selected routes | Selected mutations only | Full state-changing route matrix |
+| Log injection | Static only | Dynamic CR/LF/ANSI tests |
+| Legacy code | Static only | Active/dead determination and removal/fix |
+| Mobile | No artifact | N/A unless a mobile app exists |
+
+---
+
 ## 7. Manual test suite deep dive
 
 ### 7.1 Recorded results
@@ -1443,6 +1619,8 @@ The local target is plain HTTP. Testssl did not test TLS. The API sets Helmet he
 The suite is described as covering authn/authz, JWT forgery, CSRF, CORS, IDOR/BOLA, mass assignment, NoSQL injection, prototype pollution, headers, rate limits, account enumeration, session revocation, admin gating, and XSS.
 
 That description overstates the suite. Several checks are invalid or weak, and one “failure” is actually a confirmed vulnerability.
+
+**22 November 2026 note:** The suite was not rewritten. A separate environment-assisted harness re-tested NoSQL, `IDOR-02`, saved/notification/team objects, mass assignment, admin ban/unban, password reset, email verification, upload validation, OAuth state, and stored XSS. The original false passes and missing `IDOR-02` remain defects in the recorded suite; the new results are in Appendix H.
 
 ### 7.2 False passes
 
@@ -1606,11 +1784,12 @@ The active SQLi hits are concentrated in services that build filters from reques
 
 ### 9.3 Semgrep
 
-- **First run:** 288 rules on 465 files; 0 findings; 4 partial-parse errors in `deploy-staging.yml`/design HTML.
-- **Deep run:** 0 findings; **0 files scanned**; 2 config errors (the `p/express` config could not be downloaded; HTTP 404).
-- **What is valid:** the first run scanned real files and found no results, but parse errors reduce confidence.
-- **What is invalid:** the deep run cannot support “0 findings” because it scanned nothing.
-- **Conclusion:** invalid/incomplete. Re-run with local, pinned rule packs and fix parse errors.
+- **Original first run:** 288 rules on 465 files; 0 findings; 4 partial-parse errors in `deploy-staging.yml`/design HTML.
+- **Original deep run:** 0 findings; **0 files scanned**; 2 config errors (the `p/express` config could not be downloaded; HTTP 404).
+- **22 November re-run:** API 130 files / 103 rules; web 150 files / 70 rules; **0 findings, 0 errors** (280 files, 173 rules total).
+- **What is valid:** the re-run scanned real files with a valid registry ruleset and no parse/config errors.
+- **What is weak:** a clean Semgrep result is not proof of absence; it is a static signal only.
+- **Conclusion:** the original deep-run claim is invalid; the re-run is valid but should be pinned locally for reproducibility.
 
 ### 9.4 Trivy
 
@@ -1619,11 +1798,13 @@ The active SQLi hits are concentrated in services that build filters from reques
 - **Third-party noise:** the `sqlmap` test Dockerfile has 2 misconfigurations; secret hits in `sqlmap` JWT utilities and mitmproxy CA keys are third-party tool artifacts.
 - **What is valid:** app lockfiles/Dockerfile are clean in this scan.
 - **What is weak:** the summary says “only false positives” but omits the third-party Dockerfile misconfigurations; it is not a full app image/dependency scan.
+- **22 Nov re-run:** 2 npm lockfiles, 0 known vulnerabilities; still no image/SBOM scan.
 - **Conclusion:** app-scope clean; not a full SCA. Re-run with a proper image/SBOM scope and triage third-party noise separately.
 
 ### 9.5 Checkov
 
-- **Raw result:** 7 failed GitHub Actions checks; 289 passed across the runs.
+- **Raw result:** 7 failed GitHub Actions checks; 289 passed across the original runs.
+- **22 Nov re-run:** 241 passed, 7 failed, 0 parsing errors; same rule IDs.
 - **Findings:** 2× `CKV_GHA_3` curl-with-secrets in `deploy-staging.yml`; 1× `CKV_GHA_7` user-parameter build in `scrape-hackathons.yml`; 4× `CKV2_GHA_1` write-all.
 - **What is valid:** the checks are real CI hardening findings.
 - **What is weak:** no remediation; no action-pinning review; no environment protection review.
@@ -1711,9 +1892,10 @@ The active SQLi hits are concentrated in services that build filters from reques
 
 - **Target:** `127.0.0.1:5000`; plain HTTP; no TLS.
 - **Result:** no protocol/TLS detected; no production test.
+- **22 Nov attempt:** testssl could not run because no TLS endpoint exists and no real `dig`/`host`/`nslookup` client is installed; the fake shims do not fix the missing client.
 - **What is valid:** the local target has no TLS.
-- **What is weak:** the summary’s production TLS/secure-cookie claims are speculative; the fake `dig`/`host` shims affect DNS-dependent behavior.
-- **Conclusion:** not applicable/coverage gap.
+- **What is weak:** the summary’s production TLS/secure-cookie claims are speculative; DNS-dependent behavior is synthetic.
+- **Conclusion:** blocked/coverage gap; run only against a real HTTPS endpoint with a real resolver.
 
 ### 9.17 MobSF
 
@@ -1723,16 +1905,20 @@ The active SQLi hits are concentrated in services that build filters from reques
 ### 9.18 npm audit
 
 - **Result:** 0 vulnerabilities for the npm workspace.
+- **22 Nov re-run:** 833 npm dependencies (331 prod, 428 dev, 81 optional, 2 peer), 0 advisories.
 - **What is valid:** no npm advisories at run time.
 - **What is weak:** no Python/Go/Docker/image SCA; no SBOM; no runtime dependency review.
 - **Conclusion:** valid but narrow.
 
 ### 9.19 Gitleaks
 
-- **Result:** one historical finding: a generic API key in an old data-importer `.env`.
-- **What is valid:** the finding is real; the evidence is redacted.
-- **What is weak:** the summary’s “8 chars/entropy 3.98973” describes the redacted placeholder, not the original secret; no current-tree scan of the audit artifacts; no closure/rotation evidence.
-- **Conclusion:** confirmed historical incident; remediation incomplete (`SEC-01`).
+- **Historical result:** one finding: a generic API key in an old data-importer `.env`.
+- **22 November current evidence tree:** **13 matches in 6 files** — 6 in `seed.json`, 1 each in `manual-tests.txt`, `manual-tests.json`, and `wapiti-ep1.json`, plus 4 in two CodeQL DB page-dump files. All values redacted.
+- **Git history:** 9 matches in 4 tracked evidence files (JWT and generic-api-key rules); values redacted.
+- **Apps source:** 0 matches in `apps/`.
+- **What is valid:** the findings are real; the redacted output is sufficient for containment.
+- **What is weak:** the summary’s “8 chars/entropy 3.98973” describes the redacted placeholder, not the original secret; no closure/rotation evidence exists.
+- **Conclusion:** confirmed historical and current-evidence incidents; remediation incomplete (`SEC-01`, `SEC-02`).
 
 ### 9.20 Screenshots
 
@@ -1754,21 +1940,38 @@ The active SQLi hits are concentrated in services that build filters from reques
 
 | Area | Tool coverage | Status |
 |---|---|---|
-| Authentication | Manual JWT/login, CodeQL, Wapiti | Partial; reset/OAuth/email not tested |
-| Authorization | Manual IDOR/admin, CodeQL | Partial; IDOR-02 missing; admin 404 |
-| SQL/NoSQL injection | SQLmap, CodeQL, manual | Inconclusive; wrong DB/tests blocked |
-| XSS | XSStrike, manual | Reflected only; stored/DOM not tested |
+| Authentication | Manual JWT/login, CodeQL, Wapiti, OAuth state harness | Partial; reset/OAuth start tested; full provider/email delivery not |
+| Authorization | Manual IDOR/admin, CodeQL | Partial; IDOR-02 covered; admin list 404; ban/unban tested |
+| SQL/NoSQL injection | SQLmap, CodeQL, manual, NoSQL re-test | NoSQL login/hidden-resource pass; SQLi code-path review remains |
+| XSS | XSStrike, manual, Chromium | Stored pass; reflected/DOM review remains |
 | CSRF | Manual, CodeQL, proxy | Basic control works; error leak; broad routes untested |
 | Rate limiting | Manual, ffuf | Bypass confirmed; other endpoints untested |
-| Headers/TLS | httpx, testssl | API headers; TLS/production unverified |
-| File upload/SSRF | None | Not tested |
-| OAuth | Code review only | Not tested end-to-end |
-| Password reset/email | None | Not tested |
-| Admin mutations | None | Not tested |
+| Headers/TLS | httpx, testssl | API headers; frontend absent; TLS/production unverified |
+| File upload/SSRF | Manual upload validation | Partial; magic-byte/storage/SSRF not tested |
+| OAuth | Code review + state harness | Start/state/cookie pass; full provider not |
+| Password reset/email | Manual | Enumeration/auto-verify confirmed; delivery/expiry/reuse partial |
+| Admin mutations | Manual | Ban/unban tested; full CRUD/UI not |
 | CI/CD | Checkov | 7 findings; not remediated |
-| Supply chain | npm audit, Trivy app | Partial; no Python/Go/Docker/SBOM |
+| Supply chain | npm audit, Trivy app, Semgrep | Partial; no Python/Go/Docker/SBOM |
 | Mobile | MobSF | Not applicable |
 | Production | None | Not tested |
+
+### 9.23 Environment-assisted re-runs (22 November 2026)
+
+| Check | Result | Notes |
+|---|---|---|
+| Semgrep API | 130 files / 103 rules / 0 findings / 0 errors | Valid registry ruleset |
+| Semgrep web | 150 files / 70 rules / 0 findings / 0 errors | Valid registry ruleset |
+| npm audit | 833 dependencies / 0 vulnerabilities | Root workspace |
+| Trivy filesystem | 2 npm lockfiles / 0 vulnerabilities | No image/SBOM scan |
+| Checkov | 241 passed / 7 failed / 0 parsing errors | Same CI rule IDs |
+| Gitleaks `apps/` | 0 matches | Source tree only |
+| Gitleaks current evidence | 13 matches / 6 files | 9 tracked evidence + 4 CodeQL DB; redacted |
+| Gitleaks Git history | 9 matches / 4 tracked evidence files | JWT + generic-api-key; redacted |
+| testssl | Blocked | No TLS endpoint; no real DNS client |
+| pip-audit / govulncheck / Docker | Unavailable / N/A | No Python app, Go module, or Docker engine |
+| Browser stored XSS | PASS | Payload escaped; 0 raw images; 0 dialogs |
+| OAuth state harness | PASS for start/state/cookie | Full provider login not completed |
 
 ---
 
@@ -1830,6 +2033,27 @@ No production URL, credentials, TLS endpoint, CDN, WAF, or deployment configurat
 
 `npm audit` covers npm only. The audit folder has 190 Python packages, Go binaries, CodeQL, Burp, Trivy, and Dockerfiles. There is no `pip-audit`, `govulncheck`, image scan, SBOM, or license review. The app’s Dockerfile is clean per Trivy, but that is not the same as a full image/dependency assessment.
 
+### 10.7 Post-validation coverage update (22 November 2026)
+
+| Area | Coverage added | Still missing |
+|---|---|---|
+| Registration/login | Register validation, login, refresh/logout, rate-limit behavior | MFA, lockout, password policy, concurrent sessions |
+| Password reset | Known/unknown comparison, random token rejection, provider-failure path | Working-provider send, expiry/reuse, rate limits |
+| Email verification | Auto-verify flag, invalid token | Full verify/resend/expiry/reuse flow |
+| OAuth | Start redirect, state cookie flags, mismatched state, CSRF cookie | Full provider login, callback, linking, redirect allowlist, replay/expiry |
+| Profile | Mass-assignment fields, skills | Avatar upload end-to-end, links, delete/export |
+| Hackathons | Detail render, hidden-resource access, stored-XSS render | Track/save/admin CRUD/reports |
+| Teams/join requests | Selected IDOR for requests/invitations | Full team lifecycle and business logic |
+| Notifications/saved | Update/delete IDOR checks | List pagination, bulk actions, cache behavior |
+| Admin | List 404, reports/scrapers authz, ban/unban | Full CRUD, UI, audit log, CSRF matrix |
+| Uploads | Missing/wrong MIME/oversized rejection | Magic-byte validation before storage, image processing, signed URLs, deletion |
+| SSRF | None | Scraper/remote-link/avatar URL tests |
+| Production | API headers; frontend headers absent | TLS/redirect/CSP/HSTS and deployment behavior |
+| SCA | npm audit, app-scope Trivy, Semgrep | Python/Go/Docker/image SCA, SBOM, license review |
+| Secrets | Current evidence and CodeQL DB scan | Rotation, purge, and clean re-scan |
+
+The net effect is better coverage, not full coverage. The largest remaining assurance gaps are production, SSRF/upload end-to-end, full OAuth/provider behavior, full admin/team lifecycle, and the P0 credential cleanup.
+
 ---
 
 ## 11. Secrets, privacy, and data handling
@@ -1846,7 +2070,8 @@ No production URL, credentials, TLS endpoint, CDN, WAF, or deployment configurat
 | `seed.js` | Plaintext test password; stored-XSS payload | Tracked | Medium | Use env/placeholder; rotate |
 | `screenshots/` | Test accounts; demo/placeholder profile data | Tracked | Medium | Review/redact; use synthetic data |
 | `screenshots/index.json` | Absolute `/home/<user>/...` paths | Tracked | Low | Use relative paths |
-| `evidence/codeql-db/` | 560 MB CodeQL DB; may contain old `.env` secret | Ignored | **High** | Scan for secrets before sharing; delete after use |
+| `evidence/codeql-db/` | 560 MB CodeQL DB; **4 redacted generic-api-key matches** in 2 page-dump files | Ignored | **High** | Delete/quarantine; do not publish; rotate any matching credential |
+| Environment-assisted validation input (outside repo) | Live remote Atlas/Cloudinary/Resend/OAuth values | No | **Critical** | Rotate all values after testing; never commit; no values in reports |
 | `.mongo-data/` | 206 MB local DB; password/token hashes; audit logs | Ignored | **High** | Enable auth; delete/secure after audit |
 | `logs/` | Mongo no-auth warning; install logs | Ignored | Medium | Retain only redacted; delete test logs |
 | `tools/` | Binaries; third-party JWT/CA strings; no checksums | Ignored | Medium | Verify/checksum; remove unused; scan |
@@ -1857,9 +2082,10 @@ No production URL, credentials, TLS endpoint, CDN, WAF, or deployment configurat
 These are separate incidents:
 
 1. **Historical `.env` leak** (`SEC-01`): a real API key and MongoDB URI in old Git history. Rotation and purge are pending.
-2. **Audit artifact leak** (`SEC-02`): test passwords, cookies, JWTs, CSRF tokens, a proxy capture, and a real access-token secret in the audit folder. These are test-only, but the API is exposed and the tokens may be valid.
+2. **Audit artifact leak** (`SEC-02`): test passwords, cookies, JWTs, CSRF tokens, a proxy capture, and a real access-token secret in the audit folder. These are test-only, but the API is exposed and the tokens may be valid. The current evidence tree has 13 redacted matches in 6 files.
+3. **Environment-assisted validation input** (new, 22 Nov): live remote Atlas/Cloudinary/Resend/OAuth values supplied outside the repo. Atlas and Cloudinary accepted read-only authentication; no documents were read and no upload was performed. Treat them as compromised and rotate.
 
-Do not conflate them. Rotating the historical Brabble/MongoDB credentials does not fix the audit folder; redacting the audit folder does not fix the old Git history.
+Do not conflate them. Rotating the historical Brabble/MongoDB credentials does not fix the audit folder; redacting the audit folder does not fix the old Git history; rotating the remote credentials does not remove the tracked evidence.
 
 ### 11.3 Privacy review
 
@@ -1881,6 +2107,8 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 6. Do not publish the audit folder as-is.
 7. Review screenshots and logs for personal data.
 8. Add a data-handling section to the audit README.
+9. Rotate every value supplied for environment-assisted validation, including Atlas, Cloudinary, Resend, OAuth, JWT, refresh, CSRF, and cookie secrets.
+10. Delete/quarantine the CodeQL database after extracting redacted counts; never publish it.
 
 ---
 
@@ -1905,7 +2133,7 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 | httpx (ProjectDiscovery) | unknown | external `~/go/bin` (~70 MB) | Not bundled; name collision with Python httpx |
 | mitmproxy | 12.3.1 | venv | Used for proxy evidence; 7 flows |
 | Playwright | 1.65.2 | venv | Screenshot capture |
-| Semgrep | 1.186.0 | venv | Deep run invalid |
+| Semgrep | 1.186.0 | venv | Original deep run invalid; 22 Nov re-run valid (280 files, 0 findings) |
 | Checkov | 3.4.6 | venv | 7 CI findings |
 | MongoDB | 8.2.6 | 206 MB data | No auth |
 | `dig`/`host`/`nslookup` | shims | 12 KB | Fake DNS; synthetic answers |
@@ -1920,7 +2148,8 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 - No Python/Go/Docker SCA; only npm audit and app-scope Trivy.
 - Fake DNS shims can invalidate DNS-dependent evidence.
 - Burp Community has no scanner; the summary’s proxy claim is not a scanner result.
-- The CodeQL DB may contain old secrets; it was not scanned.
+- The CodeQL DB contains 4 redacted generic-api-key matches in 2 page-dump files; it must be deleted/quarantined.
+- The current evidence tree contains 13 redacted matches in 6 files; the tracked evidence is not clean.
 - No license review for several tools.
 
 ### 12.3 Recommendations
@@ -1945,7 +2174,10 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 | Action | Why | Verification |
 |---|---|---|
 | Stop API, Vite, MongoDB audit services | They expose test credentials and no-auth DB on the local network | No listeners on 5000/5173/27017 |
-| Rotate Brabble API key and MongoDB credentials | Historical secret may still be valid | Old credentials fail; provider logs reviewed |
+| Rotate Brabble API key and historical MongoDB credentials | Historical secret may still be valid | Old credentials fail; provider logs reviewed |
+| Rotate the supplied Atlas, Cloudinary, Resend, OAuth, JWT, refresh, CSRF, and cookie secrets | Live remote Atlas/Cloudinary credentials were accepted; the rest were supplied in the same environment | Old values fail; provider logs reviewed; no live remote value remains in use |
+| Delete/quarantine the CodeQL database and redact the 13 current evidence matches | 4 CodeQL DB matches + 9 tracked evidence matches are redacted secrets | `gitleaks` current-tree scan clean; DB removed |
+| Confirm no remote documents were read or uploaded | Remote checks were read-only; prove the boundary | Atlas/Cloudinary audit logs show metadata only; no upload |
 | Remove/redact audit secrets | `seed.json`, `manual-tests.json`, `proxy-flows.mitm`, `manual_tests.py` | Current-tree secret scan clean |
 | Rotate audit secrets and admin/test passwords | Access secret is in a tracked script | Old tokens/passwords rejected |
 | Bind API/Vite to loopback | Remove LAN exposure | No `0.0.0.0` listeners |
@@ -1962,15 +2194,18 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 | Fix `trust proxy`/XFF rate-limit bypass | `RATE-01` | 14 attempts → 429; spoofed XFF does not bypass |
 | Lower global rate limits; add login lockout/MFA | `RATE-01`, `CONFIG-01` | Limits enforced; admin MFA |
 | Add generic CSRF/body-parser error handlers | `ERR-01` | 403/413/400/500 bodies contain no stack |
+| Normalize forgot-password responses when the email provider fails | `RESET-01` | Known/unknown emails return the same 200 body/status with the provider disabled |
+| Force `DEV_AUTO_VERIFY=false` outside development and add a startup guard | `EMAIL-01` | Production-like process returns `autoVerified: false`; unsafe flag rejected |
+| Reject bad magic bytes before the storage boundary | `UPLOAD-01` | Bad-magic upload returns 400; no storage 503; no file written |
 | Harden sanitizer: reject `__proto__`/`constructor`/`prototype`; null-prototype objects | `SAN-01` | Unit tests pass; no inherited props |
 | Implement/remove admin user list; test ban/unban and admin routes | `ADMIN-01` | Admin 200 / non-admin 403 / anonymous 401 |
 | Bind Vite to loopback; remove project-root exposure | `VITE-01` | No files from LAN; production build |
 | Enable MongoDB auth; least-privilege app user | `DB-01` | Unauthenticated access fails |
 | Fix GitHub Actions permissions and curl secrets | `CI-01` | Checkov 0; no write-all |
 | Disable `DEV_AUTO_VERIFY` outside dev; use strong secrets; separate cookie secret | `CONFIG-01` | Production-like config |
-| Add frontend headers/TLS/redirect checks | `HEADER` gap | Production test A grade |
+| Add frontend CSP/XCTO/Referrer-Policy and TLS/redirect checks | `HEADER-02` | Headers present on the frontend; production test A grade |
 | Add log encoding/structured logging | `LOG-01` | CR/LF/ANSI tests pass |
-| Review OAuth state flow end-to-end | `OAUTH-01` | State mismatch/expiry/replay rejected |
+| Complete OAuth provider/mock E2E and use HTTPS callbacks | `OAUTH-01` | State mismatch/expiry/replay/redirect/linking pass; no HTTP callback in production |
 
 ### 13.3 P2 — Coverage and evidence rebuild (2–4 weeks)
 
@@ -1987,8 +2222,13 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 | Add checksums, SBOM, tool manifest, licenses | Supply chain |
 | Remove synthetic tool PNGs; capture raw logs | Evidence integrity |
 | Add README/methodology/evidence index/report | Documentation |
-| Scan CodeQL DB and tools for secrets | Old secret copies |
-| Run Python/Go/Docker SCA | Supply-chain gap |
+| Scan CodeQL DB and tools for secrets; delete the DB after extracting counts | Old secret copies |
+| Run Python/Go/Docker SCA and generate an SBOM | Supply-chain gap |
+| Run testssl against a real HTTPS endpoint with a real DNS client | TLS/production gap |
+| Test upload end-to-end, image processing, signed URLs, deletion, and SSRF | File/SSRF gap |
+| Test full OAuth provider login, account linking, redirect allowlist, replay, and expiry | OAuth gap |
+| Test email delivery with a working provider and reset/verification expiry/reuse | Reset/email gap |
+| Add stored-XSS regression to CI and complete reflected/DOM review | XSS coverage |
 | Independent review and sign-off | Assurance |
 
 ### 13.4 P3 — Ongoing
@@ -2008,21 +2248,26 @@ Do not conflate them. Rotating the historical Brabble/MongoDB credentials does n
 
 The audit can be considered closed only when:
 
-1. Historical Brabble/MongoDB credentials are rotated and old access fails.
+1. Historical Brabble/MongoDB credentials and the supplied Atlas/Cloudinary/Resend/OAuth/JWT/refresh/CSRF/cookie secrets are rotated and old access fails.
 2. GitHub purge is confirmed; secret scanning/push protection are on.
-3. The audit folder contains no passwords, cookies, JWTs, CSRF tokens, access secrets, or proxy credentials.
+3. The audit folder contains no passwords, cookies, JWTs, CSRF tokens, access secrets, proxy credentials, or current-tree secret matches; the CodeQL DB is deleted.
 4. API/Vite/Mongo are not exposed; Mongo has auth or is deleted.
 5. Rate-limit bypass is fixed and verified.
-6. Error responses do not leak stacks.
-7. Sanitizer rejects prototype keys.
-8. Admin routes are implemented/removed and tested.
+6. Error responses do not leak stacks in any environment.
+7. Sanitizer rejects prototype keys and uses null-prototype objects.
+8. Admin routes are implemented/removed and tested; the list route is not a 404.
 9. Manual suite has no false passes; `IDOR-02` is covered.
-10. Semgrep/Burp/testssl/kiterunner claims are corrected or removed.
-11. Coverage matrix includes auth, authz, injection, XSS, CSRF, rate limits, file upload, OAuth, password reset, admin, CI, and production.
+10. Semgrep is valid and reproducible; Burp/testssl/kiterunner claims are corrected or removed; npm/Trivy/Checkov/gitleaks counts are recorded.
+11. Coverage matrix includes auth, authz, injection, XSS, CSRF, rate limits, file upload, OAuth, password reset, email verification, admin, CI, and production.
 12. Tool manifest/checksums/SBOM exist.
 13. A final report is in `reports/` and has reviewer sign-off.
-14. No secrets/PII are published.
+14. No secrets/PII are published; current-tree and CodeQL DB scans are clean.
 15. Production is assessed separately or explicitly marked out of scope.
+16. Forgot-password responses are identical for known/unknown accounts when the email provider fails.
+17. `DEV_AUTO_VERIFY` is false outside development; a startup guard rejects the unsafe combination.
+18. Bad-magic uploads are rejected before the storage boundary; no storage 503.
+19. Frontend CSP/XCTO/Referrer-Policy and production TLS/redirect behavior are verified.
+20. Full OAuth provider/mock and email-delivery tests are complete.
 
 ---
 
@@ -2165,7 +2410,7 @@ The suite records 43 checks. This table adds the missing `IDOR-02` row for compl
 |---|---|---|---|---|
 | Manual suite | `manual-tests.json` | B-/D | Selected controls; rate-limit failure | NoSQL/XSS/admin/mass assignment; false passes |
 | CodeQL | `codeql.sarif` | A-/B | 42 first-party static hits | Exploitability; triage |
-| Semgrep | `semgrep.json`, `semgrep-deep.json` | D | First run scanned 465 files with 0 findings | Deep run scanned 0; no clean conclusion |
+| Semgrep | `semgrep.json`, `semgrep-deep.json`; 22 Nov re-run | B-/D | Original first run scanned 465 files; 22 Nov re-run scanned 280 files with 0 findings/0 errors | Original deep run scanned 0; a clean static scan is not proof of absence |
 | Trivy | `trivy-fs.json` | B | App lockfiles/Dockerfile clean | Full image/SBOM; third-party noise |
 | Checkov | `checkov/results_json.json` | A | 7 CI failures | Runtime/deployment |
 | Wapiti | `wapiti-*.json` | B- | 0 unauth GET vulns; 1 anomaly | Auth/POST/stored XSS/rate limits |
@@ -2181,7 +2426,7 @@ The suite records 43 checks. This table adds the missing `IDOR-02` row for compl
 | Testssl | `testssl.txt` | E/C | Local plain HTTP | TLS/production |
 | MobSF | `mobsf.txt` | N/A | No mobile artifact | Mobile security |
 | npm audit | `npm-audit.json` | B | 0 npm advisories | Python/Go/Docker |
-| Gitleaks | `gitleaks.json` | B | 1 historical finding | Current audit folder; closure |
+| Gitleaks | `gitleaks.json`; 22 Nov re-runs | B | 1 historical + 13 current evidence + 9 Git-history matches (redacted) | Closure/rotation; CodeQL DB deletion |
 | Screenshots | `screenshots/` | C/D | App UI/test data | Tool execution; console/accessibility |
 | Mongo inventory | Live DB | A | Test data/no auth | Production |
 | Live checks | API/Vite/Mongo | A | Bindings, rate-limit bypass, stack, sanitizer | Full exploitability |
@@ -2244,7 +2489,7 @@ For the CSRF stack check, use a disposable test session and inspect only whether
 
 ### Appendix G — Limitations and sign-off
 
-**Limitations:** local only; no production; no authenticated proxy; no file upload/OAuth/reset/admin-ban/background jobs; no full manual route review; no Python/Go/Docker SCA; no CodeQL DB secret scan; no remediation verification; no independent re-test; no access to provider/GitHub admin logs.
+**Limitations:** local app plus read-only remote Atlas/Cloudinary checks; no production deployment; no authenticated proxy; upload validation only (no end-to-end storage/image processing/SSRF); OAuth start/state only (no full provider login/linking/redirect-URI allowlist); reset/verification tested with email delivery unavailable; admin list absent and full admin CRUD/UI not tested; background jobs not exercised; no full manual route review; no Python/Go/Docker SCA or SBOM; CodeQL DB scanned for secrets but no new CodeQL analysis; no remediation verification; no independent re-test; no access to provider/GitHub admin logs.
 
 **Sign-off status:** **Not approved.**
 
@@ -2255,3 +2500,105 @@ For the CSRF stack check, use a disposable test session and inspect only whether
 
 **Prepared:** 22 November 2026.  
 **Next review:** after P0/P1 remediation and evidence rebuild.
+
+---
+
+### Appendix H — Environment-assisted validation update (22 November 2026)
+
+#### H.1 Scope and handling
+
+- The supplied environment values were used only for the checks below. They were kept outside the repository, were not committed, and are **not reproduced in this report**.
+- Destructive or state-changing tests were run against the local API/database. Remote Atlas and Cloudinary were used only for read-only authentication/metadata checks: no documents were read, no upload was performed, and no email was sent.
+- The running API uses the local MongoDB. The remote Atlas credential was checked separately and is not the API’s active database.
+- The local API, Vite, and MongoDB were already running on `0.0.0.0:5000`, `0.0.0.0:5173`, and `127.0.0.1:27017`.
+- A separate local API process with `NODE_ENV=production` was used for OAuth state/cookie and production error-handler checks. This was still a local process, not a production deployment.
+- The harness recorded 47 checks; the results below use explicit statuses plus HTTP observations. All secret-bearing outputs were reduced to counts, flags, or status codes.
+
+#### H.2 Results summary
+
+| Check | Result | Evidence/notes |
+|---|---|---|
+| `SEC-02` remote Atlas credential | **Accepted read-only** | Ping/metadata succeeded; no documents read; credential must be rotated |
+| `SEC-02` Cloudinary credential | **Accepted read-only** | Resources API succeeded; no upload; credential must be rotated |
+| `SEC-02` current evidence secrets | **13 redacted matches / 6 files** | 9 tracked evidence + 4 CodeQL DB; values not displayed |
+| `DB-01` local MongoDB | **No auth** | Unauthenticated connection accepted; 12 collections, 3 users |
+| `VITE-01` file exposure | **Confirmed** | `/.gitignore`, `/package.json`, `/vite.config.js`, `/src/main.jsx` returned 200 |
+| `HEADER-02` frontend headers | **Missing** | No CSP, XCTO, Referrer-Policy, HSTS, or X-Frame-Options |
+| `RATE-01` spoofed XFF | **Bypass confirmed** | 14 unique XFF attempts: 0×429, 14×401 |
+| `RATE-02` stable XFF | **Limiter works** | 12 attempts: 10×401, 2×429 |
+| `ERR-01/02/03` development errors | **Stack-like content** | 403 CSRF, 413 oversized, 400 malformed JSON |
+| `ERR-01/02` production-mode errors | **No stack-like content** | 403/413; no stack-like body |
+| `SAN-01` sanitizer | **Request-body inheritance** | Inherited property true; global `Object.prototype` clean |
+| `NOSQL-01/02` operator login | **Rejected / not exposed** | 400, no access cookie; hidden hackathon not exposed |
+| `IDOR-02/08/03/04/09` | **Pass for tested objects** | Reminder delete 404; saved delete 404; team request/invite 403; notification update 404 |
+| `MASS-01/02` | **No escalation observed** | Sensitive fields rejected/ignored; role stayed `student` |
+| `ADMIN-01` list | **404** | Route absent |
+| `ADMIN-02/03/04` | **Expected matrix** | Admin 200; non-admin 403; anonymous 401; ban/unban 200/403 |
+| `RESET-01` enumeration | **Confirmed** | Known email 500 vs unknown 200 when email delivery fails |
+| `RESET-02` random token | **Rejected** | 400 |
+| `EMAIL-01` invalid verification | **Rejected** | 400 |
+| `EMAIL-02` auto-verify | **Confirmed** | Registration returned `autoVerified: true` |
+| `UPLOAD-01` validation | **Partial pass** | Missing file/wrong MIME/oversized = 400 |
+| `UPLOAD-02` magic bytes | **Not reached** | Bad-magic request reached unconfigured storage (503) |
+| `OAUTH` start/state/cookie | **Pass** | Google/GitHub 302; `HttpOnly`/`Secure`/`SameSite=None`; mismatched state 403 |
+| `OAUTH` full provider login | **Blocked** | Interactive provider access not available |
+| `XSS-01` stored payload | **Pass** | Rendered as text; 0 raw images; 0 dialogs |
+| `METRICS-01` | **404** | No metrics exposure without token |
+| `REMINDER-01` | **Info** | Seeded camelCase dates vs snake_case helper; 400 |
+| `RESEND-01` | **Unverified** | Read-only `/domains` 401; no email sent |
+| Semgrep | **0 findings** | 280 files / 173 rules / 0 errors |
+| npm audit | **0 vulnerabilities** | 833 dependencies |
+| Trivy | **0 vulnerabilities** | 2 npm lockfiles |
+| Checkov | **7 failures** | 241 passed, 0 parsing errors |
+| Gitleaks `apps/` | **0 matches** | Source only |
+| Gitleaks current evidence | **13 matches** | Redacted |
+| Gitleaks Git history | **9 matches** | Redacted |
+| testssl | **Blocked** | No TLS endpoint; no real DNS client |
+
+#### H.3 Detailed results
+
+**H.3.1 Live remote credentials and evidence secrets.** The Atlas credential was accepted for a read-only ping/metadata operation; no documents were read. The Cloudinary credential was accepted by the read-only resources API; no upload was performed. The current evidence tree contains 13 redacted matches in 6 files: six in `seed.json`, one each in `manual-tests.txt`, `manual-tests.json`, and `wapiti-ep1.json`, and four in two CodeQL DB page-dump files. The Git history scan found 9 redacted matches in four tracked evidence files. This is a P0 containment issue; rotate the credentials and delete/quarantine the CodeQL DB.
+
+**H.3.2 Rate limiting and error handling.** Fourteen login attempts with unique spoofed `X-Forwarded-For` values produced no 429. Twelve attempts with one stable value produced two 429s. The limiter is working, but the identity is attacker-controlled. In development, 403 CSRF, 413 oversized-body, and 400 malformed-JSON responses contained stack-like content. In the production-mode local process, 403 and 413 responses did not.
+
+**H.3.3 Sanitizer.** A request body containing a prototype key caused the sanitized request object to inherit the planted property. The global `Object.prototype` was not polluted. This confirms a request-object inheritance primitive and supports the `SAN-01` fix: reject dangerous keys and build null-prototype objects.
+
+**H.3.4 NoSQL, IDOR, mass assignment, and admin.** The operator login payload was rejected with 400 and did not set an access cookie; the hidden hackathon was not exposed. Reminder delete, saved-item delete, team request/invitation access, and notification update checks passed for the tested non-owner accounts. Profile/skills sensitive-field attempts did not change `role` or sensitive fields. The admin list route is absent (404), while reports/scrapers and ban/unban authorization behaved as expected for admin/non-admin/anonymous callers. Anonymous ban returned 403 at the CSRF layer, not 401; that is still a denial, but it is not an authentication result.
+
+**H.3.5 Password reset, email verification, and upload.** Forgot-password returned 500 for a known seeded account and 200 for an unknown address when email delivery failed; this is `RESET-01`. A random reset token was rejected. Registration returned `autoVerified: true` under `DEV_AUTO_VERIFY=true`; this is `EMAIL-01`. Upload requests with no file, a wrong MIME type, or an oversized file returned 400. A bad-magic request reached the unconfigured storage layer and returned 503, so magic-byte validation was not demonstrated before storage.
+
+**H.3.6 OAuth and stored XSS.** In the production-mode local process, Google and GitHub start routes returned 302 with state. The state cookie was `HttpOnly`, `Secure`, `SameSite=None`, path `/api/auth`, max-age 600 seconds. A mismatched-state callback returned 403 without a stack-like body. The CSRF cookie also had `HttpOnly`/`Secure`/`SameSite=None`. Full provider login was not completed, and the configured callbacks are HTTP localhost. The seeded stored-XSS payload was rendered as text in Chromium: zero raw `<img src=x>` elements and zero dialogs.
+
+**H.3.7 Static, SCA, and secret scans.** Semgrep ran with a valid registry ruleset on 130 API files (103 rules) and 150 web files (70 rules): 0 findings, 0 errors. npm audit covered 833 dependencies: 0 vulnerabilities. Trivy scanned two npm lockfiles: 0 vulnerabilities. Checkov reproduced 241 passed / 7 failed / 0 parsing errors. Gitleaks found 0 in `apps/`, 13 in the current evidence tree, 9 in Git history, and 4 in the CodeQL DB. testssl could not run because there is no TLS endpoint and no real DNS client; it remains blocked.
+
+**H.3.8 What remains blocked.** Full Google/GitHub provider login and account linking; Resend send capability; production TLS/headers/redirect; full file-upload storage/image-processing/SSRF; full admin/team lifecycle; background jobs; Python/Go/Docker SCA; and remediation verification.
+
+#### H.4 Status changes from the original report
+
+| Area | Original status | 22 November status |
+|---|---|---|
+| NoSQL operator injection | Invalid/blocked tests | Tested; login rejected and hidden resource not exposed; code-path review remains |
+| Stored XSS | Not exercised | Stored payload escaped in Chromium; reflected/DOM review remains |
+| `IDOR-02` | Missing | Covered; reminder delete blocked for non-owner |
+| Mass assignment | Weak/wrong endpoint | Profile/skills tested; no role escalation; other models remain |
+| Admin authorization | List 404, ban/unban untested | List still 404; reports/scrapers/ban-unban tested |
+| OAuth state | Untested end-to-end | Start/state/cookie pass; full provider blocked |
+| Password reset/email | Untested | `RESET-01` and `EMAIL-01` confirmed; delivery/expiry/reuse partial |
+| File upload | Untested | Validation partial; magic-byte/storage/SSRF remain |
+| Semgrep | Invalid deep run | Valid 280-file re-run, 0 findings |
+| npm/Trivy | Narrow/partial | 0 vulnerabilities in npm and two lockfiles |
+| Gitleaks | Historical only | Current evidence 13, Git history 9, CodeQL DB 4; all redacted |
+| testssl | No TLS | Still blocked; no real DNS client |
+| Production | Not tested | Still not tested |
+
+#### H.5 Updated priority actions
+
+- **P0:** rotate Atlas, Cloudinary, Resend, OAuth, JWT, refresh, CSRF, and cookie secrets; delete/quarantine the CodeQL DB; redact the 13 current evidence matches; stop or loopback-bind API/Vite/Mongo; confirm no remote documents were read or uploaded; enable secret scanning and submit the GitHub purge request.
+- **P1:** fix `RESET-01` generic responses; force `DEV_AUTO_VERIFY=false` outside development; reject bad magic bytes before storage; add frontend CSP/XCTO/Referrer-Policy; complete OAuth provider/mock E2E; fix the rate-limit identity, error handlers, sanitizer, and admin list; add the frontend headers; keep the stored-XSS regression.
+- **P2:** production TLS/headers/redirect with a real resolver; full upload/image-processing/SSRF; full admin/team lifecycle; Python/Go/Docker SCA and SBOM; CodeQL re-analysis after DB cleanup; independent review.
+
+#### H.6 Reproduction note
+
+The harnesses and raw scan outputs were kept outside the repository. Reproduction commands are the same class as Appendix E: `semgrep` with a pinned ruleset, `npm audit --json`, `trivy fs`, `checkov -d .github/workflows --framework github_actions`, and `gitleaks detect` with `--redact` against `apps/`, the evidence tree, Git history, and the CodeQL DB. OAuth and browser tests require a disposable local session and must not print cookies, tokens, passwords, or provider values.
+
+**No secret values are included in this appendix.** The counts and flags are sufficient to prioritize rotation, redaction, and retesting.
