@@ -7,10 +7,28 @@ function isOptionalHttpUrl(value) {
         return true;
     }
 
+    const trimmedValue = value.trim();
+    const authority = trimmedValue.match(/^https?:\/\/([^/?#]+)(?:[/?#]|$)/i);
+    if (
+        trimmedValue.length > 300
+        || /\s|\\/.test(trimmedValue)
+        || !authority
+        || authority[1].includes("@")
+    ) {
+        return false;
+    }
+
     try {
-        const parsed = new URL(value);
+        const parsed = new URL(trimmedValue);
+        const hostname = parsed.hostname.toLowerCase().replace(/\.$/, "");
+        const labels = hostname.split(".");
         return (parsed.protocol === "http:" || parsed.protocol === "https:")
-            && parsed.hostname.includes(".")
+            && hostname.length <= 253
+            && labels.length > 1
+            && labels.every(label =>
+                label.length <= 63
+                && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+            )
             && !parsed.username
             && !parsed.password;
     } catch {
