@@ -234,6 +234,38 @@ PR checklist:
 
 ---
 
+## 5. Validation status — 22 November 2026
+
+This section records what the second environment-assisted pass actually proved, so owners do not re-run checks that are already done. Raw evidence is in `evidence/atlas-check.txt`, `evidence/testssl-atlas.txt`, `evidence/testssl-atlas.json`, `evidence/environment-pass-2.txt`, and `evidence/env-validation-2.txt`. No secret values are recorded.
+
+| Finding/area | Priority | Previous state | 22 Nov validation | Remaining owner action |
+|---|---|---|---|---|
+| `SEC-01` historical `BRABBLE_API_KEY` | P0 | Leak confirmed; rotation unverified | Still treated as compromised; no rotation evidence | Rotate at provider; confirm old key fails; purge/close incident (Senthil) |
+| `SEC-02` live supplied credentials | P0 | Atlas/Cloudinary accepted read-only | Atlas (cluster admin), Cloudinary, Resend, Google, and GitHub credentials all exercised and live; env kept outside the repo | Rotate all; replace Atlas user with scoped `readWrite`; review access list (Senthil, Berwin, Nandhini) |
+| `SEC-02` evidence secrets | P0 | 13 current-evidence matches | Unchanged; no new secret written to the repo | Redact/delete, rotate, rescan (Senthil) |
+| `DB-01` local MongoDB | P0 | No authentication | Unchanged: local instance still accepts unauthenticated connections | Enable auth or delete; loopback only (Nandhini) |
+| `DB-01` Atlas privilege | P0/P1 | Credential accepted; role unknown | Auth enforced (code 8000 without credentials), but app user is **`atlasAdmin@admin`**; 20 namespaces and counts visible; no writes | Create least-privilege `readWrite` user on `HackHub`; re-test (Nandhini) |
+| `VITE-01` Vite exposure | P0 | Project files served on `0.0.0.0:5173` | Unchanged | Bind loopback/production build (Rubashree) |
+| `RATE-01` XFF bypass | P1 | 14 attempts, no 429 | Unchanged; rate limits were raised only for scanning | Fix identity/trust proxy; verify 429 (Berwin) |
+| `ERR-01` stack leakage | P1 | Dev 403/413/400 leak; prod-mode does not | Unchanged | Generic handlers in all modes (Berwin) |
+| `SAN-01` sanitizer | P1 | `__proto__` inheritance demonstrated | Unchanged | Null-prototype + reject keys; tests (Senthil) |
+| `ADMIN-01` admin API/UI | P1 | List 404; ban/unban matrix passes | Unchanged | Implement or remove list; full CRUD tests (Berwin, Lalitha) |
+| `LOG-01` log injection | P1 | Static only | Unchanged | Structured logging + CRLF/ANSI test (Berwin) |
+| `OAUTH-01` state/flow | P1/P2 | Start/state/cookie pass; provider blocked | Client credentials valid for Google and GitHub; callbacks registered; invalid code, missing state, and missing cookie all 403 with no stack; user-supplied redirect parameters ignored | Add mock-provider tests for consent, linking, replay, expiry; interactive login still untested (Berwin, Divya) |
+| `RESET-01` reset enumeration | P1 | Known 500 vs unknown 200 with delivery down | With working key and accepted domain both return 200; 500 only when the provider rejects the recipient | Normalize responses across provider failure; tests (Berwin) |
+| `EMAIL-01` auto-verify | P1 | Bypass confirmed with flag on | Flag off: registration 200 with `autoVerified: false`, verification email accepted | Startup guard outside development (Berwin) |
+| File upload / Cloudinary | P2 | Validation partial; storage not reached | Real PNG uploaded to `hackhub/avatars` and deleted; unsigned uploads disabled; spoofed MIME accepted by multer and rejected only by Cloudinary; size/type limits 400 | Add magic-byte validation before storage; image/SSRF tests (Berwin, Rubashree) |
+| `CI-01` workflows | P1 | Checkov 7 failures | Unchanged | Fix the 7 rule IDs; re-run Checkov (Senthil) |
+| testssl / TLS | P2 | Blocked: no TLS endpoint, no DNS client | Executed against Atlas: TLS 1.2/1.3, no major TLS vulnerabilities; LUCKY13 experimental flag; cert expires 2026-12-18 | Renew cert; production app TLS scan when a URL exists (Senthil, Rubashree) |
+| Resend capability | P2 | Unverified (401 on `/domains`) | Send-only key; send accepted (200) to the test sink; `example.com` rejected 422 | Use a verified sending domain for real recipients (Berwin, Divya) |
+| `SUPPLY-01` tooling | P1 | No checksums/SBOM; fake DNS shims | `tools/bin/dig` replaced with a real dnspython client; no manifest/SBOM yet | Manifest, checksums, SBOM, remove duplicate archives (Senthil) |
+| `EVID-01` evidence package | P0/P1 | Synthetic screenshots and unreliable summaries | New pass adds raw command output and status tables; synthetic PNGs still present | Regenerate evidence from raw output; remove synthetic images (Senthil) |
+| MobSF | N/A | No mobile artifact | Still no APK/IPA | Document N/A unless a mobile app exists |
+
+**Still blocked:** interactive Google/GitHub consent and account linking; inbox delivery to arbitrary recipients with the Resend test sender; the production app’s TLS/headers/redirect (no deployment URL supplied); image processing/EXIF and SSRF; full admin/team lifecycle; background jobs; Python/Go/Docker SCA and SBOM; remediation verification and independent retest.
+
+---
+
 
 
 ## 6. Plan

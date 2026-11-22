@@ -4,8 +4,8 @@
 > **Audit package reviewed:** `security-audit/`  
 > **Target reviewed:** HackHub local audit environment (`apps/api`, `apps/web`)  
 > **Report type:** Independent consolidation of the existing audit package, plus validation of selected findings against the running local app.  
-> **Status:** Final consolidated report; updated 22 November 2026 with the environment-assisted validation in Appendix H. Still **not approved**.  
-> **Secret handling:** **No secret values are reproduced in this report.** Some referenced evidence files contain live test passwords, cookies, CSRF tokens, JWTs, or an access-token secret. Those files must be handled as sensitive and must not be published or shared as-is. The supplied environment values were used only for the checks in Appendix H and were never written into this report.
+> **Status:** Final consolidated report; updated 22 November 2026 with the environment-assisted validation in Appendix H and the second environment-assisted pass in Appendix I. Still **not approved**.  
+> **Secret handling:** **No secret values are reproduced in this report.** Some referenced evidence files contain live test passwords, cookies, CSRF tokens, JWTs, or an access-token secret. Those files must be handled as sensitive and must not be published or shared as-is. The supplied environment values were used only for the checks in Appendices H and I and were never written into this report.
 
 > **Bottom line:** The audit package contains useful raw evidence, but it does **not** support a “0 vulnerabilities” or “clean” conclusion. It found real issues, missed or invalidated several important tests, and contains its own credential leaks. The most important assurance finding is that the summary layer is materially unreliable. The most important operational findings are the historical secret leak, the credentials embedded in the audit folder and exposed local services, and a confirmed rate-limit bypass. The 22 November environment-assisted pass also confirmed that the supplied remote Atlas and Cloudinary credentials are live, that the current evidence tree contains 13 redacted secret matches, and that password-reset responses become enumerable when email delivery fails. Those results strengthen the P0 rotation/containment case; they do not close it.
 
@@ -67,12 +67,12 @@ The correct conclusion is **not** “the app is clean.” The correct conclusion
 | Metric | Value | Meaning |
 |---|---:|---|
 | Audit folder on disk | **5.2 GB** | Mostly ignored tools and the local database |
-| Git-tracked files under `security-audit/` | **101** | Tools/logs/DB are ignored; sensitive evidence is tracked |
+| Git-tracked files under `security-audit/` | **105** | Tools/logs/DB are ignored; sensitive evidence is tracked |
 | Tools directory | **~4.5 GB** | CodeQL, venv, Burp, Trivy, archives, etc. |
 | Evidence directory | **~560 MB** | Dominated by the ignored `codeql-db` |
 | Local MongoDB data | **~206 MB** | Local audit database; no authentication |
 | Screenshots | **~5.0 MB** | 13 app + 19 tool PNGs |
-| Final reports | **0** | `reports/` was empty before this report |
+| Final reports | **2** | This report plus the remediation assignment |
 | Manual checks | **43** | 40 PASS, 2 NOTE, 1 FAIL — but several are invalid or weak |
 | CodeQL raw results | **72** | 42 first-party, 30 in audit tools/venv |
 | CodeQL first-party active API hits | **23** | 17 legacy, 1 build script, 1 web dev artifact |
@@ -85,23 +85,24 @@ The correct conclusion is **not** “the app is clean.” The correct conclusion
 | Gitleaks current evidence | **13 matches** | 6 files: 9 in tracked evidence, 4 in CodeQL DB page dumps; all redacted |
 | Gitleaks Git history | **9 matches** | 4 tracked evidence files; values redacted |
 | Live services observed | **3** | API `0.0.0.0:5000`, Vite `0.0.0.0:5173`, Mongo `127.0.0.1:27017` |
+| Remote database tested | **1** | Atlas `HackHub` cluster: auth enforced, app user has `atlasAdmin@admin` |
 
 ### 1.4 Top findings
 
 | ID | Finding | Severity | Status |
 |---|---|---|---|
 | `SEC-01` | Historical secret exposure in Git/GitHub; rotation and purge not verified | **Critical** (until rotated) | Confirmed from gitleaks evidence; operational remediation pending |
-| `SEC-02` | Audit artifacts and live local services expose credentials/tokens; supplied remote Atlas/Cloudinary credentials are live; API/Vite on `0.0.0.0` | **High** | Confirmed; remote read-only authentication succeeded; rotation pending |
+| `SEC-02` | Audit artifacts and live local services expose credentials/tokens; supplied remote Atlas/Cloudinary/Resend/OAuth credentials are live; API/Vite on `0.0.0.0` | **High** | Confirmed; Atlas/Cloudinary/Resend/OAuth credentials accepted; rotation pending |
 | `RATE-01` | IP rate-limit bypass via spoofed `X-Forwarded-For`; 14 login attempts produced no 429 | **High** | Confirmed live |
 | `EVID-01` | Evidence package is unreliable: synthetic screenshots, hardcoded summaries, false passes, invalid tools, no report | **High** (assurance) | Confirmed by comparison with raw evidence; some tool claims now re-run |
 | `ERR-01` | Error-stack leakage on CSRF 403, oversized-body 413, and malformed-JSON 400 responses | **Medium** | Confirmed in development; production-mode 403/413 did not leak stacks |
 | `SAN-01` | Sanitizer copies `__proto__`; request-body inheritance demonstrated; global prototype not polluted | **Medium** | Confirmed code behavior |
 | `ADMIN-01` | `GET /api/admin/users` does not exist; ban/unban and admin authorization now tested | **Medium** (assurance) | Admin list 404; reports/scrapers/ban-unban matrix passes |
-| `DB-01` | Local MongoDB runs without authentication; supplied remote Atlas credential accepted read-only | **Medium** (local audit environment) | Confirmed live/read-only |
+| `DB-01` | Local MongoDB runs without authentication; remote Atlas requires auth but the app user holds `atlasAdmin@admin` | **Medium** | Confirmed live; over-privileged remote user |
 | `VITE-01` | Vite dev server on `0.0.0.0:5173` serves project files; frontend headers absent | **Low/Medium** | Confirmed live |
 | `CI-01` | GitHub Actions use `write-all` and curl-with-secrets patterns | **Low/Medium** | Confirmed by Checkov: 241 passed, 7 failed |
 | `LOG-01` | Four user-controlled log-injection candidates in an active controller | **Low** | Static only |
-| `OAUTH-01` | OAuth state cookie uses `SameSite=None` in production; start/state/cookie tested, full provider login untested | **Low** | Production-mode checks pass; full provider blocked |
+| `OAUTH-01` | OAuth state cookie uses `SameSite=None` in production; provider credentials and callbacks verified, full consent login untested | **Low** | Client credential/callback checks pass; interactive consent blocked |
 | `RESET-01` | Password-reset response differs (known email 500 vs unknown 200) when email delivery fails | **Medium** | Confirmed under provider-failure condition |
 | `EMAIL-01` | `DEV_AUTO_VERIFY=true` auto-verifies registration | **Medium** (config) | Confirmed in running development config |
 | `LEGACY-01` | Legacy/duplicate backend has static SQLi and missing-rate-limit hits | **Medium** (needs review) | Static only |
@@ -272,11 +273,11 @@ No production user data was observed in this local database. The audit logs and 
 ### 2.6 Limitations of this review
 
 - The review is local and time-bounded.
-- No production HackHub deployment was available. Remote Atlas and Cloudinary were checked read-only; no production documents were read and no upload was performed.
+- No production HackHub deployment was available. Remote Atlas and Cloudinary were checked read-only for metadata; no production documents were read and no long-lived upload was kept.
 - No authenticated proxy/Burp scan was performed.
-- File-upload validation was tested only through the API boundary; end-to-end storage, image processing, signed URLs, deletion, and Cloudinary writes were not tested.
-- OAuth start/state/cookie checks were tested; full provider login, callback, account linking, redirect-URI allowlist, replay, and expiry were not completed.
-- Password reset and email verification were tested with email delivery unavailable; Resend send capability remains unverified.
+- File upload was exercised end-to-end through the API into Cloudinary, including deletion; image processing/EXIF and SSRF remain untested.
+- OAuth start/state/cookie, client credentials, registered callbacks, invalid-code callbacks, and missing/mismatched state were tested; interactive provider consent, account linking, replay, and expiry were not completed.
+- Password reset and email verification were tested with a working Resend key; delivery to arbitrary domains is blocked by the Resend test sender.
 - Admin ban/unban and selected reports/scrapers authorization were tested; full admin CRUD and UI coverage remain.
 - Background jobs, scraper execution, and mobile behavior were not tested.
 - No full manual review of every route/controller was performed.
@@ -503,7 +504,7 @@ The following should not be relied on without re-running:
 
 The findings below are the ones supported by code review, raw evidence, or live local validation. Each includes impact, root cause, and remediation. Secret values are deliberately omitted.
 
-> **22 November 2026 update:** Appendix H records the environment-assisted checks run after the original consolidation. It adds evidence for the findings below and adds two new confirmed findings (`RESET-01`, `EMAIL-01`). Where an original subsection says a test was not performed, the Appendix H result is the later status.
+> **22 November 2026 update:** Appendix H records the environment-assisted checks run after the original consolidation; Appendix I records the second pass (provider OAuth, Resend send, Cloudinary upload end-to-end, Atlas privilege, and TLS). They add evidence for the findings below and add two new confirmed findings (`RESET-01`, `EMAIL-01`). Where an original subsection says a test was not performed, the Appendix H or I result is the later status.
 
 ### 5.1 `SEC-01` — Historical secret exposure and incomplete remediation
 
@@ -866,6 +867,8 @@ Even though this is test data, the primitive is real: the folder contains everyt
 
 **Post-validation update (22 Nov 2026):** The local MongoDB accepted an unauthenticated connection (12 collections, 3 users). The supplied remote Atlas credential was also accepted for a read-only ping/metadata check; no remote documents were read. Treat the remote credential as compromised and rotate it; the local DB still needs auth or deletion.
 
+**Second-pass update (Appendix I):** Atlas authentication is enforced for data operations — unauthenticated `ping` is allowed (pre-auth heartbeat) but `listCollections` fails with server error 8000. The supplied application user authenticates to replica set `atlas-x5aa2y-shard-0` (MongoDB 8.0.39) with role **`atlasAdmin@admin`**, i.e. full cluster administration instead of a scoped readWrite user on `HackHub`. The cluster was reachable from this host, so the Atlas access list permits this public source address. Twenty namespaces and estimated counts were visible (e.g. 803 hackathons, 6 users, 249 audit logs); no documents or field values were read, and no write was attempted.
+
 **Severity:** Medium (local audit environment)  
 **Status:** Confirmed live  
 **Affected assets:** Local MongoDB `hackhub` database, `.mongo-data`, API database connection
@@ -1060,8 +1063,10 @@ CodeQL reports four `js/log-injection` results in an active controller. The exac
 
 **Post-validation update (22 Nov 2026):** In a production-mode local process, Google and GitHub start routes returned 302 to the provider with state. The state cookie was `HttpOnly`, `Secure`, `SameSite=None`, path `/api/auth`, and max-age 600 seconds. A mismatched-state callback returned 403 with no stack-like content. The CSRF cookie was also `HttpOnly`/`Secure`/`SameSite=None`. Full provider login, account linking, redirect-URI allowlisting, replay, and expiry were not completed; the configured callbacks are still HTTP localhost.
 
+**Second-pass update (Appendix I):** With the supplied client IDs and secrets, both provider credentials were validated without a user login: Google's token endpoint returns `invalid_grant` (not `invalid_client`) for a malformed code, and GitHub returns `bad_verification_code` (not `incorrect_client_credentials`). Both authorize endpoints return 302 for the configured `http://localhost:5000/api/auth/<provider>/callback`, so the callbacks are registered. The app start routes send `client_id` and a 112–118 character state, do not reflect user-supplied `redirect`, `redirect_uri`, or `returnTo` parameters, and reject a valid-state/invalid-code callback, a missing state, and a missing state cookie with the same generic 403. The development state cookie is `HttpOnly`, `SameSite=Lax`, path `/api/auth`, non-Secure — the documented dev branch. Interactive consent and account linking remain blocked because they need a provider account login.
+
 **Severity:** Low (needs end-to-end review)  
-**Status:** Static; code review suggests the design is intentional but untested  
+**Status:** Code review plus provider-configuration validation; interactive consent still untested  
 **Affected assets:** `apps/api/middleware/rateLimitMiddleware.js` (OAuth state cookie options around lines 17–29), Google/GitHub OAuth flow
 
 **What was found**
@@ -1417,6 +1422,7 @@ This is the central folder-level finding. The package has raw evidence, but the 
 - The live test produced **known email 500, unknown email 200**, with different bodies.
 - The reset token remains stored after the failed send, but the user receives no email.
 - This is an enumeration oracle only when email delivery fails; with a working provider, both branches return 200.
+- Second pass with a send-capable Resend key: for a known account on an accepted recipient domain (Resend's test sink) the response is the generic 200; for a known account on a domain the provider rejects (`example.com`) it is 500. The oracle therefore tracks provider/recipient failure, not merely a missing key.
 
 **Impact**
 
@@ -1461,6 +1467,7 @@ This is the central folder-level finding. The package has raw evidence, but the 
 - The account can be used without proving control of the email address.
 - No verification email is required in this configuration.
 - The API is network-exposed, so the development convenience flag is not contained to a developer workstation.
+- With `DEV_AUTO_VERIFY=false` in the second pass, registration returned `autoVerified: false` and the verification email was handed to Resend successfully — the flag is the only thing disabling the control.
 
 **Impact**
 
@@ -1492,7 +1499,7 @@ This is the central folder-level finding. The package has raw evidence, but the 
 
 ## 6. Unconfirmed, weak, or untested areas
 
-> **22 November 2026 status:** The table below is the original package-review baseline. Appendix H and §6.10 record which rows were subsequently tested. Rows marked “tested” in §6.10 are no longer untested; the residual gap is stated there.
+> **22 November 2026 status:** The table below is the original package-review baseline. Appendices H and I and §6.10 record which rows were subsequently tested. Rows marked “tested” in §6.10 are no longer untested; the residual gap is stated there.
 
 These are not confirmed vulnerabilities. They are areas where the audit’s evidence is insufficient, invalid, or absent. They should not be reported as “clean.”
 
@@ -1561,26 +1568,28 @@ The app uses React, and no `dangerouslySetInnerHTML` was found in the app source
 
 `AUTH-03` and `AUTHZ-03` both target `/api/admin/users`. The route does not exist. An anonymous 401 and an admin 404 are not evidence that admin authorization works. The ban/unban routes and other admin operations are untested.
 
-### 6.7 File upload/SSRF — not tested
+### 6.7 File upload/SSRF — partially tested
 
-The app has an avatar uploader and Cloudinary integration. The audit did not test:
+The app has an avatar uploader and Cloudinary integration. The second pass exercised `PUT /api/users/avatar` end-to-end with the supplied Cloudinary account:
 
-- file type/size/magic-byte validation;
-- image processing/EXIF;
-- signed URL exposure;
-- SSRF via remote avatar URLs;
-- Cloudinary credential handling;
-- deletion/cleanup.
+- wrong MIME type (`text/plain`) → 400; 3 MB file → 400 (2 MB limit); missing file → 400;
+- text bytes declared as `image/png` → multer accepts (MIME-only filter), Cloudinary rejects the bytes, API returns 500 — **no application-side magic-byte check before storage**, so validation depends on the storage provider;
+- a real 1×1 PNG → 200 with an `https://res.cloudinary.com/.../hackhub/avatars/...` URL; the public ID is recorded on the user;
+- `DELETE /api/users/avatar` → 200 and the uploaded asset was destroyed (account returned to its prior object count);
+- Cloudinary unsigned upload without a signature/preset → 400 “Upload preset not found”, so no open unsigned preset;
+- avatar CDN URLs are publicly readable without authentication (expected for avatars, but they are unguessable only by ID).
 
-The scraper/admin URL-fetching code was not exercised because background jobs were disabled.
+Still untested: image processing/EXIF handling, signed-URL exposure, SSRF via remote avatar URLs, and the scraper/admin URL-fetching code (background jobs disabled).
 
-### 6.8 Password reset/email verification — not tested
+### 6.8 Password reset/email verification — partially tested
 
-`DEV_AUTO_VERIFY=true` bypasses email verification. The audit did not test reset-token entropy, expiry, reuse, enumeration, rate limits, or email delivery. The `ENUM-02` test was blocked by CSRF and is invalid.
+`DEV_AUTO_VERIFY=true` bypasses email verification; with the flag off, registration returns `autoVerified: false` and sends a verification email. The second pass verified that the supplied Resend key can send (HTTP 200 to Resend's test sink) and that the app reports 200 for both known and unknown addresses when the recipient domain is accepted (RESET-01 becomes a provider-failure oracle). Reset-token entropy, expiry, reuse, and rate limits remain untested. The `ENUM-02` test was blocked by CSRF and is invalid.
 
-### 6.9 Production TLS/headers — not tested
+### 6.9 Production TLS/headers — database endpoint tested, app deployment not tested
 
-The local target is plain HTTP. Testssl did not test TLS. The API sets Helmet headers, but the frontend headers and production TLS/redirect behavior are unverified. HSTS on an HTTP response is not meaningful. Production could be fine, or not; the audit does not know.
+The local target is plain HTTP, so testssl had no TLS target in the first pass. The second pass ran testssl against the Atlas shard endpoint (`ac-vyisml5-shard-00-00.ub0ctrl.mongodb.net:27017`): TLS 1.2 and 1.3 only, RSA 4096, trusted Let's Encrypt wildcard chain, no Heartbleed/CCS/ROBOT/POODLE/SWEET32/FREAK/DROWN/LOGJAM/BEAST/RC4 findings, LUCKY13 flagged as potentially vulnerable (experimental, CBC). The certificate expires 2026-12-18 and OCSP stapling is not offered.
+
+That is the database endpoint, not the API or web frontend. No production HackHub URL was supplied, so production TLS/redirect/CSP for the app remains unverified. HSTS on an HTTP response is still not meaningful.
 
 ---
 
@@ -1593,10 +1602,10 @@ The local target is plain HTTP. Testssl did not test TLS. The API sets Helmet he
 | IDOR/BOLA | `IDOR-02` reminder delete returned 404 for a non-owner; saved-item delete 404; team request/invitation 403; notification update 404 | Full object/role matrix and proxy replay |
 | Mass assignment | Profile/skills sensitive-field attempts rejected/ignored; role stayed `student` | Other models/endpoints and nested fields |
 | Admin authorization | Admin list 404; reports/scrapers 200/403/401; ban/unban 200/403; non-admin/anonymous ban 403 | Full admin CRUD, UI, audit log, CSRF matrix |
-| OAuth login CSRF | Start 302; state cookie `HttpOnly`/`Secure`/`SameSite=None`; mismatched state 403 with no stack; CSRF cookie flags pass | Full provider login, callback, account linking, redirect allowlist, replay/expiry |
-| Password reset/email verification | Enumeration under provider failure (`RESET-01`); auto-verify (`EMAIL-01`); random reset token rejected | Working-provider send, expiry/reuse, delivery, rate limits |
-| File upload/SSRF | Missing file/wrong MIME/oversized file 400; bad magic reached storage 503 | Magic-byte rejection before storage; end-to-end upload, image processing, signed URLs, SSRF |
-| Production TLS/headers | API Helmet headers present; frontend headers absent; production-mode 403/413 no stack | Production TLS/redirect/CSP; testssl blocked by no TLS endpoint and no DNS client |
+| OAuth login CSRF | Start 302; state cookie `HttpOnly`/`Secure`/`SameSite=None`; mismatched state 403 with no stack; client credentials and registered callbacks verified; invalid-code/missing-state callbacks 403 | Interactive consent login, account linking, replay/expiry |
+| Password reset/email verification | Enumeration under provider failure (`RESET-01`); auto-verify (`EMAIL-01`); random reset token rejected; working-key send accepted; flag-off registration sends verification | Token expiry/reuse, rate limits, inbox delivery |
+| File upload/SSRF | Missing file/wrong MIME/oversized file 400; real PNG uploaded to Cloudinary and deleted; spoofed MIME rejected only by the storage provider | Magic-byte validation; image processing/EXIF; signed URLs; SSRF |
+| Production TLS/headers | API Helmet headers present; frontend headers absent; production-mode 403/413 no stack; Atlas TLS 1.2/1.3 passed testssl | Production app TLS/redirect/CSP; client endpoint not supplied |
 | SCA/static/secret | Semgrep 280 files/0 findings; npm 833 deps/0; Trivy 2 lockfiles/0; Checkov 241 pass/7 fail; gitleaks 13 current-evidence matches | Python/Go/Docker SCA, SBOM, testssl, CodeQL re-analysis |
 | Rate limits beyond login | Login/global only | Register/reset/upload/search/admin |
 | CSRF beyond selected routes | Selected mutations only | Full state-changing route matrix |
@@ -1890,12 +1899,14 @@ The active SQLi hits are concentrated in services that build filters from reques
 
 ### 9.16 Testssl
 
-- **Target:** `127.0.0.1:5000`; plain HTTP; no TLS.
-- **Result:** no protocol/TLS detected; no production test.
-- **22 Nov attempt:** testssl could not run because no TLS endpoint exists and no real `dig`/`host`/`nslookup` client is installed; the fake shims do not fix the missing client.
-- **What is valid:** the local target has no TLS.
-- **What is weak:** the summary’s production TLS/secure-cookie claims are speculative; DNS-dependent behavior is synthetic.
-- **Conclusion:** blocked/coverage gap; run only against a real HTTPS endpoint with a real resolver.
+- **First-pass target:** `127.0.0.1:5000`; plain HTTP; no TLS; no result.
+- **Second-pass target:** `ac-vyisml5-shard-00-00.ub0ctrl.mongodb.net:27017` (Atlas TLS endpoint), real DNS resolution. Command: `testssl.sh --protocols --server-defaults --headers --vulnerable`.
+- **Result:** TLS 1.2 and TLS 1.3 only; SSLv2/SSLv3/TLS1.0/TLS1.1 not offered; RSA 4096; trusted `*.ub0ctrl.mongodb.net` Let's Encrypt chain (3 certs); certificate valid 2026-09-19 to 2026-12-18; OCSP stapling not offered; client auth optional.
+- **Vulnerabilities:** not vulnerable to Heartbleed, CCS, ROBOT, CRIME, POODLE, SWEET32, FREAK, DROWN, LOGJAM, BEAST, Winshock, RC4. LUCKY13 (CVE-2013-0169) flagged “potentially VULNERABLE” (experimental, CBC with TLS 1.2).
+- **Resolver:** `tools/bin/dig` was a hardcoded stub; it is now a real dnspython-backed client, so the answers are live lookups.
+- **What is valid:** the database endpoint’s TLS posture, observed directly.
+- **What is weak:** this is the Atlas database endpoint, not the app’s production HTTPS frontend; the LUCKY13 line is an experimental check; certificate renewal is due within 25 days.
+- **Conclusion:** testssl executed successfully for the first time; app production TLS remains a coverage gap.
 
 ### 9.17 MobSF
 
@@ -1946,7 +1957,7 @@ The active SQLi hits are concentrated in services that build filters from reques
 | XSS | XSStrike, manual, Chromium | Stored pass; reflected/DOM review remains |
 | CSRF | Manual, CodeQL, proxy | Basic control works; error leak; broad routes untested |
 | Rate limiting | Manual, ffuf | Bypass confirmed; other endpoints untested |
-| Headers/TLS | httpx, testssl | API headers; frontend absent; TLS/production unverified |
+| Headers/TLS | httpx, testssl | API headers; frontend absent; Atlas TLS 1.2/1.3 clean; app production TLS unverified |
 | File upload/SSRF | Manual upload validation | Partial; magic-byte/storage/SSRF not tested |
 | OAuth | Code review + state harness | Start/state/cookie pass; full provider not |
 | Password reset/email | Manual | Enumeration/auto-verify confirmed; delivery/expiry/reuse partial |
@@ -1968,10 +1979,14 @@ The active SQLi hits are concentrated in services that build filters from reques
 | Gitleaks `apps/` | 0 matches | Source tree only |
 | Gitleaks current evidence | 13 matches / 6 files | 9 tracked evidence + 4 CodeQL DB; redacted |
 | Gitleaks Git history | 9 matches / 4 tracked evidence files | JWT + generic-api-key; redacted |
-| testssl | Blocked | No TLS endpoint; no real DNS client |
+| testssl | Blocked in first pass; **executed** in Appendix I | Atlas shard endpoint: TLS 1.2/1.3, no major TLS vulnerabilities, LUCKY13 experimental flag |
 | pip-audit / govulncheck / Docker | Unavailable / N/A | No Python app, Go module, or Docker engine |
 | Browser stored XSS | PASS | Payload escaped; 0 raw images; 0 dialogs |
 | OAuth state harness | PASS for start/state/cookie | Full provider login not completed |
+| OAuth provider credentials | **Valid for Google and GitHub** | Token-endpoint probes; callbacks registered |
+| Resend send | **Accepted (200)** | Send-only key; test-sink recipient; example.com rejected 422 |
+| Atlas privilege | **`atlasAdmin@admin`** | Over-privileged app user; no writes attempted |
+| Cloudinary upload | **PASS end-to-end** | Real PNG stored then deleted; unsigned preset rejected |
 
 ---
 
@@ -2489,7 +2504,7 @@ For the CSRF stack check, use a disposable test session and inspect only whether
 
 ### Appendix G — Limitations and sign-off
 
-**Limitations:** local app plus read-only remote Atlas/Cloudinary checks; no production deployment; no authenticated proxy; upload validation only (no end-to-end storage/image processing/SSRF); OAuth start/state only (no full provider login/linking/redirect-URI allowlist); reset/verification tested with email delivery unavailable; admin list absent and full admin CRUD/UI not tested; background jobs not exercised; no full manual route review; no Python/Go/Docker SCA or SBOM; CodeQL DB scanned for secrets but no new CodeQL analysis; no remediation verification; no independent re-test; no access to provider/GitHub admin logs.
+**Limitations:** local app plus read-only remote Atlas/Cloudinary metadata checks; no production app deployment; no authenticated proxy; upload exercised end-to-end (upload/delete) but image processing/EXIF and SSRF untested; OAuth start/state/client-credential/callback tests only (no interactive consent or account linking); reset/verification tested with a send-capable Resend key but no inbox delivery to arbitrary domains; admin list absent and full admin CRUD/UI not tested; background jobs not exercised; no full manual route review; no Python/Go/Docker SCA or SBOM; CodeQL DB scanned for secrets but no new CodeQL analysis; no remediation verification; no independent re-test; no access to provider/GitHub admin logs. TLS was tested on the Atlas database endpoint only, not on a production HTTPS app endpoint.
 
 **Sign-off status:** **Not approved.**
 
@@ -2571,7 +2586,7 @@ For the CSRF stack check, use a disposable test session and inspect only whether
 
 **H.3.7 Static, SCA, and secret scans.** Semgrep ran with a valid registry ruleset on 130 API files (103 rules) and 150 web files (70 rules): 0 findings, 0 errors. npm audit covered 833 dependencies: 0 vulnerabilities. Trivy scanned two npm lockfiles: 0 vulnerabilities. Checkov reproduced 241 passed / 7 failed / 0 parsing errors. Gitleaks found 0 in `apps/`, 13 in the current evidence tree, 9 in Git history, and 4 in the CodeQL DB. testssl could not run because there is no TLS endpoint and no real DNS client; it remains blocked.
 
-**H.3.8 What remains blocked.** Full Google/GitHub provider login and account linking; Resend send capability; production TLS/headers/redirect; full file-upload storage/image-processing/SSRF; full admin/team lifecycle; background jobs; Python/Go/Docker SCA; and remediation verification.
+**H.3.8 What remains blocked.** Full Google/GitHub provider login and account linking; Resend send capability; production TLS/headers/redirect; full file-upload storage/image-processing/SSRF; full admin/team lifecycle; background jobs; Python/Go/Docker SCA; and remediation verification. **Appendix I closes the Resend-send, upload-storage, provider-credential/callback, and TLS items, and records what is still blocked (interactive consent, arbitrary-recipient delivery, and the production app endpoint).**
 
 #### H.4 Status changes from the original report
 
@@ -2602,3 +2617,82 @@ For the CSRF stack check, use a disposable test session and inspect only whether
 The harnesses and raw scan outputs were kept outside the repository. Reproduction commands are the same class as Appendix E: `semgrep` with a pinned ruleset, `npm audit --json`, `trivy fs`, `checkov -d .github/workflows --framework github_actions`, and `gitleaks detect` with `--redact` against `apps/`, the evidence tree, Git history, and the CodeQL DB. OAuth and browser tests require a disposable local session and must not print cookies, tokens, passwords, or provider values.
 
 **No secret values are included in this appendix.** The counts and flags are sufficient to prioritize rotation, redaction, and retesting.
+
+---
+
+### Appendix I — Second environment-assisted validation (22 November 2026)
+
+#### I.1 Scope and handling
+
+- This pass used the supplied environment values to close the checks that Appendix H left blocked: provider OAuth configuration, Resend send capability, Cloudinary upload end-to-end, and TLS.
+- The values were sourced from a mode-600 file **outside** the repository. They were not committed, not added to `security-audit/`, and are not reproduced here.
+- Remote systems were used only for read-only authentication/metadata checks, plus one short-lived avatar upload that was deleted immediately. No database write, document read, or bulk email send was performed.
+- The local API was relaunched with the supplied values, `DEV_AUTO_VERIFY=false`, and the **local** audit MongoDB. The Atlas database was checked separately and is not the API’s active store for this pass.
+- Raw artifacts: `evidence/atlas-check.txt`, `evidence/testssl-atlas.txt`, `evidence/testssl-atlas.json`, `evidence/environment-pass-2.txt`, `evidence/env-validation-2.txt`, `logs/api-env.log`.
+
+#### I.2 Results summary
+
+| Check | Result | Evidence/notes |
+|---|---|---|
+| Atlas authentication | **Enforced** | Unauthenticated `ping` allowed; `listCollections` rejected with code 8000 |
+| Atlas application role | **`atlasAdmin@admin`** | Full cluster admin, not least privilege; no writes attempted |
+| Atlas reachability | **Reachable from this host** | Access list permits this public source address; verify scope in Atlas |
+| Atlas namespaces | **20 collections** | Estimated counts only; 803 hackathons, 6 users, 249 audit logs |
+| testssl (Atlas TLS) | **TLS 1.2/1.3; no major TLS issues** | LUCKY13 experimental flag; cert expires 2026-12-18 |
+| Google client credentials | **Valid** | Token probe → `invalid_grant`, not `invalid_client` |
+| GitHub client credentials | **Valid** | Token probe → `bad_verification_code` |
+| OAuth callbacks | **Registered** | Authorize endpoint 302 for both configured localhost callbacks |
+| OAuth app flows | **Pass (negative cases)** | Invalid code, missing state, missing cookie → same generic 403, no stack |
+| OAuth redirect parameters | **Not reflected** | `redirect`/`redirect_uri`/`returnTo` ignored |
+| Interactive OAuth consent | **Blocked** | Requires a provider account login |
+| Resend key scope | **Send-only** | `/domains` and `/api-keys` 401 restricted key |
+| Resend send | **Accepted (200)** | To Resend test sink; `example.com` rejected 422 |
+| Registration, auto-verify off | **200, `autoVerified: false`** | Verification email accepted for an allowed recipient |
+| Forgot-password, working provider | **200 for known and unknown** | 500 only when the provider rejects the recipient (RESET-01 condition) |
+| Cloudinary credentials | **Valid** | Usage and resource listing 200; 66 objects |
+| Unsigned Cloudinary upload | **Rejected** | “Upload preset not found” |
+| Avatar upload, real PNG | **200** | Stored under `hackhub/avatars`, HTTPS URL, then deleted (200) |
+| Avatar upload, spoofed MIME | **500 from storage** | Multer accepts on MIME only; no magic-byte check before Cloudinary |
+| Avatar upload, size/type limits | **400** | 3 MB file and `text/plain` rejected |
+
+#### I.3 Detailed results
+
+**I.3.1 Atlas authentication and privilege.** The SRV alias resolves only via SRV records; the shard hosts resolve to A records and terminate TLS on 27017. An unauthenticated driver connected and `ping` succeeded, but `listCollections` failed with `MongoServerError` code 8000, so data operations require authentication. The supplied user authenticated with role `atlasAdmin@admin` — cluster-wide administration rather than a `readWrite` role scoped to `HackHub`. This turns a leaked credential into cluster compromise (including other databases on the same cluster), not just one app database. Only namespace names and estimated document counts were read; no field values and no writes.
+
+**I.3.2 TLS.** testssl completed in 40 seconds against the Atlas shard endpoint. Protocols are TLS 1.2 and 1.3 only; the RSA-4096 certificate chains to Let's Encrypt with SANs for `*.ub0ctrl.mongodb.net` and `*.ub0ctrl.mesh.mongodb.net`. No Heartbleed, CCS, ROBOT, POODLE, SWEET32, FREAK, DROWN, LOGJAM, BEAST, Winshock, or RC4 issues. LUCKY13 is flagged “potentially VULNERABLE” by the experimental CBC check. OCSP stapling is not offered and the certificate expires 2026-12-18. This is the database endpoint; the app’s production HTTPS frontend was not available.
+
+**I.3.3 OAuth configuration.** Google’s token endpoint returns `invalid_grant` for a malformed code, which proves the client pair authenticated; GitHub returns `bad_verification_code`. Both authorize endpoints return 302 for the configured localhost callbacks, so the callback URLs are registered. The app’s start routes send `client_id` and state but no `redirect_uri`, ignore `redirect`, `redirect_uri`, and `returnTo` query parameters, and return the same generic 403 for invalid code, missing state, and missing state cookie. The development state cookie is `HttpOnly`, `SameSite=Lax`, path `/api/auth`, non-Secure, matching the documented dev branch. Interactive consent and account linking remain untested.
+
+**I.3.4 Resend and email flows.** The key is send-only (`/domains` and `/api-keys` return 401 restricted-key errors) but sending works: HTTP 200 to Resend’s test sink, HTTP 422 for `example.com` because the `onboarding@resend.dev` sender only accepts testing/owned recipients. With `DEV_AUTO_VERIFY=false`, registration returns 200 with `autoVerified: false` and the verification email is accepted for an allowed recipient; for a rejected domain it returns 500. Forgot-password returns the generic 200 for known and unknown addresses on an allowed domain, and 500 for a known account on a rejected domain. RESET-01 therefore depends on provider/recipient failure rather than merely a missing key.
+
+**I.3.5 Cloudinary upload.** Admin API metadata confirms the credentials are valid (Free plan, 66 objects). Unsigned uploads are disabled. Through the API, a real PNG was stored at `hackhub/avatars` with an HTTPS CDN URL and then removed by `DELETE /api/users/avatar`, returning the account to its previous asset set. Text bytes labelled `image/png` were accepted by multer and rejected by Cloudinary (500), which shows there is no application-side magic-byte validation; the storage provider is the only binary check. Oversized and wrong-MIME files were rejected at the API with 400. Avatar URLs are publicly readable without authentication.
+
+**I.3.6 Exposure from this pass.** The supplied Atlas (cluster-admin), Cloudinary, Resend, Google, and GitHub credentials are live and were exercised here. They must be treated as compromised and rotated, and the Atlas user must be replaced with a least-privilege `readWrite` user on `HackHub`. The environment file stayed outside the repository; `git status` remains clean apart from the untracked `security-audit/` folder.
+
+#### I.4 Status changes from Appendix H
+
+| Area | Appendix H status | Appendix I status |
+|---|---|---|
+| testssl | Blocked (no TLS endpoint, no DNS client) | Executed against Atlas TLS; clean except the experimental LUCKY13 flag |
+| Resend send | Unverified (401 on `/domains`) | Send-only key; send accepted (200) |
+| OAuth provider login | Blocked | Credentials and callbacks verified; consent still blocked |
+| File upload | Validation partial; magic bytes not reached | End-to-end upload and delete pass; spoofed MIME only caught by storage |
+| Password reset | Enumeration confirmed with delivery down | 200 both ways with working delivery; 500 only on provider rejection |
+| Auto-verify | Confirmed with flag on | Flag off returns `autoVerified: false` and sends verification |
+| Atlas privilege | Credential accepted read-only | Auth enforced, but user is `atlasAdmin@admin` (new finding detail) |
+| Remote database | Ping/metadata only | Namespace/count metadata; still no document reads |
+
+#### I.5 Updated priority actions
+
+- **P0:** rotate every supplied credential (Atlas, Cloudinary, Resend, Google, GitHub, JWT, access, refresh, CSRF); replace the Atlas `atlasAdmin` user with a scoped `readWrite` user; review the Atlas network access list; keep the environment file outside the repository.
+- **P1:** add application-side magic-byte validation before Cloudinary; normalize forgot-password responses so provider failures cannot create an enumeration oracle; keep `DEV_AUTO_VERIFY=false` outside development; renew the Atlas certificate before 2026-12-18; add OAuth mock-provider tests for consent/linking/replay/expiry.
+- **P2:** production HTTPS TLS/headers/redirect scan once a deployment URL exists; image processing/EXIF and SSRF tests; full admin/team lifecycle; Python/Go/Docker SCA and SBOM; independent retest after remediation.
+
+#### I.6 Reproduction note
+
+- Atlas: `node atlas_check.js` with `MONGODB_URI` in the environment (read-only; no writes).
+- TLS: `PATH="$PWD/tools/venv/bin:$PWD/tools/bin:$PATH" bash tools/testssl/testssl.sh --protocols --server-defaults --headers --vulnerable ac-vyisml5-shard-00-00.ub0ctrl.mongodb.net:27017`.
+- App flows: `tools/venv/bin/python3 env_validation.py` against the local API with the supplied environment and `DEV_AUTO_VERIFY=false`.
+- Evidence: `evidence/atlas-check.txt`, `evidence/testssl-atlas.txt`, `evidence/testssl-atlas.json`, `evidence/environment-pass-2.txt`, `evidence/env-validation-2.txt`.
+
+**No secret values are included in this appendix.**
