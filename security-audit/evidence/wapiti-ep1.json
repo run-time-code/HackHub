@@ -560,7 +560,7 @@
         "parameter": "search",
         "referer": "",
         "module": "file",
-        "http_request": "GET /api/hackathons?search=https%3A%2F%2Fwapiti3.ovh%2F%2Fe.php%00&skills=python&mode=ONLINE&status=upcoming&domain=AI&page=1&limit=20&sort=deadline&organizer=acme HTTP/1.1\nhost: 127.0.0.1:5000\nconnection: keep-alive\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0\naccept-language: en-US\naccept-encoding: gzip, deflate, br\naccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\ncookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MCIsImVtYWlsIjoiYWxpY2VAYXVkaXQubG9jYWwiLCJyb2xlIjoic3R1ZGVudCIsInRva2VuVmVyc2lvbiI6MCwiaWF0IjoxNzk1MzMwODA0LCJleHAiOjE3OTUzMzE3MDR9.SkFwZu3dM-DZEFGV7fsrgenKVzuth5y_rYjLNvPOkB0",
+        "http_request": "GET /api/hackathons?search=https%3A%2F%2Fwapiti3.ovh%2F%2Fe.php%00&skills=python&mode=ONLINE&status=upcoming&domain=AI&page=1&limit=20&sort=deadline&organizer=acme HTTP/1.1\nhost: 127.0.0.1:5000\nconnection: keep-alive\nuser-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0\naccept-language: en-US\naccept-encoding: gzip, deflate, br\naccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\ncookie: accessToken=[REDACTED_JWT]",
         "curl_command": "curl \"http://127.0.0.1:5000/api/hackathons?search=https%3A%2F%2Fwapiti3.ovh%2F%2Fe.php%00&skills=python&mode=ONLINE&status=upcoming&domain=AI&page=1&limit=20&sort=deadline&organizer=acme\"",
         "wstg": [
           "WSTG-ERRH-01"

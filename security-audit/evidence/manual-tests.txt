@@ -1,3 +1,7 @@
+# HISTORICAL BASELINE (superseded by the rebuilt manual_tests.py).
+# The original suite recorded false passes; see SECURITY_AUDIT_REPORT.md section 7.
+# Secret values, cookies/tokens and stack frames have been redacted for SEC-02.
+
 [PASS] AUTH-01 (info) Protected endpoint rejects anonymous access
     GET /users/me unauthenticated -> 401
 
@@ -35,7 +39,7 @@
     token from an unrelated anonymous session (same IP) used with Alice's cookies -> 403. Binding is req.ip only (csrfMiddleware getSessionIdentifier), not the session/user.
 
 [PASS] COOKIE-01 (info) Auth cookies are HttpOnly
-    login -> 200; Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MyIsImVtYWlsIjoiYm9iQGF1ZGl0LmxvY2FsIiwicm9sZSI6InN0dWRlbnQiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMTUyOSwiZXhwIjoxNzk1MzMyNDI5fQ.dYup9Y5zhv5jwQjPMcHcvDv9Lyjtcfd9YQisZcxzMQE; Max-Age=900; Path=/; Expires=Sun, 2
+    login -> 200; Set-Cookie: [REDACTED]
 
 [PASS] INFO-01 (info) Alice saved items visible to Alice
     GET /saved -> 200, first id=6b0292f5fed591be77e86702
@@ -92,7 +96,7 @@
     200 KB body -> 413
 
 [PASS] ENUM-01 (medium) Registration does not disclose existing accounts
-    register existing alice@audit.local -> 403 {"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenError: invalid csrf to
+    register existing [TEST_EMAIL] -> 403 {"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenError: invalid csrf to
 
 [PASS] ENUM-02 (medium) Password reset response identical for existing/non-existing accounts
     nonexistent -> 403; existing -> 403 ({"success":false,"error":{"code":"EBADCSRFTOKEN","message":"invalid csrf token","stack":"ForbiddenEr)

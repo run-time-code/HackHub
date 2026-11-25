@@ -1,4 +1,5 @@
 {
+  "note": "Secret values (passwords, cookies, CSRF tokens, access/refresh tokens, request bodies) were removed for SEC-02. Only fixture identifiers and status codes are retained.",
   "hackathons": [
     {
       "id": "6b0292f4d9fe5ce36bd23a16",
@@ -15,122 +16,21 @@
   ],
   "users": {
     "alice": {
-      "email": "alice@audit.local",
-      "password": "AuditPass1!",
-      "cookie": "psifi.x-csrf-token=3aec9526043c5f34586d6339c441f0f2d1f93350fc4bdbf137f25378c9b9a1aa.e63191a4eba5dec37d4f729de2d21b6bb98dc8b06a7f23509ba35b4592e37a48; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MCIsImVtYWlsIjoiYWxpY2VAYXVkaXQubG9jYWwiLCJyb2xlIjoic3R1ZGVudCIsInRva2VuVmVyc2lvbiI6MCwiaWF0IjoxNzk1MzMwODA0LCJleHAiOjE3OTUzMzE3MDR9.SkFwZu3dM-DZEFGV7fsrgenKVzuth5y_rYjLNvPOkB0; refreshToken=58b8d75d2fbd33c00e7e935bfa56c732116e19121930f5fd2e5c649919a0cbcc3822944b0817e96c241f78b2d3cbcdfa2cd0c26b31e7dea76f3e485a53135837",
-      "csrf": "3aec9526043c5f34586d6339c441f0f2d1f93350fc4bdbf137f25378c9b9a1aa.e63191a4eba5dec37d4f729de2d21b6bb98dc8b06a7f23509ba35b4592e37a48"
+      "email": "alice@audit.local"
     },
     "bob": {
-      "email": "bob@audit.local",
-      "password": "AuditPass1!",
-      "cookie": "psifi.x-csrf-token=67889a8f882e5456dec7e551da6a1a9b75ec608ee95d5b4280b82a99eccd73c7.600783f51c36df01a9b03bec85d6b0741cf9d44e54e73ed63dd8a58174b3fe9a; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MyIsImVtYWlsIjoiYm9iQGF1ZGl0LmxvY2FsIiwicm9sZSI6InN0dWRlbnQiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMDgwNCwiZXhwIjoxNzk1MzMxNzA0fQ.x7ISwM2Yuz0kejILfifUht5419gH09SCJIUV1wCdQaw; refreshToken=226533530eb8279b34d41e2050b01c12cd5d3a95615e1a580246151ee58dbb51069843a94e171e44a61a8366bf7e5c3ff6d089aee4158905bfa115bea0e7b075",
-      "csrf": "67889a8f882e5456dec7e551da6a1a9b75ec608ee95d5b4280b82a99eccd73c7.600783f51c36df01a9b03bec85d6b0741cf9d44e54e73ed63dd8a58174b3fe9a"
+      "email": "bob@audit.local"
     },
     "admin": {
-      "email": "admin@audit.local",
-      "password": "AuditPass1!",
-      "cookie": "psifi.x-csrf-token=dd2ae39916add774e34f1d84b64896ae9d25ecaad6a8e1992861152dd79c6ab0.d5d2d44c6466f004b54e7bf8018607aad1a64b472ec2fd1b6496488cdbf0b0bb; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4NiIsImVtYWlsIjoiYWRtaW5AYXVkaXQubG9jYWwiLCJyb2xlIjoiYWRtaW4iLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMDgwNSwiZXhwIjoxNzk1MzMxNzA1fQ.OK4jHs7X9BM06S0pZuO5tL1vP8JWs2uP4aip8RnQ-Aw; refreshToken=74bec2b68a8e5559e8ab58060230e3abc42b79f59643dfef770239723055752a8b3e20b98c9860467ea5eef1f690e0df6ee9f7ebd867eea0f3356a5441a9341d",
-      "csrf": "dd2ae39916add774e34f1d84b64896ae9d25ecaad6a8e1992861152dd79c6ab0.d5d2d44c6466f004b54e7bf8018607aad1a64b472ec2fd1b6496488cdbf0b0bb",
-      "loginStatus": 200
+      "email": "admin@audit.local"
     }
   },
   "teamId": "6b0292f53467d682420bdf8a",
-  "joinRequest": {
-    "status": 201,
-    "body": {
-      "success": true,
-      "data": {
-        "id": "6b0292f53467d682420bdf8b",
-        "team": {
-          "id": "6b0292f53467d682420bdf8a"
-        },
-        "user": {
-          "id": "6b0292f43467d682420bdf83"
-        },
-        "type": "request",
-        "initiatedBy": "6b0292f43467d682420bdf83",
-        "role": "member",
-        "message": "Let me in",
-        "status": "pending",
-        "expiresAt": "2026-11-29T07:00:05.123Z",
-        "respondedAt": null,
-        "createdAt": "2026-11-22T07:00:05.123Z",
-        "updatedAt": "2026-11-22T07:00:05.123Z"
-      },
-      "requestId": "00f0ad63-335f-4420-87bc-4f8c1c46f110"
-    }
-  },
-  "saved": {
-    "status": 201,
-    "body": {
-      "success": true,
-      "data": {
-        "id": "6b0292f5fed591be77e86702",
-        "_id": "6b0292f5fed591be77e86702",
-        "savedId": "6b0292f5fed591be77e86702",
-        "hackathon": {
-          "id": "6b0292f4d9fe5ce36bd23a16",
-          "_id": "6b0292f4d9fe5ce36bd23a16",
-          "slug": "6b0292f4d9fe5ce36bd23a16",
-          "hackathonId": "6b0292f4d9fe5ce36bd23a16",
-          "title": "AUDIT Hackathon Alpha",
-          "description": "Seeded event for the audit. <img src=x onerror=alert(1)>",
-          "organizer": "Audit Org",
-          "source": "",
-          "url": "",
-          "skills": [
-            "JavaScript",
-            "Node.js"
-          ],
-          "domain": [
-            "Web"
-          ],
-          "domains": [
-            "Web"
-          ],
-          "theme": "",
-          "tags": [],
-          "mode": "ONLINE",
-          "location": "",
-          "registrationDeadline": "2026-11-29T07:00:04.326Z",
-          "registration_deadline": "2026-11-29T07:00:04.326Z",
-          "submissionDeadline": null,
-          "submission_deadline": null,
-          "eventStartDate": "2026-12-06T07:00:04.326Z",
-          "eventEndDate": "2026-12-08T07:00:04.326Z",
-          "prize": "5000",
-          "prizePool": "5000",
-          "status": "upcoming",
-          "sourceUrl": "",
-          "source_url": "",
-          "sourceId": "",
-          "externalId": "",
-          "external_id": "",
-          "isActive": true,
-          "is_active": true,
-          "isHidden": false,
-          "isFeatured": false,
-          "createdAt": "2026-11-22T07:00:04.336Z",
-          "updatedAt": "2026-11-22T07:00:04.336Z"
-        },
-        "status": "saved",
-        "notes": "",
-        "createdAt": "2026-11-22T07:00:05.133Z",
-        "updatedAt": "2026-11-22T07:00:05.133Z"
-      },
-      "requestId": "fdedc305-1e69-4262-9399-952c1581f1c3"
-    }
-  },
-  "reminder": {
-    "status": 400,
-    "body": {
-      "success": false,
-      "error": {
-        "code": "NO_DEADLINE",
-        "message": "This hackathon does not have a date for that reminder type"
-      },
-      "requestId": "c4fde505-d2ea-41b7-abaf-f8d7c1ddf51c"
-    }
-  },
-  "hiddenHackathonId": "6b0292f4d9fe5ce36bd23a18"
+  "hiddenHackathonId": "6b0292f4d9fe5ce36bd23a18",
+  "statuses": {
+    "joinRequest": 201,
+    "saved": 201,
+    "reminder": 400,
+    "adminLogin": 200
+  }
 }

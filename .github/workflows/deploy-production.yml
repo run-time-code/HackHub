@@ -9,6 +9,11 @@ concurrency:
   group: production
   cancel-in-progress: false
 
+# Least privilege: deployments are performed through external APIs, so the
+# workflow token only needs read access to the repository.
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: production checks

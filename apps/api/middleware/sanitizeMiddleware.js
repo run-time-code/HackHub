@@ -1,30 +1,72 @@
+'use strict';
+
+// Keys that can change an object's prototype or the behaviour of property
+// lookups. They are never legitimate request data and must be dropped before
+// any downstream code sees the object. See SECURITY_AUDIT_REPORT.md SAN-01.
+const FORBIDDEN_KEYS = new Set([
+    "__proto__",
+    "constructor",
+    "prototype"
+]);
+
+const hasOwn = (object, key) =>
+    Object.prototype.hasOwnProperty.call(object, key);
+
+const isSanitizableObject = (value) =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * Recursively copy user-controlled data into null-prototype objects.
+ *
+ * A null prototype means a request body such as
+ * `{"__proto__":{"role":"admin"}}` cannot make `req.body.role` resolve
+ * through the prototype chain. Forbidden keys and Mongo operators/dotted
+ * paths are dropped at every level.
+ *
+ * @param {*} value Raw user input.
+ * @param {boolean} allowDottedKeys Kept for the validated skillProficiency map
+ *   (skill names such as "Node.js" are data, never query keys).
+ * @returns {*}
+ */
 const sanitizeObject = (value, allowDottedKeys = false) => {
     if (Array.isArray(value)) {
         return value.map((item) => sanitizeObject(item, allowDottedKeys));
     }
 
-    if (value !== null && typeof value === "object") {
-        const sanitized = {};
-
-        for (const [key, item] of Object.entries(value)) {
-            // `$` operators are never legitimate request data. Dots are
-            // stripped to block path injection, except for skill names such
-            // as "Node.js" inside the validated skillProficiency map (Mixed
-            // field, never used in a Mongo query).
-            if (key.startsWith("$") || (!allowDottedKeys && key.includes("."))) {
-                continue;
-            }
-
-            sanitized[key] = sanitizeObject(
-                item,
-                allowDottedKeys || key === "skillProficiency"
-            );
-        }
-
-        return sanitized;
+    if (!isSanitizableObject(value)) {
+        return value;
     }
 
-    return value;
+    // Build with no prototype so inherited properties are never present.
+    const sanitized = Object.create(null);
+
+    for (const key of Object.keys(value)) {
+        if (FORBIDDEN_KEYS.has(key)) {
+            continue;
+        }
+
+        // `$` operators are never legitimate request data. Dots are
+        // stripped to block path injection, except for skill names such
+        // as "Node.js" inside the validated skillProficiency map (Mixed
+        // field, never used in a Mongo query).
+        if (key.startsWith("$") || (!allowDottedKeys && key.includes("."))) {
+            continue;
+        }
+
+        // Only copy own enumerable properties. Object.keys already does
+        // that, but the explicit hasOwn check documents the contract and
+        // protects against a future refactor to for...in.
+        if (!hasOwn(value, key)) {
+            continue;
+        }
+
+        sanitized[key] = sanitizeObject(
+            value[key],
+            allowDottedKeys || key === "skillProficiency"
+        );
+    }
+
+    return sanitized;
 };
 
 const sanitizeValue = (value) => {
@@ -69,3 +111,6 @@ const sanitizeMiddleware = (req, res, next) => {
 };
 
 module.exports = sanitizeMiddleware;
+// Exposed for unit tests that need to assert on the sanitizer's internal
+// object shape (null prototype, dropped keys) rather than HTTP JSON output.
+module.exports.sanitizeObject = sanitizeObject;

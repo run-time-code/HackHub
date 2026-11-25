@@ -88,7 +88,7 @@
     "title": "Auth cookies are HttpOnly",
     "severity": "info",
     "verdict": "PASS",
-    "detail": "login -> 200; Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZiMDI5MmY0MzQ2N2Q2ODI0MjBiZGY4MyIsImVtYWlsIjoiYm9iQGF1ZGl0LmxvY2FsIiwicm9sZSI6InN0dWRlbnQiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc5NTMzMTUyOSwiZXhwIjoxNzk1MzMyNDI5fQ.dYup9Y5zhv5jwQjPMcHcvDv9Lyjtcfd9YQisZcxzMQE; Max-Age=900; Path=/; Expires=Sun, 2"
+    "detail": "login -> 200; Set-Cookie: [REDACTED]"
   },
   {
     "id": "INFO-01",
@@ -221,7 +221,7 @@
     "title": "Registration does not disclose existing accounts",
     "severity": "medium",
     "verdict": "PASS",
-    "detail": "register existing alice@audit.local -> 403 {\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenError: invalid csrf to"
+    "detail": "register existing [TEST_EMAIL] -> 403 {\"success\":false,\"error\":{\"code\":\"EBADCSRFTOKEN\",\"message\":\"invalid csrf token\",\"stack\":\"ForbiddenError: invalid csrf to"
   },
   {
     "id": "ENUM-02",

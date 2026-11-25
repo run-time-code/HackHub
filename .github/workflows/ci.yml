@@ -7,6 +7,11 @@ on:
   push:
     branches: [main, develop]
 
+# Least privilege: the CI jobs only read the repository. The gitleaks job
+# needs full history, which is a read operation. Do not grant write-all.
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: frontend (lint, test, build)

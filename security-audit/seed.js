@@ -1,14 +1,30 @@
 'use strict';
 
 // Seeds the local HackHub instance for the security audit.
-// Run from the repository root: node security-audit/seed.js
+// Run from the repository root:
+//   AUDIT_TEST_PASSWORD='<throwaway test password>' node security-audit/seed.js
+//
+// SECURITY NOTE (SEC-02): the audit password is supplied at runtime through an
+// environment variable and is never written to evidence/seed.json. The output
+// contains only fixture identifiers and HTTP status codes. Rotate and unset
+// the password after the audit session.
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 
-const API = 'http://127.0.0.1:5000/api';
+const API = process.env.AUDIT_API_URL || 'http://127.0.0.1:5000/api';
+const MONGODB_URI =
+  process.env.AUDIT_MONGODB_URI || 'mongodb://127.0.0.1:27017/hackhub';
 const OUT = path.join(__dirname, 'evidence', 'seed.json');
-const PREFIX = 'audit_';
+const PASSWORD = process.env.AUDIT_TEST_PASSWORD;
+
+if (!PASSWORD || PASSWORD.length < 12) {
+  console.error(
+    'Set AUDIT_TEST_PASSWORD to a throwaway test password of at least 12 ' +
+      'characters. It is used only in memory and is never written to evidence.'
+  );
+  process.exit(1);
+}
 
 const Hackathon = require('../apps/api/models/Hackathon');
 
@@ -54,17 +70,16 @@ async function csrf(jar) {
 async function registerAndLogin(email, name) {
   const jar = cookieJar();
   let token = await csrf(jar);
-  const password = 'AuditPass1!';
-  const reg = await call(jar, 'POST', '/auth/register', { name, email, password }, { 'x-csrf-token': token });
+  const reg = await call(jar, 'POST', '/auth/register', { name, email, password: PASSWORD }, { 'x-csrf-token': token });
   token = await csrf(jar);
-  const login = await call(jar, 'POST', '/auth/login', { email, password }, { 'x-csrf-token': token });
+  const login = await call(jar, 'POST', '/auth/login', { email, password: PASSWORD }, { 'x-csrf-token': token });
   if (login.status !== 200) throw new Error(`login ${email} failed: ${login.status} ${JSON.stringify(login.json)}`);
   token = await csrf(jar);
-  return { email, name, password, jar, token, login: login.json };
+  return { email, name, jar, token, login: login.json, registerStatus: reg.status };
 }
 
 (async () => {
-  await mongoose.connect('mongodb://127.0.0.1:27017/hackhub');
+  await mongoose.connect(MONGODB_URI);
   const User = require('../apps/api/models/User');
 
   await User.deleteMany({ email: /@audit\.local$/ });
@@ -116,7 +131,7 @@ async function registerAndLogin(email, name) {
   // Promote a third account to admin directly (admin routes are not public).
   const admin = await registerAndLogin('admin@audit.local', 'Audit Admin');
   await User.updateOne({ email: 'admin@audit.local' }, { $set: { role: 'admin' } });
-  const adminLogin = await call(admin.jar, 'POST', '/auth/login', { email: admin.email, password: admin.password }, { 'x-csrf-token': await csrf(admin.jar) });
+  const adminLogin = await call(admin.jar, 'POST', '/auth/login', { email: admin.email, password: PASSWORD }, { 'x-csrf-token': await csrf(admin.jar) });
 
   const team = await call(alice.jar, 'POST', '/teams', {
     name: 'AUDIT Team One',
@@ -132,24 +147,32 @@ async function registerAndLogin(email, name) {
   const saved = await call(alice.jar, 'POST', '/saved', { hackathonId: String(hackathons[0]._id), status: 'saved', notes: 'audit note' }, { 'x-csrf-token': alice.token });
   const reminder = await call(alice.jar, 'POST', '/reminders', { hackathonId: String(hackathons[0]._id), remindAt: new Date(Date.now() + 864e5).toISOString() }, { 'x-csrf-token': alice.token });
 
+  // Only non-secret fixture metadata is written. Never write passwords,
+  // cookies, CSRF tokens, access tokens, refresh tokens, or request bodies.
   const out = {
+    note:
+      'Secret values are intentionally omitted (SEC-02). Test credentials are ' +
+      'read from the AUDIT_* environment variables at runtime.',
     hackathons: hackathons.map((h) => ({ id: String(h._id), title: h.title })),
     users: {
-      alice: { email: alice.email, password: alice.password, cookie: alice.jar.header(), csrf: alice.token },
-      bob: { email: bob.email, password: bob.password, cookie: bob.jar.header(), csrf: bob.token },
-      admin: { email: admin.email, password: admin.password, cookie: admin.jar.header(), csrf: admin.token, loginStatus: adminLogin.status },
+      alice: { email: alice.email },
+      bob: { email: bob.email },
+      admin: { email: admin.email },
     },
     teamId,
-    joinRequest: { status: joinReq.status, body: joinReq.json },
-    saved: { status: saved.status, body: saved.json },
-    reminder: { status: reminder.status, body: reminder.json },
+    statuses: {
+      joinRequest: joinReq.status,
+      saved: saved.status,
+      reminder: reminder.status,
+      adminLogin: adminLogin.status,
+    },
     hiddenHackathonId: String(hackathons[2]._id),
   };
-  fs.writeFileSync(OUT, JSON.stringify(out, null, 2));
+  fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n');
   console.log(JSON.stringify(out, null, 2));
   await mongoose.disconnect();
 })().catch(async (err) => {
-  console.error('SEED FAILED', err);
+  console.error('SEED FAILED', err.message);
   await mongoose.disconnect();
   process.exit(1);
 });

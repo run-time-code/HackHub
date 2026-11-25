@@ -12,21 +12,19 @@ on:
   schedule:
     # 03:10 IST daily (21:40 UTC the previous day).
     - cron: '40 21 * * *'
+  # Intentionally no workflow_dispatch inputs: the scrape parameters come from
+  # repository/environment variables so event input cannot influence the build
+  # or the command that runs (CI-01 / CKV_GHA_7).
   workflow_dispatch:
-    inputs:
-      sources:
-        description: 'Comma-separated source keys (blank = all enabled)'
-        required: false
-        default: ''
-      dry_run:
-        description: 'Dry run (fetch and normalize without writing)'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: scrape-hackathons
   cancel-in-progress: false
+
+# Least privilege: the scraper only reads the repository and uses the
+# configured database secret.
+permissions:
+  contents: read
 
 jobs:
   scrape:
@@ -52,13 +50,25 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-placeholder' }}
           ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET || 'ci-placeholder' }}
           CSRF_SECRET: ${{ secrets.CSRF_SECRET || 'ci-placeholder' }}
-          SOURCES: ${{ inputs.sources }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          # Set these as repository/environment variables, not dispatch inputs.
+          # SOURCES format: comma-separated keys from the scraper registry.
+          SOURCES: ${{ vars.SCRAPE_SOURCES }}
+          DRY_RUN: ${{ vars.SCRAPE_DRY_RUN }}
           # Config module requires production secrets; the scraper does not
           # use them, these placeholders keep config validation quiet.
         run: |
           if [ -z "$MONGODB_URI" ]; then
             echo "::error::MONGODB_URI secret is not configured"
+            exit 1
+          fi
+          # Validate operator-controlled configuration before using it as an
+          # argument. This keeps the command surface to known characters.
+          if [ -n "$SOURCES" ] && ! printf '%s' "$SOURCES" | grep -Eq '^[A-Za-z0-9_,-]+$'; then
+            echo "::error::SCRAPE_SOURCES contains invalid characters"
+            exit 1
+          fi
+          if [ -n "$SOURCES" ] && [ "${#SOURCES}" -gt 500 ]; then
+            echo "::error::SCRAPE_SOURCES is too long"
             exit 1
           fi
           args=""

@@ -13,6 +13,11 @@ concurrency:
   group: staging
   cancel-in-progress: false
 
+# Least privilege: deployment is performed through external hooks, so the
+# workflow token only needs read access to the repository.
+permissions:
+  contents: read
+
 jobs:
   backend-checks:
     name: backend checks (lint, test)
@@ -33,25 +38,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: backend-checks
     environment: staging
+    env:
+      # Keep secret values out of `run` expressions so they cannot appear in
+      # process arguments, debug output, or shell tracing (CI-01 / CKV_GHA_3).
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}
+      STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
     steps:
       - name: Trigger Render deploy hook
         run: |
-          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}" ]; then
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "::error::Missing secret RENDER_DEPLOY_HOOK_STAGING."
             echo "See docs/staging.md section 3 (Render service + deploy hook)."
             exit 1
           fi
-          curl -sS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}"
+          curl -sS --fail-with-body -X POST "$RENDER_DEPLOY_HOOK"
           echo "Render staging deploy triggered."
       - name: Wait for API health
         run: |
-          if [ -z "${{ secrets.STAGING_API_URL }}" ]; then
+          if [ -z "$STAGING_API_URL" ]; then
             echo "::error::Missing secret STAGING_API_URL (e.g. https://hackhub-api-staging.onrender.com)."
             echo "See docs/staging.md section 5."
             exit 1
           fi
           for i in $(seq 1 30); do
-            if curl -sSf "${{ secrets.STAGING_API_URL }}/health" | grep -q '"status":"ok"'; then
+            if curl -sSf "$STAGING_API_URL/health" | grep -q '"status":"ok"'; then
               echo "Staging API is healthy."
               exit 0
             fi
@@ -66,6 +76,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: backend-checks
     environment: staging
+    env:
+      # Secrets are passed as environment variables, never interpolated into
+      # the `run` script (CI-01).
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
     steps:
       - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -76,23 +93,21 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace @hackhub/web
         env:
-          VITE_API_BASE_URL: ${{ secrets.STAGING_API_URL }}/api
+          VITE_API_BASE_URL: ${{ env.STAGING_API_URL }}/api
           VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_FRONTEND }}
       - name: Deploy to Vercel
-        env:
-          VITE_API_BASE_URL: ${{ secrets.STAGING_API_URL }}/api
         run: |
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
             echo "::error::Missing Vercel secrets (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID)."
             echo "See docs/staging.md section 4."
             exit 1
           fi
           npm i -g vercel@latest
-          vercel link --yes --project "${{ secrets.VERCEL_PROJECT_ID }}" --scope "${{ secrets.VERCEL_ORG_ID }}" --token="${{ secrets.VERCEL_TOKEN }}"
-          vercel pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
+          vercel link --yes --project "$VERCEL_PROJECT_ID" --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+          vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           node scripts/configure-vercel-csp.mjs
-          vercel build --token="${{ secrets.VERCEL_TOKEN }}"
-          vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}" > vercel-url.txt
+          vercel build --token "$VERCEL_TOKEN"
+          vercel deploy --prebuilt --token "$VERCEL_TOKEN" > vercel-url.txt
           cat vercel-url.txt
 
   smoke:
