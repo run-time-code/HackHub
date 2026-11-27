@@ -1,0 +1,22 @@
+ProjectDiscovery httpx execution block evidence
+Date: 2026-11-15
+Executable: C:\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\httpx\httpx.exe
+Matching Code Integrity events: 3
+
+Time: 11/15/2026 11:04:54
+Event ID: 3077
+Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\httpx\httpx.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+
+Time: 11/15/2026 11:04:50
+Event ID: 3077
+Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\httpx\httpx.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+
+Time: 11/15/2026 11:04:42
+Event ID: 3077
+Code Integrity determined that a process (\Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe) attempted to load \Device\HarddiskVolume3\Users\kanja\OneDrive\Documents\OG_REPO_RTC\HackHub\.security-tools\httpx\httpx.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6}).
+
+
+Assessment result:
+Windows Application Control blocked execution.
+No HTTP probing or vulnerability scan was performed.
+No Windows security policy was changed.

@@ -1,0 +1,22 @@
+﻿{
+    "Tool":  "Trivy",
+    "Version":  "0.76.2",
+    "ScanDate":  "2026-11-14",
+    "Scanner":  "secret",
+    "Targets":  [
+                    {
+                        "Target":  "apps\\api\\.env",
+                        "ExitCode":  0,
+                        "FindingCount":  0
+                    },
+                    {
+                        "Target":  "apps\\api\\apps\\api\\.env",
+                        "ExitCode":  0,
+                        "FindingCount":  0
+                    }
+                ],
+    "TotalFindings":  0,
+    "Findings":  [
+
+                 ]
+}

@@ -1,0 +1,2 @@
+XSStrike help was not executed because XSStrike is not installed.
+No help output is available. No CLI options are claimed.

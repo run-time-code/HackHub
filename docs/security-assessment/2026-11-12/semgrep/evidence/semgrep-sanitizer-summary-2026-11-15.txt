@@ -1,0 +1,7 @@
+﻿Semgrep CLI: 1.185.0
+Target: apps/api/middleware/sanitizeMiddleware.js
+Rules: 5 custom local rules
+Files scanned: 1
+Findings: 0
+Parsed lines: approximately 100%
+Status: Completed successfully

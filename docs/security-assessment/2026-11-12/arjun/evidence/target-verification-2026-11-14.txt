@@ -1,0 +1,6 @@
+Assessment date: 14 November 2026
+Target: http://localhost:5000/api/hackathons
+Health endpoint: HTTP 200 OK
+Hackathons endpoint: HTTP 200 OK
+API server: Running
+MongoDB: Connected

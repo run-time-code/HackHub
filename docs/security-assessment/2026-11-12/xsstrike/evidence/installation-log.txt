@@ -1,0 +1,13 @@
+HackHub XSStrike assessment - installation log
+
+Status: NOT INSTALLED
+
+The existing .security-tools virtual environment was inspected and is runnable:
+- Python 3.12.10
+- pip 26.3
+- pip show xsstrike reported: Package(s) not found: xsstrike
+- No xsstrike command or XSStrike source tree was found at the checked local paths.
+
+No clone, dependency installation, or global package installation was attempted.
+There was no Windows Application Control error. Installation was not attempted,
+so no installation success or failure is claimed.

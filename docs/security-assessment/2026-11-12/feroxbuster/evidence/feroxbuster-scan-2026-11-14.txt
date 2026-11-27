@@ -1,0 +1,48 @@
+feroxbuster.exe : 
+At line:1 char:1
++ & $exe `
++ ~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ ___  ___  __   __     __      __         __   ___
+|__  |__  |__) |__) | /  `    /  \ \_/ | |  \ |__
+|    |___ |  \ |  \ | \__,    \__/ / \ | |__/ |___
+by Ben "epi" Risher                    ver: 2.13.1
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+     Target Url            Γöé http://localhost:5000/api
+     In-Scope Url          Γöé localhost
+     Threads               Γöé 2
+     Wordlist              Γöé docs\security-assessment\2026-11-12\feroxbuster\evidence\feroxbuster-wordlist-2026-11-14.txt
+     Status Codes          Γöé All Status Codes!
+     Timeout (secs)        Γöé 10
+     User-Agent            Γöé feroxbuster/2.13.1
+     Extract Links         Γöé true
+     JSON Output           Γöé true
+     Output File           Γöé docs\security-assessment\2026-11-12\feroxbuster\evidence\feroxbuster-scan-2026-11-14.jsonl
+     HTTP methods          Γöé [GET]
+     Do Not Recurse        Γöé true
+     Requests per Second   Γöé 2
+     Time Limit            Γöé 2m
+     New Version Available Γöé https://github.com/epi052/feroxbuster/releases/latest
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ ≡ƒÅü  Press [ENTER] to use the Scan Management MenuΓäó
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+404      GET        1l        5w        -c Auto-filtering found 404-like response and created new filter; toggle off with --dont-filter
+
+200      GET        1l        1w      200c http://localhost:5000/api/health
+
+400      GET        1l        5w      156c http://localhost:5000/api/teams
+
+401      GET        1l        2w      139c http://localhost:5000/api/notifications
+
+200      GET        1l      106w    11937c http://localhost:5000/api/hackathons
+
+200      GET        1l        1w      142c http://localhost:5000/api/stats
+
+401      GET        1l        2w      139c http://localhost:5000/api/calendar
+
+401      GET        1l        2w      139c http://localhost:5000/api/reminders
+
+401      GET        1l        2w      139c http://localhost:5000/api/saved
+

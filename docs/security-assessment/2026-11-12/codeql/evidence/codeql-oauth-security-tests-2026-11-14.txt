@@ -1,0 +1,20 @@
+Γùç injected env (0) from .env // tip: Γîÿ enable debugging { debug: true }
+Γû╢ login lockout is atomic
+  Γ£ö locks the account after concurrent failures and clears it after expiry (919.1901ms)
+Audit log could not be saved: Operation interrupted because client was closed
+  Γ£ö keeps generic 401 responses for unknown accounts (18.2902ms)
+Γ£ö login lockout is atomic (1723.3828ms)
+Γû╢ OAuth state verification
+  Γ£ö GET /auth/google issues a signed state cookie and a state param (12.1327ms)
+Audit log could not be saved: Operation interrupted because client was closed
+  Γ£ö rejects callbacks with a missing or forged state before passport runs (16.3468ms)
+Audit log could not be saved: Cannot use a session that has ended
+Γ£ö OAuth state verification (698.3963ms)
+Γä╣ tests 4
+Γä╣ suites 2
+Γä╣ pass 4
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 4129.1336
