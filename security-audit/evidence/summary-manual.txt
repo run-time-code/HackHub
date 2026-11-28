@@ -1,3 +1,14 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
+HISTORICAL SUITE - these results come from the original 43-check
+suite, which contained known false passes. They are kept only as a
+before-baseline; the rebuilt suite (manual_tests.py) supersedes them
+and must be re-run against a live API before any claim is made.
+
 Deep authenticated API suite: 43 checks
   PASS 40, NOTE 2, FAIL 1
 

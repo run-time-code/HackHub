@@ -1,3 +1,9 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
 $ codeql database analyze codeql-db \
     codeql/javascript-queries:codeql-suites/javascript-security-extended.qls
 

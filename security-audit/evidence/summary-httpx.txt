@@ -1,3 +1,9 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
 $ httpx -status-code -tech-detect -web-server -json
 
 [200] http://127.0.0.1:5000/api/health  ()
@@ -15,3 +21,4 @@ $ httpx -status-code -tech-detect -web-server -json
       referrer_policy: no-referrer
 
 [200] http://127.0.0.1:5173  (HackHub — Discover. Team Up. Compete.)
+

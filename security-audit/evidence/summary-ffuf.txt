@@ -1,3 +1,9 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
 $ ffuf -w common.txt -u http://127.0.0.1:5000/api/FUZZ -mc all -fc 404
 
   200    198b  http://127.0.0.1:5000/api/Health

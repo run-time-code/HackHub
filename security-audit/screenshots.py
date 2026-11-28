@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
-"""Capture UI screenshots of the local HackHub instance (Playwright/Chromium)."""
+"""Capture UI screenshots of the local HackHub instance (Playwright/Chromium).
+
+The audit seed password is no longer stored in evidence/seed.json (SEC-02), so
+the credential is read from the environment:
+
+    AUDIT_ALICE_PASSWORD='<throwaway password>' \
+    tools/venv/bin/python security-audit/screenshots.py
+
+index.json records paths relative to this directory so the evidence package
+stays portable and does not leak absolute local paths (PRIV-01).
+"""
 import json
+import os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -21,7 +32,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(wait)
         path = OUT / f"{name}.png"
         page.screenshot(path=str(path), full_page=full)
-        shots.append({"name": name, "url": url, "file": str(path)})
+        shots.append({"name": name, "url": url, "file": path.name})
         print("saved", path)
 
     # public pages
@@ -34,12 +45,18 @@ with sync_playwright() as p:
     # Authenticated session: mint real tokens through the API, then hand them
     # to the browser exactly as a login would (httpOnly cookies).
     import requests
+    alice_password = os.environ.get("AUDIT_ALICE_PASSWORD")
+    if not alice_password:
+        raise SystemExit(
+            "AUDIT_ALICE_PASSWORD is required: the audit password is no "
+            "longer stored in evidence/seed.json."
+        )
     rs = requests.Session()
     rs.headers.update({"Origin": "http://localhost:5173"})
     ct = rs.get("http://127.0.0.1:5000/api/auth/csrf-token").json()["csrfToken"]
     lr = rs.post("http://127.0.0.1:5000/api/auth/login",
                  json={"email": seed["users"]["alice"]["email"],
-                       "password": seed["users"]["alice"]["password"]},
+                       "password": alice_password},
                  headers={"X-CSRF-Token": ct})
     print("api login:", lr.status_code)
     cookies = []

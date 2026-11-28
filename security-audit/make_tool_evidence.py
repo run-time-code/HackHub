@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
-"""Build a concise evidence summary + rendered screenshot for every tool."""
+"""Build the presentation summaries in evidence/summary-*.txt.
+
+These files are SUMMARY aids, not raw tool output. They are derived from the
+raw artifacts in evidence/ and must never be presented as the tool's own
+capture (EVID-01). Every generated file starts with a provenance header that
+names this script and the raw artifact directory, so a reader can always go
+back to the raw output.
+
+This script intentionally renders no screenshots. The old `tool-*.png` images
+were Chromium renders of this script's own prose and were labelled "verbatim
+tool output"; they were removed because they looked like raw evidence.
+
+Run from anywhere:
+
+    python3 security-audit/make_tool_evidence.py
+"""
 import json
-import html
 import glob
 from pathlib import Path
-from playwright.sync_api import sync_playwright
 
 BASE = Path(__file__).parent
 EV = BASE / "evidence"
@@ -135,13 +148,21 @@ wap = arg("wapiti-api-list.json", {})
 total = 0
 lines = ["$ wapiti -u <each parameterised API endpoint> \\",
          "    -m xss,sql,exec,ssrf,file,redirect,crlf,ldap,xxe,csrf,...", ""]
+anomalies = 0
 for f in sorted(glob.glob(str(EV / "wapiti-ep*.json"))):
     d = json.loads(Path(f).read_text())
     n = sum(len(x) for x in d.get("vulnerabilities", {}).values())
+    a = sum(len(x) for x in d.get("anomalies", {}).values())
     total += n
+    anomalies += a
     lines.append(f"  {d.get('infos', {}).get('target')[:96]}")
-    lines.append(f"      vulnerabilities: {n}")
-lines += ["", f"Total findings: {total}", "",
+    lines.append(f"      vulnerabilities: {n}; anomalies: {a}")
+lines += ["", f"Total findings: {total}", f"Total anomalies: {anomalies}", ""]
+if anomalies:
+    lines += ["Anomalies are unhandled 500 responses. They are not findings by",
+              "themselves, but each one must be traced to a cause before this",
+              "result is called clean (see report section 9)."]
+lines += ["",
           "Attacked: search/skills/mode/status/domain/page/limit/sort/organizer,",
           "discover, calendar, teams. No XSS/SQLi/command-injection/SSRF/path",
           "traversal/CRLF/open-redirect confirmed."]
@@ -285,7 +306,11 @@ counts = {}
 for x in mt:
     counts[x["verdict"]] = counts.get(x["verdict"], 0) + 1
 fails = [x for x in mt if x["verdict"] == "FAIL"]
-lines = [f"Deep authenticated API suite: {len(mt)} checks",
+lines = ["HISTORICAL SUITE - these results come from the original 43-check",
+         "suite, which contained known false passes. They are kept only as a",
+         "before-baseline; the rebuilt suite (manual_tests.py) supersedes them",
+         "and must be re-run against a live API before any claim is made.", "",
+         f"Deep authenticated API suite: {len(mt)} checks",
          "  " + ", ".join(f"{k} {v}" for k, v in counts.items()), ""]
 for x in fails:
     lines.append(f"[FAIL] {x['id']} {x['title']}")
@@ -296,46 +321,16 @@ lines += ["",
           "limits, account enumeration, session revocation, admin gating, XSS."]
 summaries["manual"] = "\n".join(lines)
 
-# ------------------------------------------------------------ write + render
+# --------------------------------------------------------------------- write
+PROVENANCE = (
+    "# GENERATED SUMMARY - presentation aid, NOT raw tool output.\n"
+    "# Producer: security-audit/make_tool_evidence.py\n"
+    "# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the\n"
+    "# command, environment and raw file behind each claim). Where this summary\n"
+    "# and the raw artifact disagree, the raw artifact wins.\n\n"
+)
+
 for name, text in summaries.items():
-    (EV / f"summary-{name}.txt").write_text(text)
+    (EV / f"summary-{name}.txt").write_text(PROVENANCE + text + "\n")
 
-TEMPLATE = """<!doctype html><html><head><meta charset="utf-8"><style>
-body {{ margin:0; background:#0f1115; color:#d7dce2;
-  font-family:'DejaVu Sans Mono',ui-monospace,monospace; }}
-.bar {{ background:#1b1f27; padding:10px 16px; display:flex; gap:8px;
-  align-items:center; border-bottom:1px solid #2b313c; }}
-.dot {{ width:10px;height:10px;border-radius:50%; }}
-.title {{ margin-left:8px; color:#9aa4b2; font-size:13px; }}
-.wrap {{ padding:20px 24px; }}
-h1 {{ font-size:18px; margin:0 0 4px; color:#fff; font-family:'DejaVu Sans',sans-serif; }}
-.sub {{ color:#7d8794; font-size:12px; margin-bottom:14px; }}
-pre {{ white-space:pre-wrap; word-break:break-word; font-size:12.5px;
-  line-height:1.55; margin:0; }}
-</style></head><body>
-<div class="bar"><span class="dot" style="background:#ff5f56"></span>
-<span class="dot" style="background:#ffbd2e"></span>
-<span class="dot" style="background:#27c93f"></span>
-<span class="title">{tool} — evidence capture</span></div>
-<div class="wrap"><h1>{tool}</h1>
-<div class="sub">HackHub security audit — {date} — verbatim tool output</div>
-<pre>{body}</pre></div></body></html>"""
-
-from datetime import date
-with sync_playwright() as p:
-    b = p.chromium.launch()
-    pg = b.new_page(viewport={"width": 1180, "height": 900})
-    for name, text in summaries.items():
-        doc = TEMPLATE.format(
-            tool=html.escape(name.upper()),
-            date=date.today().isoformat(),
-            body=html.escape(text),
-        )
-        pg.set_content(doc)
-        pg.wait_for_timeout(120)
-        h = pg.evaluate("document.body.scrollHeight")
-        pg.set_viewport_size({"width": 1180, "height": min(max(h, 260), 2200)})
-        pg.screenshot(path=str(SHOTS / f"tool-{name}.png"), full_page=True)
-        print("screenshot:", SHOTS / f"tool-{name}.png")
-    b.close()
-print("summaries:", len(summaries))
+print(f"wrote {len(summaries)} summaries to {EV}")

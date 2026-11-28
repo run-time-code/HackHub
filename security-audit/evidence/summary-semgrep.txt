@@ -1,3 +1,9 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
 $ semgrep scan --config=p/owasp-top-ten --config=p/nodejs \
       --config=p/javascript --config=p/secrets .
 Ran 288 rules on 465 files: 0 findings

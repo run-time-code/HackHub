@@ -6,3 +6,7 @@ logs/
 
 # Large generated CodeQL database (recreate with codeql)
 evidence/codeql-db/
+
+# Python bytecode from audit scripts (never evidence)
+__pycache__/
+*.pyc

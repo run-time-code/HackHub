@@ -1,16 +1,27 @@
+# GENERATED SUMMARY - presentation aid, NOT raw tool output.
+# Producer: security-audit/make_tool_evidence.py
+# Raw artifacts: security-audit/evidence/ (see evidence/README.md for the
+# command, environment and raw file behind each claim). Where this summary
+# and the raw artifact disagree, the raw artifact wins.
+
 $ wapiti -u <each parameterised API endpoint> \
     -m xss,sql,exec,ssrf,file,redirect,crlf,ldap,xxe,csrf,...
 
   http://127.0.0.1:5000/api/hackathons?search=devpost&skills=python&mode=ONLINE&status=upcoming&do
-      vulnerabilities: 0
+      vulnerabilities: 0; anomalies: 1
   http://127.0.0.1:5000/api/users/discover?skills=python&interests=ai&limit=10&sort=score
-      vulnerabilities: 0
+      vulnerabilities: 0; anomalies: 0
   http://127.0.0.1:5000/api/calendar?from=2026-01-01&to=2026-12-31&view=month
-      vulnerabilities: 0
+      vulnerabilities: 0; anomalies: 0
   http://127.0.0.1:5000/api/teams?page=1&limit=20&status=open&skills=design
-      vulnerabilities: 0
+      vulnerabilities: 0; anomalies: 0
 
 Total findings: 0
+Total anomalies: 1
+
+Anomalies are unhandled 500 responses. They are not findings by
+themselves, but each one must be traced to a cause before this
+result is called clean (see report section 9).
 
 Attacked: search/skills/mode/status/domain/page/limit/sort/organizer,
 discover, calendar, teams. No XSS/SQLi/command-injection/SSRF/path
